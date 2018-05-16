@@ -35,3 +35,7 @@
 *.cbp
 *.depend
 *.layout
+
+# Folders where the compiled output are placed
+bin/
+obj/
