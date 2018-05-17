@@ -27,7 +27,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 MainWindow::MainWindow() : closing(false) {
 
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
-    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
