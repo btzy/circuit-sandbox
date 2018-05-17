@@ -1,6 +1,7 @@
 #include <exception>
 #include <stdexcept>
 #include <iostream>
+#include <string>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -22,7 +23,7 @@ struct InitGuard {
         }
     }
     ~InitGuard() {
-        TTF_Init();
+        TTF_Quit();
         SDL_Quit();
     }
 };

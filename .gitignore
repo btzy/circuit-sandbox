@@ -32,10 +32,16 @@
 *.app
 
 # CodeBlocks files
-*.cbp
 *.depend
 *.layout
 
 # Folders where the compiled output are placed
 bin/
 obj/
+Debug/
+Release/
+
+# Visual Studio files
+.vs/
+*.filters
+*.user
