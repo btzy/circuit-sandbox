@@ -25,13 +25,6 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 
 
 MainWindow::MainWindow() : closing(false) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        throw std::runtime_error("SDL_Init() failed:  "s + SDL_GetError());
-    }
-
-    if (TTF_Init() != 0) {
-        throw std::runtime_error("TTF_Init() failed:  "s + TTF_GetError());
-    }
 
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
     window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);
@@ -61,8 +54,6 @@ MainWindow::MainWindow() : closing(false) {
 MainWindow::~MainWindow() {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    TTF_Init();
-    SDL_Quit();
 }
 
 
