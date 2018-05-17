@@ -5,26 +5,38 @@
  */
 
 #include <tuple>
+#include <optional>
+#include <variant>
 
 #include <SDL.h>
 
+#include "declarations.hpp"
+#include "drawable.hpp"
 #include "elements.hpp"
 
 #include "tag_tuple.hpp"
 
 
-class Toolbox {
+class Toolbox : public Drawable {
 private:
-    // compile-time type tag which stores the list of available elements
-    using element_tags = extensions::tag_tuple<ConductiveWire, InsulatedWire>;
+    // owner window
+    MainWindow& mainWindow;
 
+    constexpr static int BUTTON_HEIGHT = 20;
+    constexpr static int PADDING_HORIZONTAL = 8;
+    constexpr static int PADDING_VERTICAL = 8;
 public:
+
+    Toolbox(MainWindow&);
 
     /**
      * Renders this toolbox on the given area of the renderer.
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer, const SDL_Rect& render_area);
+    void render(SDL_Renderer* renderer);
+
+    void processMouseMotionEvent(const SDL_MouseMotionEvent&);
+    void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
 };
 

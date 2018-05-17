@@ -4,6 +4,8 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#include <iostream>
+
 #include "mainwindow.hpp"
 
 
@@ -16,6 +18,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
         if (event_window == main_window->window) {
+            main_window->layoutComponents();
             main_window->render();
         }
     }
@@ -24,7 +27,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow() : closing(false) {
+MainWindow::MainWindow() : closing(false), toolbox(*this) {
 
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
     window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -48,12 +51,24 @@ MainWindow::MainWindow() : closing(false) {
     if (renderer == nullptr) {
         throw std::runtime_error("SDL_CreateRenderer() failed:  "s + SDL_GetError());
     }
+
+    layoutComponents();
 }
 
 
 MainWindow::~MainWindow() {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+}
+
+
+void MainWindow::layoutComponents() {
+    // get the size of the render target
+    int pixelWidth, pixelHeight;
+    SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
+
+    // position all the components:
+    toolbox.renderArea = SDL_Rect{pixelWidth - 128, 0, 128, pixelHeight};
 }
 
 
@@ -91,6 +106,11 @@ void MainWindow::processEvent(const SDL_Event& event) {
     case SDL_WINDOWEVENT:
         processWindowEvent(event.window);
         break;
+    case SDL_MOUSEMOTION:
+        processMouseMotionEvent(event.motion);
+        break;
+    case SDL_MOUSEBUTTONDOWN:
+        processMouseButtonDownEvent(event.button);
     }
 }
 
@@ -104,18 +124,29 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
 }
 
 
+void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
+    toolbox.processMouseMotionEvent(event);
+}
+
+
+void MainWindow::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
+    SDL_Point position{event.x, event.y};
+    if (SDL_PointInRect(&position, &toolbox.renderArea)) {
+        toolbox.processMouseButtonDownEvent(event);
+    }
+}
+
+
 // TODO: needs some way to use the old data when resizing, for consistency?
 void MainWindow::render() {
-    // get the size of the render target
-    int pixelWidth, pixelHeight;
-    SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
+
 
     // Clear the window with a black background
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
     SDL_RenderClear(renderer);
 
     // TODO: draw everything to the screen - buttons, status info, play area, etc.
-    toolbox.render(renderer, SDL_Rect{pixelWidth - 128, 0, 128, pixelHeight});
+    toolbox.render(renderer);
 
     // Then display to the user
     SDL_RenderPresent(renderer);

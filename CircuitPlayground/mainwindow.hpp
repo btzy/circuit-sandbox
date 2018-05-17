@@ -4,15 +4,23 @@
  * The main window.
  */
 
+#include <variant>
+#include <optional>
+
 #include <SDL.h>
 
+#include "declarations.hpp"
 #include "toolbox.hpp"
+#include "tag_tuple.hpp"
+#include "elements.hpp"
 
 class MainWindow {
+public:
+
+    // compile-time type tag which stores the list of available elements
+    using element_tags = extensions::tag_tuple<ConductiveWire, InsulatedWire>;
+
 private:
-    // SDL and window stuff:
-    SDL_Window* window;
-    SDL_Renderer* renderer;
     bool closing; // whether the user has pressed the close button
 
     // Render-able components in the window:
@@ -23,6 +31,8 @@ private:
      */
     void processEvent(const SDL_Event&);
     void processWindowEvent(const SDL_WindowEvent&);
+    void processMouseMotionEvent(const SDL_MouseMotionEvent&);
+    void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
 
     /**
      * Renders everything to the screen
@@ -33,7 +43,29 @@ private:
     friend int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event);
     #endif // _WIN32
 
+    /**
+     * Recalculate all the 'renderArea' for all the Drawables (call after resizing)
+     */
+    void layoutComponents();
+
 public:
+
+    // SDL and window stuff:
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+
+    /**
+     * Stores all the data necessary to maintain the context in which the user is interacting.
+     */
+    struct InteractionContext {
+        // selection state: (it is a std::variant of tag<Element>)
+        std::optional<typename element_tags::tag_variant_t> selectedElement;
+
+        // element being moused over (so we can show something on the UI)
+        std::optional<typename element_tags::tag_variant_t> mouseoverElement;
+    };
+
+    InteractionContext context;
 
     constexpr static SDL_Color backgroundColor{0, 0, 0, 0xFF}; // black background
 
