@@ -27,7 +27,7 @@ struct InitGuard {
     }
 };
 
-int main( int argc, char * argv[] ) {
+int main(int argc, char* argv[]) {
     try {
         InitGuard init_guard; // this ensures that all the program-wide init and de-init works even if exceptions are thrown
         MainWindow main_window;
