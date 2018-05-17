@@ -32,7 +32,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
         std::strcpy(font_path, cwd);
         std::strcat(font_path, font_name);
         SDL_free(cwd);
-        button_font = TTF_OpenFont(font_path, 12);
+        button_font = TTF_OpenFont(font_path, mainWindow.logicalToPhysicalSize(12));
         delete[] font_path;
     }
     if (button_font == nullptr) {
@@ -53,7 +53,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
         if (mainWindow.context.mouseoverElement && (*mainWindow.context.mouseoverElement).index() == index){ // <-- test that the optional is not empty, and the element being held is of the correct index
             backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
-            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT};
+            const SDL_Rect destRect{renderArea.x + mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL), renderArea.y + mainWindow.logicalToPhysicalSize(PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index)), renderArea.w - mainWindow.logicalToPhysicalSize(2 * PADDING_HORIZONTAL), mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT)};
             SDL_RenderFillRect(renderer, &destRect);
         }
 
@@ -64,8 +64,8 @@ void Toolbox::render(SDL_Renderer* renderer) {
             SDL_FreeSurface(surface);
             int textureWidth, textureHeight;
             SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
-            // the complicated calculation here makes the text vertically-centered and horizontally displaced by 2 pixels
-            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + 2, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index) + (BUTTON_HEIGHT - textureHeight) / 2, textureWidth, textureHeight};
+            // the complicated calculation here makes the text vertically-centered and horizontally displaced by 2 logical pixels
+            const SDL_Rect destRect{renderArea.x + mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL + 2), renderArea.y + mainWindow.logicalToPhysicalSize(PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index)) + (mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT) - textureHeight) / 2, textureWidth, textureHeight};
             SDL_RenderCopy(renderer, texture, nullptr, &destRect);
             SDL_DestroyTexture(texture);
         }
@@ -77,7 +77,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
 
 
 void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-    // offset relative to top-left of toolbox
+    // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
 
@@ -85,10 +85,10 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     mainWindow.context.mouseoverElement = std::nullopt;
 
     // check left/right out of bounds
-    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
+    if(offsetX < mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL) || offsetX >= renderArea.w - mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL)) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
+    size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
     if (index >= MainWindow::element_tags::size) return;
 
     // select the correct element based on the index
@@ -102,15 +102,15 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
 
 void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
-    // offset relative to top-left of toolbox
+    // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
 
     // check left/right out of bounds
-    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
+    if(offsetX < mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL) || offsetX >= renderArea.w - mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL)) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
+    size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
     if (index >= MainWindow::element_tags::size) return;
 
     // select the correct element based on the index

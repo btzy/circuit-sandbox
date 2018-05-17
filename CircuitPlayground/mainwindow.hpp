@@ -26,6 +26,11 @@ private:
     // Render-able components in the window:
     Toolbox toolbox;
 
+    // High DPI stuff:
+    int physicalMultiplier = 1; // physical size = size in real monitor pixels
+    int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels 
+    // (physical size) = (logical size) * physicalMultiplier / logicalMultiplier
+
     /**
      * Process the event that has occurred (called by start())
      */
@@ -48,11 +53,24 @@ private:
      */
     void layoutComponents();
 
+    /**
+    * Update the dpi fields, then resize the window and relayout
+    */
+    void updateDpiAndLayout();
+
+    /**
+    * Update the dpi fields.  Returns true if the dpi got changed
+    */
+    bool updateDpiFields(int display_index = 0);
+
 public:
 
     // SDL and window stuff:
     SDL_Window* window;
     SDL_Renderer* renderer;
+
+    
+   
 
     /**
      * Stores all the data necessary to maintain the context in which the user is interacting.
@@ -84,4 +102,14 @@ public:
      * This function will block until the window is closed.
      */
     void start();
+
+    /**
+     * DPI conversion functions
+     */
+    inline int logicalToPhysicalSize(int logicalSize) {
+        return logicalSize * physicalMultiplier / logicalMultiplier;
+    }
+    inline int physicalToLogicalSize(int physicalSize) {
+        return physicalSize * logicalMultiplier / physicalMultiplier;
+    }
 };

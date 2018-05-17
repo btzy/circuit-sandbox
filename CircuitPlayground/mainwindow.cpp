@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <string>
+#include <numeric>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -27,10 +28,38 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
+bool MainWindow::updateDpiFields(int display_index) {
+    float dpi_float;
+    SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr); // well we expect horizontal and vertical dpis to be the same
+    int dpi = static_cast<int>(dpi_float + 0.5); // round to nearest int
+    int default_dpi;
+#ifdef __APPLE__
+    default_dpi = 72;
+#else
+    default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
+#endif
+
+    // use gcd, so the multipliers don't become too big
+    int gcd = std::gcd(dpi, default_dpi);
+
+    int tmp_physicalMultiplier = physicalMultiplier;
+    int tmp_logicalMultiplier = logicalMultiplier;
+    // update the fields
+    physicalMultiplier = dpi / gcd;
+    logicalMultiplier = default_dpi / gcd;
+
+    // return true if the fields changed
+    return tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
+}
+
+
 MainWindow::MainWindow() : closing(false), toolbox(*this) {
 
+    // update dpi once first, so we can use it to create the properly sized window
+    updateDpiFields();
+
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
-    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
@@ -52,7 +81,8 @@ MainWindow::MainWindow() : closing(false), toolbox(*this) {
         throw std::runtime_error("SDL_CreateRenderer() failed:  "s + SDL_GetError());
     }
 
-    layoutComponents();
+    // update dpi again (in case the window was opened on something other than the default monitor), and do the layout
+    updateDpiAndLayout();
 }
 
 
@@ -62,13 +92,31 @@ MainWindow::~MainWindow() {
 }
 
 
+void MainWindow::updateDpiAndLayout() {
+    int display_index = SDL_GetWindowDisplayIndex(window);
+    if (display_index < 0) { // means that SDL_GetWindowDisplayIndex doesn't work, then we just use the default monitor
+        display_index = 0;
+    }
+    
+    // update the two dpi member fields
+    if (updateDpiFields(display_index)) {
+        // resize the window, if the dpi changed
+        SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
+    }
+
+
+    // now that we have updated the DPI, we need to relayout all the components
+    layoutComponents();
+}
+
+
 void MainWindow::layoutComponents() {
-    // get the size of the render target
+    // get the size of the render target (this is a physical size)
     int pixelWidth, pixelHeight;
     SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
 
     // position all the components:
-    toolbox.renderArea = SDL_Rect{pixelWidth - 128, 0, 128, pixelHeight};
+    toolbox.renderArea = SDL_Rect{pixelWidth - logicalToPhysicalSize(128), 0, logicalToPhysicalSize(128), pixelHeight};
 }
 
 

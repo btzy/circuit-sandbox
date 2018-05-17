@@ -32,6 +32,7 @@
 *.app
 
 # CodeBlocks files
+*.cbp
 *.depend
 *.layout
 
@@ -43,5 +44,7 @@ Release/
 
 # Visual Studio files
 .vs/
+*.vcxproj
+*.sln
 *.filters
 *.user

@@ -15,6 +15,6 @@
 
 class Drawable {
 public:
-    SDL_Rect renderArea;
+    SDL_Rect renderArea; // this is a physical size
 };
 
