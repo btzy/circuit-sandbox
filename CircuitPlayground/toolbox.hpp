@@ -4,17 +4,12 @@
  * Represents the toolbox - the place where all the element buttons are located.
  */
 
-#include <tuple>
-#include <optional>
-#include <variant>
-
 #include <SDL.h>
 
 #include "declarations.hpp"
 #include "drawable.hpp"
-#include "elements.hpp"
 
-#include "tag_tuple.hpp"
+
 
 
 class Toolbox : public Drawable {
@@ -48,15 +43,15 @@ public:
     void render(SDL_Renderer* renderer);
 
     /**
-    * Processing of events.
-    */
+     * Processing of events.
+     */
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
 
 
     /**
-    * This is called to reset all the hovering of buttons, because mousemove events are only triggered when the mouse is still on the canvas
-    */
+     * This is called to reset all the hovering of buttons, because mousemove events are only triggered when the mouse is still on the canvas
+     */
     void processMouseLeave();
 };
 

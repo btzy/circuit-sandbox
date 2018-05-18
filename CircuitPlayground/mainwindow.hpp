@@ -11,6 +11,7 @@
 
 #include "declarations.hpp"
 #include "toolbox.hpp"
+#include "playarea.hpp"
 #include "tag_tuple.hpp"
 #include "elements.hpp"
 
@@ -20,11 +21,18 @@ public:
     // compile-time type tag which stores the list of available elements
     using element_tags = extensions::tag_tuple<ConductiveWire, InsulatedWire>;
 
+    // logical units
+    constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
+
+    // physical units
+    int TOOLBOX_WIDTH = LOGICAL_TOOLBOX_WIDTH;
+
 private:
     bool closing; // whether the user has pressed the close button
 
     // Render-able components in the window:
     Toolbox toolbox;
+    PlayArea playArea;
 
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels

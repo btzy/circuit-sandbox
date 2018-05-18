@@ -8,6 +8,7 @@
 
 #include "toolbox.hpp"
 #include "mainwindow.hpp"
+#include "tag_tuple.hpp"
 
 
 using namespace std::literals::string_literals; // gives the 's' suffix for strings

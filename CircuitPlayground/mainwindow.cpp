@@ -34,7 +34,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 
 
 
-MainWindow::MainWindow() : closing(false), toolbox(*this) {
+MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this) {
 
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);
@@ -124,7 +124,11 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
     if (fields_changed) {
         // tell the components to update their cached sizes
+        playArea.updateDpi();
         toolbox.updateDpi();
+
+        // remember to update my own pseudo-constants
+        TOOLBOX_WIDTH = logicalToPhysicalSize(LOGICAL_TOOLBOX_WIDTH);
     }
 
     // return true if the fields changed
@@ -142,7 +146,9 @@ void MainWindow::layoutComponents() {
     SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
 
     // position all the components:
-    toolbox.renderArea = SDL_Rect{pixelWidth - logicalToPhysicalSize(128), 0, logicalToPhysicalSize(128), pixelHeight};
+    playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH, pixelHeight};
+    toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight};
+    
 }
 
 
@@ -199,6 +205,7 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
         layoutComponents();
         break;
     case SDL_WINDOWEVENT_LEAVE:
+        playArea.processMouseLeave();
         toolbox.processMouseLeave();
         break;
     }
@@ -206,13 +213,17 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
 
 
 void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
+    playArea.processMouseMotionEvent(event);
     toolbox.processMouseMotionEvent(event);
 }
 
 
 void MainWindow::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     SDL_Point position{event.x, event.y};
-    if (SDL_PointInRect(&position, &toolbox.renderArea)) {
+    if (SDL_PointInRect(&position, &playArea.renderArea)) {
+        playArea.processMouseButtonDownEvent(event);
+    }
+    else if (SDL_PointInRect(&position, &toolbox.renderArea)) {
         toolbox.processMouseButtonDownEvent(event);
     }
 }
@@ -227,6 +238,7 @@ void MainWindow::render() {
     SDL_RenderClear(renderer);
 
     // TODO: draw everything to the screen - buttons, status info, play area, etc.
+    playArea.render(renderer);
     toolbox.render(renderer);
 
     // Then display to the user

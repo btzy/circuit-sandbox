@@ -2,3 +2,4 @@
 
 class MainWindow;
 class Toolbox;
+class PlayArea;
