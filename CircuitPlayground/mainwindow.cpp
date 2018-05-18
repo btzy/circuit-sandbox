@@ -5,10 +5,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#ifdef __linux__
-#include "linux.hpp"
-#endif // __linux__
-
 #include <iostream>
 
 #include "mainwindow.hpp"
@@ -92,20 +88,15 @@ bool MainWindow::updateDpiFields(bool useWindow) {
     }
 
 
-    int dpi;
-#ifdef __linux__
-    double dpi_double;
-    dpi_double = linux_getSystemDpi();
-    dpi = static_cast<int>(dpi_double + 0.5);
-#else
     float dpi_float;
     SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr); // well we expect horizontal and vertical dpis to be the same
-    dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
-#endif
+    int dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
 
     int default_dpi;
-#ifdef __APPLE__
+#if defined(__APPLE__)
     default_dpi = 72;
+#elif defined(__linux__)
+    default_dpi = 144;
 #else
     default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
 #endif
