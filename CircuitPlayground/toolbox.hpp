@@ -52,5 +52,11 @@ public:
     */
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
+
+
+    /**
+    * This is called to reset all the hovering of buttons, because mousemove events are only triggered when the mouse is still on the canvas
+    */
+    void processMouseLeave();
 };
 

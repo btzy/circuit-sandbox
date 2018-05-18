@@ -198,6 +198,9 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
     case SDL_WINDOWEVENT_RESIZED: // window got resized by window manager or by user (will NOT be triggered by programmatic resize, e.g. SDL_SetWindowSize)
         layoutComponents();
         break;
+    case SDL_WINDOWEVENT_LEAVE:
+        toolbox.processMouseLeave();
+        break;
     }
 }
 

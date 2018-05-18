@@ -127,3 +127,8 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Element::displayName, mainWindow.window);
     });
 }
+
+
+void Toolbox::processMouseLeave() {
+    mainWindow.context.mouseoverElementIndex = MainWindow::InteractionContext::EMPTY_INDEX;
+}
