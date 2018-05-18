@@ -5,6 +5,10 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#ifdef __linux__
+#include "linux.hpp"
+#endif // __linux__
+
 #include <iostream>
 
 #include "mainwindow.hpp"
@@ -28,29 +32,6 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-bool MainWindow::updateDpiFields(int display_index) {
-    float dpi_float;
-    SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr); // well we expect horizontal and vertical dpis to be the same
-    int dpi = static_cast<int>(dpi_float + 0.5); // round to nearest int
-    int default_dpi;
-#ifdef __APPLE__
-    default_dpi = 72;
-#else
-    default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
-#endif
-
-    // use gcd, so the multipliers don't become too big
-    int gcd = std::gcd(dpi, default_dpi);
-
-    int tmp_physicalMultiplier = physicalMultiplier;
-    int tmp_logicalMultiplier = logicalMultiplier;
-    // update the fields
-    physicalMultiplier = dpi / gcd;
-    logicalMultiplier = default_dpi / gcd;
-
-    // return true if the fields changed
-    return tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
-}
 
 
 MainWindow::MainWindow() : closing(false), toolbox(*this) {
@@ -89,6 +70,40 @@ MainWindow::MainWindow() : closing(false), toolbox(*this) {
 MainWindow::~MainWindow() {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+}
+
+
+bool MainWindow::updateDpiFields(int display_index) {
+
+    int dpi;
+#ifdef __linux__
+    double dpi_double;
+    dpi_double = linux_getSystemDpi();
+    dpi = static_cast<int>(dpi_double + 0.5);
+#else
+    float dpi_float;
+    SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr); // well we expect horizontal and vertical dpis to be the same
+    dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
+#endif
+
+    int default_dpi;
+#ifdef __APPLE__
+    default_dpi = 72;
+#else
+    default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
+#endif
+
+                      // use gcd, so the multipliers don't become too big
+    int gcd = std::gcd(dpi, default_dpi);
+
+    int tmp_physicalMultiplier = physicalMultiplier;
+    int tmp_logicalMultiplier = logicalMultiplier;
+    // update the fields
+    physicalMultiplier = dpi / gcd;
+    logicalMultiplier = default_dpi / gcd;
+
+    // return true if the fields changed
+    return tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
 }
 
 
