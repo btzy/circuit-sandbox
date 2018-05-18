@@ -77,10 +77,12 @@ public:
      */
     struct InteractionContext {
         // selection state: (it is a std::variant of tag<Element>)
-        std::optional<typename element_tags::tag_variant_t> selectedElement;
+        size_t selectedElementIndex;
 
         // element being moused over (so we can show something on the UI)
-        std::optional<typename element_tags::tag_variant_t> mouseoverElement;
+        size_t mouseoverElementIndex;
+
+        constexpr static size_t EMPTY_INDEX = -1;
     };
 
     InteractionContext context;

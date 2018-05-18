@@ -50,7 +50,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
         SDL_Color backgroundColorForText = MainWindow::backgroundColor;
 
         // Make a grey rectangle if the element is being moused over
-        if (mainWindow.context.mouseoverElement && (*mainWindow.context.mouseoverElement).index() == index){ // <-- test that the optional is not empty, and the element being held is of the correct index
+        if (mainWindow.context.mouseoverElementIndex == index){ // <-- test that current index is the index being mouseovered
             backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
             const SDL_Rect destRect{renderArea.x + mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL), renderArea.y + mainWindow.logicalToPhysicalSize(PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index)), renderArea.w - mainWindow.logicalToPhysicalSize(2 * PADDING_HORIZONTAL), mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT)};
@@ -82,7 +82,7 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int offsetY = event.y - renderArea.y;
 
     // reset the mouseover context
-    mainWindow.context.mouseoverElement = std::nullopt;
+    mainWindow.context.mouseoverElementIndex = MainWindow::InteractionContext::EMPTY_INDEX;
 
     // check left/right out of bounds
     if(offsetX < mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL) || offsetX >= renderArea.w - mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL)) return;
@@ -91,13 +91,8 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
     if (index >= MainWindow::element_tags::size) return;
 
-    // select the correct element based on the index
-    MainWindow::element_tags::get(index, [this](const auto element_tag) {
-        // 'Element' is the type of element (e.g. ConductiveWire)
-        using Element = typename decltype(element_tag)::type;
-
-        mainWindow.context.mouseoverElement = extensions::tag<Element>{};
-    });
+    // save the index since it is valid
+    mainWindow.context.mouseoverElementIndex = index;
 }
 
 
@@ -113,13 +108,14 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
     if (index >= MainWindow::element_tags::size) return;
 
-    // select the correct element based on the index
+    // save the index since it is valid
+    mainWindow.context.selectedElementIndex = index;
+
+    // make a message box pop up
     MainWindow::element_tags::get(index, [this](const auto element_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
         using Element = typename decltype(element_tag)::type;
-
-        mainWindow.context.selectedElement = extensions::tag<Element>{};
-
+        
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Element::displayName, mainWindow.window);
     });
 }
