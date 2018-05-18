@@ -50,18 +50,15 @@ private:
 
     /**
      * Recalculate all the 'renderArea' for all the Drawables (call after resizing)
+     * Also does DPI recalculation (SDL2 will send a resize event when the dpi changes)
      */
     void layoutComponents();
 
-    /**
-    * Update the dpi fields, then resize the window and relayout
-    */
-    void updateDpiAndLayout();
 
     /**
     * Update the dpi fields.  Returns true if the dpi got changed
     */
-    bool updateDpiFields(int display_index = 0);
+    bool updateDpiFields(bool useWindow = true);
 
 public:
 
@@ -82,7 +79,7 @@ public:
         // element being moused over (so we can show something on the UI)
         size_t mouseoverElementIndex;
 
-        constexpr static size_t EMPTY_INDEX = -1;
+        constexpr static size_t EMPTY_INDEX = static_cast<size_t>(-1);
     };
 
     InteractionContext context;

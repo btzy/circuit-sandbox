@@ -15,6 +15,14 @@ using namespace std::literals::string_literals; // gives the 's' suffix for stri
 
 Toolbox::Toolbox(MainWindow& main_window) : mainWindow(main_window) {};
 
+
+void Toolbox::updateDpi() {
+    BUTTON_HEIGHT = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_HEIGHT);
+    PADDING_HORIZONTAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_HORIZONTAL);
+    PADDING_VERTICAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_VERTICAL);
+}
+
+
 void Toolbox::render(SDL_Renderer* renderer) {
     // draw a grey border around the toolbox
     SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
@@ -53,7 +61,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
         if (mainWindow.context.mouseoverElementIndex == index){ // <-- test that current index is the index being mouseovered
             backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
-            const SDL_Rect destRect{renderArea.x + mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL), renderArea.y + mainWindow.logicalToPhysicalSize(PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index)), renderArea.w - mainWindow.logicalToPhysicalSize(2 * PADDING_HORIZONTAL), mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT)};
+            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT};
             SDL_RenderFillRect(renderer, &destRect);
         }
 
@@ -65,7 +73,7 @@ void Toolbox::render(SDL_Renderer* renderer) {
             int textureWidth, textureHeight;
             SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
             // the complicated calculation here makes the text vertically-centered and horizontally displaced by 2 logical pixels
-            const SDL_Rect destRect{renderArea.x + mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL + 2), renderArea.y + mainWindow.logicalToPhysicalSize(PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index)) + (mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT) - textureHeight) / 2, textureWidth, textureHeight};
+            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + mainWindow.logicalToPhysicalSize(2), renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index) + (BUTTON_HEIGHT - textureHeight) / 2, textureWidth, textureHeight};
             SDL_RenderCopy(renderer, texture, nullptr, &destRect);
             SDL_DestroyTexture(texture);
         }
@@ -85,10 +93,10 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     mainWindow.context.mouseoverElementIndex = MainWindow::InteractionContext::EMPTY_INDEX;
 
     // check left/right out of bounds
-    if(offsetX < mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL) || offsetX >= renderArea.w - mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL)) return;
+    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
+    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
     if (index >= MainWindow::element_tags::size) return;
 
     // save the index since it is valid
@@ -102,10 +110,10 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     int offsetY = event.y - renderArea.y;
 
     // check left/right out of bounds
-    if(offsetX < mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL) || offsetX >= renderArea.w - mainWindow.logicalToPhysicalSize(PADDING_HORIZONTAL)) return;
+    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - mainWindow.logicalToPhysicalSize(PADDING_VERTICAL)) / mainWindow.logicalToPhysicalSize(BUTTON_HEIGHT));
+    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
     if (index >= MainWindow::element_tags::size) return;
 
     // save the index since it is valid

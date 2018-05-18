@@ -22,12 +22,23 @@ private:
     // owner window
     MainWindow& mainWindow;
 
-    constexpr static int BUTTON_HEIGHT = 20;
-    constexpr static int PADDING_HORIZONTAL = 8;
-    constexpr static int PADDING_VERTICAL = 8;
+    // logical units
+    constexpr static int LOGICAL_BUTTON_HEIGHT = 20;
+    constexpr static int LOGICAL_PADDING_HORIZONTAL = 8;
+    constexpr static int LOGICAL_PADDING_VERTICAL = 8;
+
+    // physical units
+    int BUTTON_HEIGHT = LOGICAL_BUTTON_HEIGHT;
+    int PADDING_HORIZONTAL = LOGICAL_PADDING_HORIZONTAL;
+    int PADDING_VERTICAL = LOGICAL_PADDING_VERTICAL;
 public:
 
     Toolbox(MainWindow&);
+
+    /**
+    * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
+    */
+    void updateDpi();
 
     /**
      * Renders this toolbox on the given area of the renderer.
@@ -36,6 +47,9 @@ public:
      */
     void render(SDL_Renderer* renderer);
 
+    /**
+    * Processing of events.
+    */
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
 };

@@ -37,7 +37,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 MainWindow::MainWindow() : closing(false), toolbox(*this) {
 
     // update dpi once first, so we can use it to create the properly sized window
-    updateDpiFields();
+    updateDpiFields(false);
 
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
     window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -63,7 +63,14 @@ MainWindow::MainWindow() : closing(false), toolbox(*this) {
     }
 
     // update dpi again (in case the window was opened on something other than the default monitor), and do the layout
-    updateDpiAndLayout();
+    
+    // update the two dpi member fields
+    if (updateDpiFields()) {
+        // resize the window, if the dpi changed
+        SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
+    }
+
+    layoutComponents();
 }
 
 
@@ -73,7 +80,17 @@ MainWindow::~MainWindow() {
 }
 
 
-bool MainWindow::updateDpiFields(int display_index) {
+bool MainWindow::updateDpiFields(bool useWindow) {
+    
+    int display_index = 0;
+
+    if (useWindow) {
+        display_index = SDL_GetWindowDisplayIndex(window);
+        if (display_index < 0) { // means that SDL_GetWindowDisplayIndex doesn't work, then we just use the default monitor
+            display_index = 0;
+        }
+    }
+
 
     int dpi;
 #ifdef __linux__
@@ -102,30 +119,24 @@ bool MainWindow::updateDpiFields(int display_index) {
     physicalMultiplier = dpi / gcd;
     logicalMultiplier = default_dpi / gcd;
 
+    // check if the fields changed
+    bool fields_changed = tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
+
+    if (fields_changed) {
+        // tell the components to update their cached sizes
+        toolbox.updateDpi();
+    }
+
     // return true if the fields changed
-    return tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
-}
-
-
-void MainWindow::updateDpiAndLayout() {
-    int display_index = SDL_GetWindowDisplayIndex(window);
-    if (display_index < 0) { // means that SDL_GetWindowDisplayIndex doesn't work, then we just use the default monitor
-        display_index = 0;
-    }
-    
-    // update the two dpi member fields
-    if (updateDpiFields(display_index)) {
-        // resize the window, if the dpi changed
-        SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
-    }
-
-
-    // now that we have updated the DPI, we need to relayout all the components
-    layoutComponents();
+    return fields_changed;
 }
 
 
 void MainWindow::layoutComponents() {
+
+    // update the two dpi member fields
+    updateDpiFields();
+    
     // get the size of the render target (this is a physical size)
     int pixelWidth, pixelHeight;
     SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
@@ -174,6 +185,7 @@ void MainWindow::processEvent(const SDL_Event& event) {
         break;
     case SDL_MOUSEBUTTONDOWN:
         processMouseButtonDownEvent(event.button);
+        break;
     }
 }
 
@@ -182,6 +194,9 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
     switch (event.event) {
     case SDL_WINDOWEVENT_CLOSE: // close button was pressed (or some other close command like Alt-F4)
         closing = true;
+        break;
+    case SDL_WINDOWEVENT_RESIZED: // window got resized by window manager or by user (will NOT be triggered by programmatic resize, e.g. SDL_SetWindowSize)
+        layoutComponents();
         break;
     }
 }
