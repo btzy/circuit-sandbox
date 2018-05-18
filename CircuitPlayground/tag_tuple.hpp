@@ -8,7 +8,7 @@
 #include <tuple> // for std::tuple
 #include <utility> // for std::forward
 #include <type_traits> // for std::integral_constant
-#include <variant> // for variant
+//#include <variant> // for variant
 
 namespace extensions {
 
@@ -63,7 +63,7 @@ namespace extensions {
             get_by_index<0>(index, std::forward<Callback>(callback));
         }
 
-        using tag_variant_t = std::variant<tag<T>...>;
+        //using tag_variant_t = std::variant<tag<T>...>;
     };
 
 }

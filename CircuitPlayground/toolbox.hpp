@@ -40,7 +40,7 @@ public:
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer);
+    void render(SDL_Renderer* renderer) const;
 
     /**
      * Processing of events.

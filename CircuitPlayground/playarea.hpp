@@ -4,17 +4,21 @@
 
 #include "declarations.hpp"
 #include "drawable.hpp"
+#include "gamestate.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
  * This class handles the drawing onto the game canvas, including all the necessary translation and scaling (due to the adjustable zoom level and panning).
- * This class owns the PixelState object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
+ * This class owns the GameState object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
  */
 
 class PlayArea : public Drawable {
 private:
     // owner window
     MainWindow& mainWindow;
+
+    // game state
+    GameState gameState;
 
 public:
     PlayArea(MainWindow&);
@@ -29,7 +33,7 @@ public:
     * This method is called by MainWindow
     * @pre renderer must not be null.
     */
-    void render(SDL_Renderer* renderer);
+    void render(SDL_Renderer* renderer) const;
 
     /**
     * Processing of events.

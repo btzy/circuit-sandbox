@@ -113,10 +113,10 @@ public:
     /**
      * DPI conversion functions
      */
-    inline int logicalToPhysicalSize(int logicalSize) {
+    inline int logicalToPhysicalSize(int logicalSize) const {
         return logicalSize * physicalMultiplier / logicalMultiplier;
     }
-    inline int physicalToLogicalSize(int physicalSize) {
+    inline int physicalToLogicalSize(int physicalSize) const {
         return physicalSize * logicalMultiplier / physicalMultiplier;
     }
 };

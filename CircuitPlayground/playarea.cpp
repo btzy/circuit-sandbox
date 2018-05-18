@@ -10,7 +10,7 @@ void PlayArea::updateDpi() {
 }
 
 
-void PlayArea::render(SDL_Renderer* renderer) {
+void PlayArea::render(SDL_Renderer* renderer) const {
     // TODO
 }
 
