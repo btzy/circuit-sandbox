@@ -72,7 +72,7 @@ namespace extensions {
          * @pre indices must be within the bounds of width and height
          */
         T& operator[](const std::pair<size_t, size_t>& indices) {
-            return T[indices.second * _width + indices.first];
+            return buffer[indices.second * _width + indices.first];
         }
 
         /**
@@ -80,7 +80,7 @@ namespace extensions {
         * @pre indices must be within the bounds of width and height
         */
         const T& operator[](const std::pair<size_t, size_t>& indices) const {
-            return T[indices.second * width + indices.first];
+            return buffer[indices.second * _width + indices.first];
         }
     };
 }
