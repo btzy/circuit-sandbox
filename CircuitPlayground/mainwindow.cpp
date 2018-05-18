@@ -59,7 +59,7 @@ MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this) {
     }
 
     // update dpi again (in case the window was opened on something other than the default monitor), and do the layout
-    
+
     // update the two dpi member fields
     if (updateDpiFields()) {
         // resize the window, if the dpi changed
@@ -77,7 +77,7 @@ MainWindow::~MainWindow() {
 
 
 bool MainWindow::updateDpiFields(bool useWindow) {
-    
+
     int display_index = 0;
 
     if (useWindow) {
@@ -131,7 +131,7 @@ void MainWindow::layoutComponents() {
 
     // update the two dpi member fields
     updateDpiFields();
-    
+
     // get the size of the render target (this is a physical size)
     int pixelWidth, pixelHeight;
     SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
@@ -139,7 +139,7 @@ void MainWindow::layoutComponents() {
     // position all the components:
     playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH, pixelHeight};
     toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight};
-    
+
 }
 
 

@@ -124,7 +124,7 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     MainWindow::element_tags::get(index, [this](const auto element_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
         using Element = typename decltype(element_tag)::type;
-        
+
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Element::displayName, mainWindow.window);
     });
 }

@@ -36,7 +36,7 @@ private:
 
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels
-    int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels 
+    int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels
     // (physical size) = (logical size) * physicalMultiplier / logicalMultiplier
 
     /**
@@ -74,8 +74,8 @@ public:
     SDL_Window* window;
     SDL_Renderer* renderer;
 
-    
-   
+
+
 
     /**
      * Stores all the data necessary to maintain the context in which the user is interacting.
