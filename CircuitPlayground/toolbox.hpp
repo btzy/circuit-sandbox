@@ -26,6 +26,10 @@ private:
     int BUTTON_HEIGHT = LOGICAL_BUTTON_HEIGHT;
     int PADDING_HORIZONTAL = LOGICAL_PADDING_HORIZONTAL;
     int PADDING_VERTICAL = LOGICAL_PADDING_VERTICAL;
+
+    // the index of the element being mouseovered
+    size_t mouseoverElementIndex;
+
 public:
 
     Toolbox(MainWindow&);

@@ -59,7 +59,7 @@ void Toolbox::render(SDL_Renderer* renderer) const {
         SDL_Color backgroundColorForText = MainWindow::backgroundColor;
 
         // Make a grey rectangle if the element is being moused over
-        if (mainWindow.context.mouseoverElementIndex == index){ // <-- test that current index is the index being mouseovered
+        if (mouseoverElementIndex == index) { // <-- test that current index is the index being mouseovered
             backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
             const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT};
@@ -91,7 +91,7 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int offsetY = event.y - renderArea.y;
 
     // reset the mouseover context
-    mainWindow.context.mouseoverElementIndex = MainWindow::InteractionContext::EMPTY_INDEX;
+    mouseoverElementIndex = MainWindow::EMPTY_INDEX;
 
     // check left/right out of bounds
     if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
@@ -101,7 +101,7 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     if (index >= MainWindow::element_tags::size) return;
 
     // save the index since it is valid
-    mainWindow.context.mouseoverElementIndex = index;
+    mouseoverElementIndex = index;
 }
 
 
@@ -118,7 +118,7 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     if (index >= MainWindow::element_tags::size) return;
 
     // save the index since it is valid
-    mainWindow.context.selectedElementIndex = index;
+    mainWindow.selectedElementIndex = index;
 
     // make a message box pop up
     MainWindow::element_tags::get(index, [this](const auto element_tag) {
@@ -131,5 +131,5 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
 
 
 void Toolbox::processMouseLeave() {
-    mainWindow.context.mouseoverElementIndex = MainWindow::InteractionContext::EMPTY_INDEX;
+    mouseoverElementIndex = MainWindow::EMPTY_INDEX;
 }

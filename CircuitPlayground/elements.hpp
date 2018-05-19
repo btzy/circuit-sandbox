@@ -10,6 +10,16 @@
  * 2. Element::displayName is a const char* (the name displayed in the toolbox)
  */
 
+struct Selector {
+    static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    static constexpr const char* displayName = "Selector";
+};
+
+struct Eraser {
+    static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    static constexpr const char* displayName = "Eraser";
+};
+
 struct ConductiveWire {
     static constexpr SDL_Color displayColor{0x99, 0x99, 0x99, 0xFF};
     static constexpr const char* displayName = "Conductive Wire";

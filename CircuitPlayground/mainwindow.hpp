@@ -19,7 +19,7 @@ class MainWindow {
 public:
 
     // compile-time type tag which stores the list of available elements
-    using element_tags = extensions::tag_tuple<ConductiveWire, InsulatedWire>;
+    using element_tags = extensions::tag_tuple<Selector, Eraser, ConductiveWire, InsulatedWire>;
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
@@ -78,19 +78,11 @@ public:
 
 
     /**
-     * Stores all the data necessary to maintain the context in which the user is interacting.
+     * Stores the element that is selected by the toolbox.
      */
-    struct InteractionContext {
-        // selection state: (it is a std::variant of tag<Element>)
-        size_t selectedElementIndex;
+    size_t selectedElementIndex;
 
-        // element being moused over (so we can show something on the UI)
-        size_t mouseoverElementIndex;
-
-        constexpr static size_t EMPTY_INDEX = static_cast<size_t>(-1);
-    };
-
-    InteractionContext context;
+    constexpr static size_t EMPTY_INDEX = static_cast<size_t>(-1);
 
     constexpr static SDL_Color backgroundColor{0, 0, 0, 0xFF}; // black background
 
