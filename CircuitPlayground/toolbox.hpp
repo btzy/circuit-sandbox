@@ -28,7 +28,7 @@ private:
     int PADDING_VERTICAL = LOGICAL_PADDING_VERTICAL;
 
     // the index of the element being mouseovered
-    size_t mouseoverElementIndex;
+    size_t mouseoverToolIndex;
 
 public:
 

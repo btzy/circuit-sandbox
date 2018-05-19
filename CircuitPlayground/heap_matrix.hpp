@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <algorithm> // for std::copy and std::move
 
 /**
  * Represents a generic dynamically-allocated 2D array.
@@ -50,7 +51,14 @@ namespace extensions {
         }
 
         heap_matrix(size_t width, size_t height): _width(width), _height(height) {
-            buffer = new T[_width * _height]; // reserve the heap array
+            if (_width == 0 || _height == 0) {
+                buffer = nullptr;
+                _width = 0;
+                _height = 0;
+            }
+            else {
+                buffer = new T[_width * _height]; // reserve the heap array
+            }
         }
 
         /**
@@ -63,9 +71,16 @@ namespace extensions {
         /**
         * returns the width of the matrix
         */
-        /*size_t width() const {
+        size_t width() const {
             return _width;
-        }*/
+        }
+
+        /**
+        * returns the height of the matrix
+        */
+        size_t height() const {
+            return _width;
+        }
 
         /**
          * indices is a pair of {x,y}
@@ -82,5 +97,41 @@ namespace extensions {
         const T& operator[](const std::pair<size_t, size_t>& indices) const {
             return buffer[indices.second * _width + indices.first];
         }
+
+        template <typename TSrc, typename TDest>
+        friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height);
+
+        template <typename TSrc, typename TDest>
+        friend inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height);
     };
+
+    /**
+    * Copies all the data in a rectangle in the source matrix to a rectangle in the destination matrix
+    * @pre the rectangles should be within the bounds of their respective matrices
+    */
+    template <typename TSrc, typename TDest>
+    inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height) {
+        const TSrc* src_buffer = src.buffer;
+        TDest* dest_buffer = dest.buffer;
+        for (size_t i = 0; i < height; ++i) {
+            std::copy(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
+            src_buffer += src._width;
+            dest_buffer += dest._width;
+        }
+    }
+
+    /**
+    * Moves all the data in a rectangle in the source matrix to a rectangle in the destination matrix
+    * @pre the rectangles should be within the bounds of their respective matrices
+    */
+    template <typename TSrc, typename TDest>
+    inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height) {
+        TSrc* src_buffer = src.buffer + src_y * src._width;
+        TDest* dest_buffer = dest.buffer + dest_y * dest._width;
+        for (size_t i = 0; i < height; ++i) {
+            std::move(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
+            src_buffer += src._width;
+            dest_buffer += dest._width;
+        }
+    }
 }

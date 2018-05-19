@@ -8,7 +8,6 @@
 #include <tuple> // for std::tuple
 #include <utility> // for std::forward
 #include <type_traits> // for std::integral_constant
-//#include <variant> // for variant
 
 namespace extensions {
 
@@ -52,18 +51,25 @@ namespace extensions {
 
         inline constexpr static size_t size = sizeof...(T);
 
+
+        /**
+         * Invokes callback(tag<T>) for each T, in order.
+         */
         template <typename Callback>
         inline static void for_each(Callback&& callback) {
             invoke<0>(std::forward<Callback>(callback));
         }
 
 
+        /**
+        * Invokes callback(tag<T>) for the T at the given index.
+        * If index is out of bounds, then callback will not be invoked.
+        */
         template <typename Callback>
         inline static void get(const size_t index, Callback&& callback) {
             get_by_index<0>(index, std::forward<Callback>(callback));
         }
 
-        //using tag_variant_t = std::variant<tag<T>...>;
     };
 
 }

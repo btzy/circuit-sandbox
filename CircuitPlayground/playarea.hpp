@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <SDL.h>
 
 #include "declarations.hpp"
@@ -19,6 +21,10 @@ private:
 
     // game state
     GameState gameState;
+
+    // transformation
+    int32_t translationX = 0;
+    int32_t translationY = 0;
 
 public:
     PlayArea(MainWindow&);

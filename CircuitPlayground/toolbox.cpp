@@ -50,16 +50,16 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
 
     // draw the buttons to the screen one-by-one
-    MainWindow::element_tags::for_each([this, renderer, button_font](const auto element_tag, const auto index_tag) {
-        // 'Element' is the type of element (e.g. ConductiveWire)
-        using Element = typename decltype(element_tag)::type;
-        // 'index' is the index of this element inside the element_tags
+    MainWindow::tool_tags::for_each([this, renderer, button_font](const auto tool_tag, const auto index_tag) {
+        // 'Tool' is the type of tool (e.g. ConductiveWire)
+        using Tool = typename decltype(tool_tag)::type;
+        // 'index' is the index of this element inside the tool_tags
         constexpr size_t index = decltype(index_tag)::value;
 
         SDL_Color backgroundColorForText = MainWindow::backgroundColor;
 
         // Make a grey rectangle if the element is being moused over
-        if (mouseoverElementIndex == index) { // <-- test that current index is the index being mouseovered
+        if (mouseoverToolIndex == index) { // <-- test that current index is the index being mouseovered
             backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
             const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT};
@@ -68,7 +68,7 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
         // Render the text
         {
-            SDL_Surface* surface = TTF_RenderText_Shaded(button_font, Element::displayName, Element::displayColor, backgroundColorForText);
+            SDL_Surface* surface = TTF_RenderText_Shaded(button_font, Tool::displayName, Tool::displayColor, backgroundColorForText);
             SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
             int textureWidth, textureHeight;
@@ -91,17 +91,17 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int offsetY = event.y - renderArea.y;
 
     // reset the mouseover context
-    mouseoverElementIndex = MainWindow::EMPTY_INDEX;
+    mouseoverToolIndex = MainWindow::EMPTY_INDEX;
 
     // check left/right out of bounds
     if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
 
     // element index
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
-    if (index >= MainWindow::element_tags::size) return;
+    if (index >= MainWindow::tool_tags::size) return;
 
     // save the index since it is valid
-    mouseoverElementIndex = index;
+    mouseoverToolIndex = index;
 }
 
 
@@ -115,21 +115,21 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
 
     // element index
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
-    if (index >= MainWindow::element_tags::size) return;
+    if (index >= MainWindow::tool_tags::size) return;
 
     // save the index since it is valid
-    mainWindow.selectedElementIndex = index;
+    mainWindow.selectedToolIndex = index;
 
     // make a message box pop up
-    MainWindow::element_tags::get(index, [this](const auto element_tag) {
-        // 'Element' is the type of element (e.g. ConductiveWire)
-        using Element = typename decltype(element_tag)::type;
+    MainWindow::tool_tags::get(index, [this](const auto tool_tag) {
+        // 'Tool' is the type of tool (e.g. ConductiveWire)
+        using Tool = typename decltype(tool_tag)::type;
 
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Element::displayName, mainWindow.window);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Tool::displayName, mainWindow.window);
     });
 }
 
 
 void Toolbox::processMouseLeave() {
-    mouseoverElementIndex = MainWindow::EMPTY_INDEX;
+    mouseoverToolIndex = MainWindow::EMPTY_INDEX;
 }

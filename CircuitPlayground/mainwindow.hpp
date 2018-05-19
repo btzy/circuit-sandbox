@@ -19,7 +19,7 @@ class MainWindow {
 public:
 
     // compile-time type tag which stores the list of available elements
-    using element_tags = extensions::tag_tuple<Selector, Eraser, ConductiveWire, InsulatedWire>;
+    using tool_tags = extensions::tag_tuple<Selector, Eraser, ConductiveWire, InsulatedWire>;
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
@@ -80,7 +80,7 @@ public:
     /**
      * Stores the element that is selected by the toolbox.
      */
-    size_t selectedElementIndex;
+    size_t selectedToolIndex;
 
     constexpr static size_t EMPTY_INDEX = static_cast<size_t>(-1);
 
