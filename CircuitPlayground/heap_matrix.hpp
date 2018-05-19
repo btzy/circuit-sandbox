@@ -79,7 +79,7 @@ namespace extensions {
         * returns the height of the matrix
         */
         size_t height() const {
-            return _width;
+            return _height;
         }
 
         /**

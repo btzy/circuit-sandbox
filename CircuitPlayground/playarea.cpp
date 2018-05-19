@@ -64,7 +64,7 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
         }
         else {
             // if we get here, we will get a compiler error
-            static_assert(false, "Invalid tool type!");
+            static_assert(std::negation_v<std::is_same<Tool, Tool>>, "Invalid tool type!");
         }
     });
 
