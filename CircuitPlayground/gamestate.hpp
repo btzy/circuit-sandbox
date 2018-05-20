@@ -9,6 +9,7 @@
 
 #include "heap_matrix.hpp"
 #include "elements.hpp"
+#include "point.hpp"
 
 
 /**
@@ -28,7 +29,7 @@ private:
      * Modifies the dataMatrix so that the x and y will be within the matrix.
      * Returns the translation that should be applied on {x,y}.
      */
-    std::pair<int32_t, int32_t> prepareDataMatrixForAddition(int32_t x, int32_t y) {
+    extensions::point prepareDataMatrixForAddition(int32_t x, int32_t y) {
         if (dataMatrix.empty()) {
             // special case for empty matrix
             dataMatrix = extensions::heap_matrix<element_variant_t>(1, 1);
@@ -62,7 +63,7 @@ private:
     * As an optimization, will only shrink if {x,y} is along a border.
     * Returns the translation that should be applied on {x,y}.
     */
-    std::pair<int32_t, int32_t> shrinkDataMatrix(int32_t x, int32_t y) {
+    extensions::point shrinkDataMatrix(int32_t x, int32_t y) {
         
         if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
@@ -120,12 +121,12 @@ public:
 
     /**
      * Change the state of a pixel.
-     * 'Element' should be one of the elementis in 'element_variant_t', or std::monostate for the eraser
+     * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
      * Returns the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
      */
     template <typename Element>
-    std::pair<int32_t, int32_t> changePixelState(int32_t x, int32_t y) {
-        std::pair<int32_t, int32_t> translation{ 0, 0 };
+    extensions::point changePixelState(int32_t x, int32_t y) {
+        extensions::point translation{ 0, 0 };
 
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
@@ -140,8 +141,8 @@ public:
         else {
             // Element is not std::monostate, so we might need to expand the matrix size first
             translation = prepareDataMatrixForAddition(x, y);
-            x += translation.first;
-            y += translation.second;
+            x += translation.x;
+            y += translation.y;
 
             dataMatrix[{x, y}] = Element{};
         }

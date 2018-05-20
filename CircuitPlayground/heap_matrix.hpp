@@ -3,6 +3,8 @@
 #include <utility>
 #include <algorithm> // for std::copy and std::move
 
+#include "point.hpp"
+
 /**
  * Represents a generic dynamically-allocated 2D array.
  * The size of the 2d array can be set at runtime, but it is not growable.
@@ -86,16 +88,16 @@ namespace extensions {
          * indices is a pair of {x,y}
          * @pre indices must be within the bounds of width and height
          */
-        T& operator[](const std::pair<size_t, size_t>& indices) {
-            return buffer[indices.second * _width + indices.first];
+        T& operator[](const point& indices) {
+            return buffer[indices.y * _width + indices.x];
         }
 
         /**
         * indices is a pair of {x,y}
         * @pre indices must be within the bounds of width and height
         */
-        const T& operator[](const std::pair<size_t, size_t>& indices) const {
-            return buffer[indices.second * _width + indices.first];
+        const T& operator[](const point& indices) const {
+            return buffer[indices.y * _width + indices.x];
         }
 
         template <typename TSrc, typename TDest>

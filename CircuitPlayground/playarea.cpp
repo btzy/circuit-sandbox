@@ -10,6 +10,7 @@
 #include "mainwindow.hpp"
 #include "elements.hpp"
 #include "integral_division.hpp"
+#include "point.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window) {};
 
@@ -54,7 +55,16 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
 
-    // TODO: maybe some mouseover effects like draw a white rectangle around the pixel being hovered, if the zoom level is high enough?
+    // translation:
+    offsetX -= translationX;
+    offsetY -= translationY;
+
+    // scaling:
+    offsetX = extensions::div_floor(offsetX, scale);
+    offsetY = extensions::div_floor(offsetY, scale);
+
+
+    
 }
 
 
@@ -76,18 +86,18 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
         using Tool = typename decltype(tool_tag)::type;
 
         if constexpr (std::is_base_of_v<Pencil, Tool>) {
-            int32_t deltaTransX, deltaTransY;
+            extensions::point deltaTrans;
 
             // if it is a Pencil, forward the drawing to the gamestate
             if constexpr (std::is_base_of_v<Eraser, Tool>) {
-                std::tie(deltaTransX, deltaTransY) = gameState.changePixelState<std::monostate>(offsetX, offsetY); // special handling for the eraser
+                deltaTrans = gameState.changePixelState<std::monostate>(offsetX, offsetY); // special handling for the eraser
             }
             else {
-                std::tie(deltaTransX, deltaTransY) = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
+                deltaTrans = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
             }
 
-            translationX -= deltaTransX * scale;
-            translationY -= deltaTransY * scale;
+            translationX -= deltaTrans.x * scale;
+            translationY -= deltaTrans.y * scale;
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.
