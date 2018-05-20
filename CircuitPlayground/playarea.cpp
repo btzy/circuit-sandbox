@@ -71,18 +71,18 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
 void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    int offsetX = event.x - renderArea.x;
-    int offsetY = event.y - renderArea.y;
+    int physicalOffsetX = event.x - renderArea.x;
+    int physicalOffsetY = event.y - renderArea.y;
 
     // store the mouseover point
-    mouseoverPoint = extensions::point{ offsetX, offsetY };
+    mouseoverPoint = extensions::point{ physicalOffsetX, physicalOffsetY };
 
     // update translation if panning
     if (panning) {
-        translationX += offsetX - panLastX;
-        translationY += offsetY - panLastY;
-        panLastX = offsetX;
-        panLastY = offsetY;
+        translationX += physicalOffsetX - panLastX;
+        translationY += physicalOffsetY - panLastY;
+        panLastX = physicalOffsetX;
+        panLastY = physicalOffsetY;
     }
 }
 
