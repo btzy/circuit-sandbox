@@ -34,7 +34,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     SDL_RenderCopy(renderer, texture, &renderArea, &dstRect);
     SDL_DestroyTexture(texture);
     // reset the clip rect
-    SDL_RenderSetClipRect(renderer, NULL);
+    SDL_RenderSetClipRect(renderer, nullptr);
 }
 
 
