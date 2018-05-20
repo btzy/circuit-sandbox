@@ -24,10 +24,11 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
     SDL_RenderSetClipRect(renderer, &renderArea);
-    // scale and translate the surface
+    // scale and translate the surface according to the the pan and zoom level
+    // the section of the surface enclosed within renderArea is mapped to dstRect
     const SDL_Rect dstRect {
-        renderArea.x,
-        renderArea.y,
+        renderArea.x + translationX,
+        renderArea.y + translationY,
         renderArea.w * elementSize,
         renderArea.h * elementSize
     };
@@ -57,8 +58,10 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     offsetY -= translationY;
 
     // scaling:
-    offsetX /= elementSize;
-    offsetY /= elementSize;
+    offsetX = offsetX >= 0 ? offsetX / elementSize : ~(~offsetX / elementSize); // offsetX / elementSize rounded towards negative infinity
+    offsetY = offsetY >= 0 ? offsetY / elementSize : ~(~offsetY / elementSize);
+
+    printf("%d %d\n", offsetX, offsetY);
 
     MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, offsetX, offsetY](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
@@ -75,8 +78,8 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
                 std::tie(deltaTransX, deltaTransY) = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
             }
 
-            translationX -= deltaTransX;
-            translationY -= deltaTransY;
+            translationX -= deltaTransX * elementSize;
+            translationY -= deltaTransY * elementSize;
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.
