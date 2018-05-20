@@ -34,7 +34,7 @@ namespace extensions {
         heap_matrix(const heap_matrix&) = delete;
         heap_matrix& operator=(const heap_matrix&) = delete;
 
-        heap_matrix(heap_matrix&& other) :buffer(other.buffer), _width(other.width), _height(other.height) {
+        heap_matrix(heap_matrix&& other) :buffer(other.buffer), _width(other._width), _height(other._height) {
             other.buffer = nullptr;
             other._width = 0;
             other._height = 0;
