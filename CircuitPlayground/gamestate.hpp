@@ -63,6 +63,10 @@ private:
     * Returns the translation that should be applied on {x,y}.
     */
     std::pair<int32_t, int32_t> shrinkDataMatrix(int32_t x, int32_t y) {
+        if (dataMatrix.empty()) {
+            return { 0, 0 }; // for consistency - there is no observable difference in the choice of values
+        }
+
         if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
         }

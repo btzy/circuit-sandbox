@@ -17,7 +17,7 @@ void GameState::fillSurface(uint32_t* pixelBuffer, int32_t left, int32_t top, in
                     [&color](std::monostate) {},
                     [&color](auto element) {
                         // 'Element' is the type of tool (e.g. ConductiveWire)
-                        using Element = typename decltype(element);
+                        using Element = decltype(element);
 
                         color = Element::displayColor.r | (Element::displayColor.g << 8) | (Element::displayColor.b << 16);
                     },
