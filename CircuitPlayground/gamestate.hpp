@@ -34,7 +34,7 @@ private:
             dataMatrix = extensions::heap_matrix<element_variant_t>(1, 1);
             return { -x, -y };
         }
-        
+
         if (0 >= x && x < dataMatrix.width() && 0 >= y && y < dataMatrix.height()) { // check if inside the matrix
             return { 0, 0 }; // no preparation or translation needed
         }
@@ -146,4 +146,9 @@ public:
 
         return translation;
     }
+
+    /**
+     * Draw onto a surface supplied by PlayArea.
+     */
+    void fillSurface(SDL_Surface* surface) const;
 };

@@ -3,6 +3,7 @@
 #include <tuple>
 
 #include <SDL.h>
+#include <variant>
 
 #include "playarea.hpp"
 #include "mainwindow.hpp"
@@ -17,7 +18,23 @@ void PlayArea::updateDpi() {
 
 
 void PlayArea::render(SDL_Renderer* renderer) const {
-    // TODO
+    SDL_Surface* surface = SDL_CreateRGBSurface(0, renderArea.w, renderArea.h, 32, 0, 0, 0, 0);
+    gameState.fillSurface(surface);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    // set clip rect to clip off parts of the surface outside renderArea
+    SDL_RenderSetClipRect(renderer, &renderArea);
+    // scale and translate the surface
+    const SDL_Rect dstRect {
+        renderArea.x,
+        renderArea.y,
+        renderArea.w * elementSize,
+        renderArea.h * elementSize
+    };
+    SDL_RenderCopy(renderer, texture, &renderArea, &dstRect);
+    SDL_DestroyTexture(texture);
+    // reset the clip rect
+    SDL_RenderSetClipRect(renderer, NULL);
 }
 
 
@@ -38,7 +55,10 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     // translation:
     offsetX -= translationX;
     offsetY -= translationY;
-    // TODO: proper transformation of coordinates for scaling
+
+    // scaling:
+    offsetX /= elementSize;
+    offsetY /= elementSize;
 
     MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, offsetX, offsetY](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
