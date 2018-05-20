@@ -119,14 +119,6 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
 
     // save the index since it is valid
     mainWindow.selectedToolIndex = index;
-
-    // make a message box pop up
-    MainWindow::tool_tags::get(index, [this](const auto tool_tag) {
-        // 'Tool' is the type of tool (e.g. ConductiveWire)
-        using Tool = typename decltype(tool_tag)::type;
-
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Button clicked", Tool::displayName, mainWindow.window);
-    });
 }
 
 
