@@ -128,20 +128,21 @@ public:
 
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
-        if constexpr (!(std::is_same_v<std::monostate, Element>)) {
+        if constexpr (std::is_same_v<std::monostate, Element>) {
+            if (x >= 0 && x < dataMatrix.width() && y >= 0 && y < dataMatrix.height()) {
+                dataMatrix[{x, y}] = Element{};
+
+                // Element is std::monostate, so we have to see if we can shrink the matrix size
+                translation = shrinkDataMatrix(x, y);
+            }
+        }
+        else {
             // Element is not std::monostate, so we might need to expand the matrix size first
             translation = prepareDataMatrixForAddition(x, y);
             x += translation.first;
             y += translation.second;
-        }
 
-        dataMatrix[{x, y}] = Element{};
-
-        if constexpr(std::is_same_v<std::monostate, Element>) {
-            // Element is std::monostate, so we have to see if we can shrink the matrix size
-            translation = shrinkDataMatrix(x, y);
-
-            // note that shrinkDataMatrix() and prepareDataMatrixForAddition() cannot both be called.  At most one of them will be called only.
+            dataMatrix[{x, y}] = Element{};
         }
 
         return translation;
