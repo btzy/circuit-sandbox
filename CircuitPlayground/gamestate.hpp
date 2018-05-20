@@ -63,6 +63,10 @@ private:
     * Returns the translation that should be applied on {x,y}.
     */
     std::pair<int32_t, int32_t> shrinkDataMatrix(int32_t x, int32_t y) {
+        if (dataMatrix.empty()) {
+            return { 0, 0 }; // for consistency - there is no observable difference in the choice of values
+        }
+
         if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
         }
@@ -135,7 +139,9 @@ public:
             y += translation.second;
         }
 
-        dataMatrix[{x, y}] = Element{};
+        if (!dataMatrix.empty()) {
+            dataMatrix[{x, y}] = Element{};
+        }
 
         if constexpr(std::is_same_v<std::monostate, Element>) {
             // Element is std::monostate, so we have to see if we can shrink the matrix size
