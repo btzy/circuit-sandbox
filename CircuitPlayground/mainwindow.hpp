@@ -19,7 +19,7 @@ class MainWindow {
 public:
 
     // compile-time type tag which stores the list of available elements
-    using tool_tags = extensions::tag_tuple<Selector, Eraser, ConductiveWire, InsulatedWire>;
+    using tool_tags = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire>;
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
@@ -45,7 +45,7 @@ private:
     void processEvent(const SDL_Event&);
     void processWindowEvent(const SDL_WindowEvent&);
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
-    void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
+    void processMouseButtonEvent(const SDL_MouseButtonEvent&);
 
     /**
      * Renders everything to the screen

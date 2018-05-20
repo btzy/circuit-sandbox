@@ -20,6 +20,11 @@ struct Selector {
     static constexpr const char* displayName = "Selector";
 };
 
+struct Panner {
+    static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    static constexpr const char* displayName = "Panner";
+};
+
 struct Eraser : public Pencil {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     static constexpr const char* displayName = "Eraser";

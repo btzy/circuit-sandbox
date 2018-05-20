@@ -183,7 +183,8 @@ void MainWindow::processEvent(const SDL_Event& event) {
         processMouseMotionEvent(event.motion);
         break;
     case SDL_MOUSEBUTTONDOWN:
-        processMouseButtonDownEvent(event.button);
+    case SDL_MOUSEBUTTONUP:
+        processMouseButtonEvent(event.button);
         break;
     }
 }
@@ -211,13 +212,15 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 }
 
 
-void MainWindow::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
+void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     SDL_Point position{event.x, event.y};
     if (SDL_PointInRect(&position, &playArea.renderArea)) {
-        playArea.processMouseButtonDownEvent(event);
+        playArea.processMouseButtonEvent(event);
     }
     else if (SDL_PointInRect(&position, &toolbox.renderArea)) {
-        toolbox.processMouseButtonDownEvent(event);
+        if (event.type == SDL_MOUSEBUTTONDOWN) {
+            toolbox.processMouseButtonDownEvent(event);
+        }
     }
 }
 

@@ -76,43 +76,63 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     // store the mouseover point
     mouseoverPoint = extensions::point{ offsetX, offsetY };
+
+    // update translation if panning
+    if (panning) {
+        translationX += offsetX - panLastX;
+        translationY += offsetY - panLastY;
+        panLastX = offsetX;
+        panLastY = offsetY;
+    }
 }
 
 
-void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
+void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    int offsetX = event.x - renderArea.x;
-    int offsetY = event.y - renderArea.y;
+    int physicalOffsetX = event.x - renderArea.x;
+    int physicalOffsetY = event.y - renderArea.y;
 
     // translation:
-    offsetX -= translationX;
-    offsetY -= translationY;
+    int offsetX = physicalOffsetX - translationX;
+    int offsetY = physicalOffsetY - translationY;
 
     // scaling:
     offsetX = extensions::div_floor(offsetX, scale);
     offsetY = extensions::div_floor(offsetY, scale);
 
-    MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, offsetX, offsetY](const auto tool_tag) {
+    MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, event, offsetX, offsetY, physicalOffsetX, physicalOffsetY](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
         using Tool = typename decltype(tool_tag)::type;
 
         if constexpr (std::is_base_of_v<Pencil, Tool>) {
-            extensions::point deltaTrans;
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                extensions::point deltaTrans;
 
-            // if it is a Pencil, forward the drawing to the gamestate
-            if constexpr (std::is_base_of_v<Eraser, Tool>) {
-                deltaTrans = gameState.changePixelState<std::monostate>(offsetX, offsetY); // special handling for the eraser
-            }
-            else {
-                deltaTrans = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
-            }
+                // if it is a Pencil, forward the drawing to the gamestate
+                if constexpr (std::is_base_of_v<Eraser, Tool>) {
+                    deltaTrans = gameState.changePixelState<std::monostate>(offsetX, offsetY); // special handling for the eraser
+                }
+                else {
+                    deltaTrans = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
+                }
 
-            translationX -= deltaTrans.x * scale;
-            translationY -= deltaTrans.y * scale;
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
+            }
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.
             // TODO.
+        }
+        else if constexpr (std::is_base_of_v<Panner, Tool>) {
+            // it is a Panner.
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                panLastX = physicalOffsetX;
+                panLastY = physicalOffsetY;
+                panning = true;
+            } else {
+                panning = false;
+            }
         }
         else {
             // if we get here, we will get a compiler error
