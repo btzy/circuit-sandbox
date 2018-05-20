@@ -1,12 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include <SDL.h>
 
 #include "declarations.hpp"
 #include "drawable.hpp"
 #include "gamestate.hpp"
+#include "point.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -22,12 +24,16 @@ private:
     // game state
     GameState gameState;
 
-    // transformation
+    // translation (applied to gamestate before scaling)
     int32_t translationX = 0;
     int32_t translationY = 0;
 
     // length (in pixels) of each element; changes with zoom level
     int32_t scale = 20;
+
+    // point that is being mouseovered
+    // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
+    std::optional<extensions::point> mouseoverPoint;
 
 public:
     PlayArea(MainWindow&);

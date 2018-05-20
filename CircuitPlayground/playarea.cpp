@@ -28,7 +28,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     surfaceRect.w = extensions::div_ceil(renderArea.w - translationX, scale) - surfaceRect.x;
     surfaceRect.h = extensions::div_ceil(renderArea.h - translationY, scale) - surfaceRect.y;
 
-
+    // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
     gameState.fillSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -45,6 +45,25 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     };
     SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
     SDL_DestroyTexture(texture);
+
+    // render a mouseover rectangle (if the mouseoverPoint is non-empty)
+    if (mouseoverPoint) {
+        int32_t gameStateX = extensions::div_floor(mouseoverPoint->x - translationX, scale);
+        int32_t gameStateY = extensions::div_floor(mouseoverPoint->y - translationY, scale);
+
+        SDL_Rect mouseoverRect{
+            gameStateX * scale + translationX,
+            gameStateY * scale + translationY,
+            scale,
+            scale
+        };
+
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+        SDL_RenderFillRect(renderer, &mouseoverRect);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    }
+
     // reset the clip rect
     SDL_RenderSetClipRect(renderer, nullptr);
 }
@@ -55,16 +74,8 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
 
-    // translation:
-    offsetX -= translationX;
-    offsetY -= translationY;
-
-    // scaling:
-    offsetX = extensions::div_floor(offsetX, scale);
-    offsetY = extensions::div_floor(offsetY, scale);
-
-
-    
+    // store the mouseover point
+    mouseoverPoint = extensions::point{ offsetX, offsetY };
 }
 
 
@@ -114,5 +125,5 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
 
 
 void PlayArea::processMouseLeave() {
-    // TODO
+    mouseoverPoint = std::nullopt;
 }

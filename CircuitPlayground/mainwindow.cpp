@@ -57,15 +57,17 @@ MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this) {
     if (renderer == nullptr) {
         throw std::runtime_error("SDL_CreateRenderer() failed:  "s + SDL_GetError());
     }
+    
+    // if not already the default, set the blend mode to none
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
-    // update dpi again (in case the window was opened on something other than the default monitor), and do the layout
-
-    // update the two dpi member fields
+    // update dpi again (in case the window was opened on something other than the default monitor)
     if (updateDpiFields()) {
         // resize the window, if the dpi changed
         SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
     }
-
+    
+    // do the layout
     layoutComponents();
 }
 
