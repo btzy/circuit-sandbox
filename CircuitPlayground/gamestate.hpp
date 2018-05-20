@@ -4,7 +4,7 @@
 #include <variant> // for std::variant
 #include <type_traits>
 #include <algorithm> // for std::min and std::max
-#include <cstdint> // for int32_t
+#include <cstdint> // for int32_t and uint32_t
 #include <limits>
 
 #include "heap_matrix.hpp"
@@ -148,7 +148,8 @@ public:
     }
 
     /**
-     * Draw onto a surface supplied by PlayArea.
+     * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.
+     * Pixel format: pixel = R | (G << 8) | (B << 16)
      */
-    void fillSurface(SDL_Surface* surface) const;
+    void fillSurface(uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
 };

@@ -27,7 +27,7 @@ private:
     int32_t translationY = 0;
 
     // length (in pixels) of each element; changes with zoom level
-    int elementSize = 20;
+    int32_t scale = 20;
 
 public:
     PlayArea(MainWindow&);

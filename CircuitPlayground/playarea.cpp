@@ -1,6 +1,7 @@
 #include <type_traits>
 #include <variant>
 #include <tuple>
+#include <cstdint>
 
 #include <SDL.h>
 #include <variant>
@@ -8,6 +9,7 @@
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "elements.hpp"
+#include "integral_division.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window) {};
 
@@ -18,20 +20,29 @@ void PlayArea::updateDpi() {
 
 
 void PlayArea::render(SDL_Renderer* renderer) const {
-    SDL_Surface* surface = SDL_CreateRGBSurface(0, renderArea.w, renderArea.h, 32, 0, 0, 0, 0);
-    gameState.fillSurface(surface);
+    // calculate the rectangle (in gamestate coordinates) that we will be drawing:
+    SDL_Rect surfaceRect;
+    surfaceRect.x = extensions::div_floor(-translationX, scale);
+    surfaceRect.y = extensions::div_floor(-translationY, scale);
+    surfaceRect.w = extensions::div_ceil(renderArea.w - translationX, scale) - surfaceRect.x;
+    surfaceRect.h = extensions::div_ceil(renderArea.h - translationY, scale) - surfaceRect.y;
+
+
+    SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
+    gameState.fillSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
     SDL_RenderSetClipRect(renderer, &renderArea);
-    // scale and translate the surface
+    // scale and translate the surface according to the the pan and zoom level
+    // the section of the surface enclosed within surfaceRect is mapped to dstRect
     const SDL_Rect dstRect {
-        renderArea.x,
-        renderArea.y,
-        renderArea.w * elementSize,
-        renderArea.h * elementSize
+        renderArea.x + surfaceRect.x * scale + translationX,
+        renderArea.y + surfaceRect.y * scale + translationY,
+        surfaceRect.w * scale,
+        surfaceRect.h * scale
     };
-    SDL_RenderCopy(renderer, texture, &renderArea, &dstRect);
+    SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
     SDL_DestroyTexture(texture);
     // reset the clip rect
     SDL_RenderSetClipRect(renderer, nullptr);
@@ -57,8 +68,8 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     offsetY -= translationY;
 
     // scaling:
-    offsetX /= elementSize;
-    offsetY /= elementSize;
+    offsetX = extensions::div_floor(offsetX, scale);
+    offsetY = extensions::div_floor(offsetY, scale);
 
     MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, offsetX, offsetY](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
@@ -75,8 +86,8 @@ void PlayArea::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
                 std::tie(deltaTransX, deltaTransY) = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
             }
 
-            translationX -= deltaTransX;
-            translationY -= deltaTransY;
+            translationX -= deltaTransX * scale;
+            translationY -= deltaTransY * scale;
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.

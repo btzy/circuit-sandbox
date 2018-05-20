@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL.h>
+
 /**
  * This header file contains the definitions for all the elements in the game.
  */
