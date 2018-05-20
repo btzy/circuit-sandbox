@@ -186,6 +186,9 @@ void MainWindow::processEvent(const SDL_Event& event) {
     case SDL_MOUSEBUTTONUP:
         processMouseButtonEvent(event.button);
         break;
+    case SDL_MOUSEWHEEL:
+        processMouseWheelEvent(event.wheel);
+        break;
     }
 }
 
@@ -221,6 +224,15 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         if (event.type == SDL_MOUSEBUTTONDOWN) {
             toolbox.processMouseButtonDownEvent(event);
         }
+    }
+}
+
+void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
+    SDL_Point position;
+    // poll the mouse position since it's not reflected in the event
+    SDL_GetMouseState(&position.x, &position.y);
+    if (SDL_PointInRect(&position, &playArea.renderArea)) {
+        playArea.processMouseWheelEvent(event);
     }
 }
 

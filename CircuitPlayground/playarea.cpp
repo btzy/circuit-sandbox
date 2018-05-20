@@ -143,6 +143,14 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     // TODO
 }
 
+void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
+    if (event.y > 0) {
+        scale++;
+    } else {
+        scale--;
+    }
+}
+
 
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;

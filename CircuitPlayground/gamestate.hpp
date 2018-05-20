@@ -64,7 +64,7 @@ private:
     * Returns the translation that should be applied on {x,y}.
     */
     extensions::point shrinkDataMatrix(int32_t x, int32_t y) {
-        
+
         if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
         }

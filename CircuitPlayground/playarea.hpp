@@ -59,6 +59,7 @@ public:
     */
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonEvent(const SDL_MouseButtonEvent&);
+    void processMouseWheelEvent(const SDL_MouseWheelEvent&);
 
 
     /**
