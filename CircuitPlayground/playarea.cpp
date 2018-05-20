@@ -144,9 +144,11 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 }
 
 void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
-    if (event.y > 0) {
+    int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
+    if (scrollAmount > 0) {
         scale++;
-    } else {
+    }
+    else if (scrollAmount < 0) {
         scale--;
     }
 }
