@@ -99,7 +99,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     offsetX = extensions::div_floor(offsetX, scale);
     offsetY = extensions::div_floor(offsetY, scale);
 
-    MainWindow::tool_tags::get(mainWindow.selectedToolIndex, [this, event, offsetX, offsetY, physicalOffsetX, physicalOffsetY](const auto tool_tag) {
+    MainWindow::tool_tags::get(mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)], [this, event, offsetX, offsetY, physicalOffsetX, physicalOffsetY](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
         using Tool = typename decltype(tool_tag)::type;
 
@@ -147,9 +147,9 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
         int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
         int32_t offsetX = extensions::div_floor(mouseoverPoint->x - translationX + scale / 2, scale); // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
         int32_t offsetY = extensions::div_floor(mouseoverPoint->y - translationY + scale / 2, scale);
+        
         if (scrollAmount > 0) {
             scale++;
-            
             translationX -= offsetX;
             translationY -= offsetY;
         }

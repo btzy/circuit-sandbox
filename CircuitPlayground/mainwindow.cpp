@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <string>
 #include <numeric>
+#include <algorithm>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -31,6 +32,9 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 
 
 MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this) {
+
+    // unset all the input handle selection state
+    std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
 
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);

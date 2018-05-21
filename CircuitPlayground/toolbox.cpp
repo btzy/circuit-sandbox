@@ -118,7 +118,7 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     if (index >= MainWindow::tool_tags::size) return;
 
     // save the index since it is valid
-    mainWindow.selectedToolIndex = index;
+    mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)] = index;
 }
 
 
