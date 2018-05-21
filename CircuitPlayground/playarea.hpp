@@ -24,11 +24,11 @@ private:
     // game state
     GameState gameState;
 
-    // translation (applied to gamestate before scaling)
+    // translation (in physical pixels)
     int32_t translationX = 0;
     int32_t translationY = 0;
 
-    // length (in pixels) of each element; changes with zoom level
+    // length (in physical pixels) of each element; changes with zoom level
     int32_t scale = 20;
 
     // point that is being mouseovered
