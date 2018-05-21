@@ -2,6 +2,7 @@
 #include <type_traits>
 #include <string>
 #include <cstring>
+#include <algorithm>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -49,6 +50,17 @@ void Toolbox::render(SDL_Renderer* renderer) const {
     }
 
 
+
+    // draw the selection rectangles
+    for (size_t i = 0; i != NUM_INPUT_HANDLES; ++i) {
+        if (mainWindow.selectedToolIndices[i] != MainWindow::EMPTY_INDEX) {
+            SDL_SetRenderDrawColor(renderer, selectorHandleColors[i].r, selectorHandleColors[i].g, selectorHandleColors[i].b, selectorHandleColors[i].a);
+            const SDL_Rect destRect{ renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(mainWindow.selectedToolIndices[i]), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT };
+            SDL_RenderFillRect(renderer, &destRect);
+        }
+    }
+
+
     // draw the buttons to the screen one-by-one
     MainWindow::tool_tags::for_each([this, renderer, button_font](const auto tool_tag, const auto index_tag) {
         // 'Tool' is the type of tool (e.g. ConductiveWire)
@@ -58,11 +70,14 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
         SDL_Color backgroundColorForText = MainWindow::backgroundColor;
 
-        // Make a grey rectangle if the element is being moused over
-        if (mouseoverToolIndex == index) { // <-- test that current index is the index being mouseovered
-            backgroundColorForText = SDL_Color{0x44, 0x44, 0x44, 0xFF};
+        // Make a grey rectangle if the element is being moused over, otherwise make a black rectangle
+
+        {
+            if (mouseoverToolIndex == index) { // <-- test that current index is the index being mouseovered
+                backgroundColorForText = SDL_Color{ 0x44, 0x44, 0x44, 0xFF };
+            }
             SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
-            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL, renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index), renderArea.w - 2 * PADDING_HORIZONTAL, BUTTON_HEIGHT};
+            const SDL_Rect destRect{ renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING, renderArea.y + PADDING_VERTICAL + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(index) + BUTTON_PADDING, renderArea.w - 2 * (PADDING_HORIZONTAL + BUTTON_PADDING), BUTTON_HEIGHT - 2 * BUTTON_PADDING };
             SDL_RenderFillRect(renderer, &destRect);
         }
 
@@ -74,11 +89,12 @@ void Toolbox::render(SDL_Renderer* renderer) const {
             int textureWidth, textureHeight;
             SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
             // the complicated calculation here makes the text vertically-centered and horizontally displaced by 2 logical pixels
-            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + mainWindow.logicalToPhysicalSize(2), renderArea.y + PADDING_VERTICAL + BUTTON_HEIGHT * static_cast<int>(index) + (BUTTON_HEIGHT - textureHeight) / 2, textureWidth, textureHeight};
+            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING + mainWindow.logicalToPhysicalSize(4), renderArea.y + PADDING_VERTICAL + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(index) + (BUTTON_HEIGHT - textureHeight) / 2, textureWidth, textureHeight};
             SDL_RenderCopy(renderer, texture, nullptr, &destRect);
             SDL_DestroyTexture(texture);
         }
     });
+
 
     // free the font so we don't leak memory
     TTF_CloseFont(button_font);
@@ -117,8 +133,18 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
     if (index >= MainWindow::tool_tags::size) return;
 
-    // save the index since it is valid
-    mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)] = index;
+    // if there is already a handle binded to this tool, then swap the handles
+    auto it = std::find(mainWindow.selectedToolIndices, mainWindow.selectedToolIndices + NUM_INPUT_HANDLES, index);
+    if (it == mainWindow.selectedToolIndices + NUM_INPUT_HANDLES) {
+        // cannot find an existing handle
+        mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)] = index;
+    }
+    else {
+        // can find an existing handle
+        using std::swap;
+        swap(mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)], *it);
+    }
+    
 }
 
 

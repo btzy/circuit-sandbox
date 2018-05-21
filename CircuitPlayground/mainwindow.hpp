@@ -76,10 +76,7 @@ public:
     SDL_Renderer* renderer;
 
 
-    /**
-     * The number of distinct "input handles": 5 (SDL2 supports this many mouse buttons) + 1 (for touch input)
-     */
-    constexpr static size_t NUM_INPUT_HANDLES = 6;
+    
 
     /**
      * Resolve the mouse button event to the input handle index (used with 'selectedToolIndices');

@@ -18,17 +18,33 @@ private:
     MainWindow& mainWindow;
 
     // logical units
-    constexpr static int LOGICAL_BUTTON_HEIGHT = 20;
+    constexpr static int LOGICAL_BUTTON_HEIGHT = 24;
     constexpr static int LOGICAL_PADDING_HORIZONTAL = 8;
     constexpr static int LOGICAL_PADDING_VERTICAL = 8;
+    constexpr static int LOGICAL_BUTTON_PADDING = 2;
+    constexpr static int LOGICAL_BUTTON_SPACING = 2;
 
     // physical units
     int BUTTON_HEIGHT = LOGICAL_BUTTON_HEIGHT;
     int PADDING_HORIZONTAL = LOGICAL_PADDING_HORIZONTAL;
     int PADDING_VERTICAL = LOGICAL_PADDING_VERTICAL;
+    int BUTTON_PADDING = LOGICAL_BUTTON_PADDING;
+    int BUTTON_SPACING = LOGICAL_BUTTON_SPACING;
 
     // the index of the element being mouseovered
     size_t mouseoverToolIndex;
+
+    /**
+     * The colour of the each handle
+     */
+    constexpr static SDL_Color selectorHandleColors[NUM_INPUT_HANDLES] = {
+        { 0xFF, 0xFF, 0, SDL_ALPHA_OPAQUE },
+        { 0xFF, 0, 0, SDL_ALPHA_OPAQUE },
+        { 0, 0xFF, 0, SDL_ALPHA_OPAQUE },
+        { 0x55, 0x55, 0xFF, SDL_ALPHA_OPAQUE },
+        { 0, 0xCC, 0xFF, SDL_ALPHA_OPAQUE },
+        { 0xCC, 0, 0xFF, SDL_ALPHA_OPAQUE }
+    };
 
 public:
 
