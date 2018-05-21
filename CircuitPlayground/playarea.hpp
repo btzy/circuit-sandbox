@@ -36,8 +36,6 @@ private:
     std::optional<extensions::point> mouseoverPoint;
 
     bool panning = false; // whether panning is active
-    int32_t panLastX;
-    int32_t panLastY;
 
 public:
     PlayArea(MainWindow&);

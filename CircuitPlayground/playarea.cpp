@@ -74,16 +74,15 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int physicalOffsetX = event.x - renderArea.x;
     int physicalOffsetY = event.y - renderArea.y;
 
-    // store the mouseover point
-    mouseoverPoint = extensions::point{ physicalOffsetX, physicalOffsetY };
-
+    
     // update translation if panning
-    if (panning) {
-        translationX += physicalOffsetX - panLastX;
-        translationY += physicalOffsetY - panLastY;
-        panLastX = physicalOffsetX;
-        panLastY = physicalOffsetY;
+    if (panning && mouseoverPoint) {
+        translationX += physicalOffsetX - mouseoverPoint->x;
+        translationY += physicalOffsetY - mouseoverPoint->y;
     }
+
+    // store the new mouseover point
+    mouseoverPoint = extensions::point{ physicalOffsetX, physicalOffsetY };
 }
 
 
@@ -127,8 +126,6 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         else if constexpr (std::is_base_of_v<Panner, Tool>) {
             // it is a Panner.
             if (event.type == SDL_MOUSEBUTTONDOWN) {
-                panLastX = physicalOffsetX;
-                panLastY = physicalOffsetY;
                 panning = true;
             } else {
                 panning = false;
