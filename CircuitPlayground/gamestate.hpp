@@ -155,4 +155,9 @@ public:
      * Pixel format: pixel = R | (G << 8) | (B << 16)
      */
     void fillSurface(uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
+
+    /**
+     * Take a snapshot of the gamestate and save it in the history
+     */
+    void saveToHistory();
 };

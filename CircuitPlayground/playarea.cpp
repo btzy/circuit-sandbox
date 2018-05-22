@@ -74,7 +74,19 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int physicalOffsetX = event.x - renderArea.x;
     int physicalOffsetY = event.y - renderArea.y;
 
-    
+    if (drawingIndex && mouseoverPoint) {
+        int offsetX = physicalOffsetX - translationX;
+        int offsetY = physicalOffsetY - translationY;
+        offsetX = extensions::div_floor(offsetX, scale);
+        offsetY = extensions::div_floor(offsetY, scale);
+        MainWindow::tool_tags::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
+            using Tool = typename decltype(tool_tag)::type;
+            if constexpr (std::is_base_of_v<Pencil, Tool>) {
+                processDrawingTool<Tool>(offsetX, offsetY);
+            }
+        });
+    }
+
     // update translation if panning
     if (panning && mouseoverPoint) {
         translationX += physicalOffsetX - mouseoverPoint->x;
@@ -99,24 +111,25 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     offsetX = extensions::div_floor(offsetX, scale);
     offsetY = extensions::div_floor(offsetY, scale);
 
-    MainWindow::tool_tags::get(mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)], [this, event, offsetX, offsetY, physicalOffsetX, physicalOffsetY](const auto tool_tag) {
+    size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
+    MainWindow::tool_tags::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, offsetX, offsetY, inputHandleIndex](const auto tool_tag) {
         // 'Element' is the type of element (e.g. ConductiveWire)
         using Tool = typename decltype(tool_tag)::type;
 
         if constexpr (std::is_base_of_v<Pencil, Tool>) {
             if (event.type == SDL_MOUSEBUTTONDOWN) {
-                extensions::point deltaTrans;
-
-                // if it is a Pencil, forward the drawing to the gamestate
-                if constexpr (std::is_base_of_v<Eraser, Tool>) {
-                    deltaTrans = gameState.changePixelState<std::monostate>(offsetX, offsetY); // special handling for the eraser
+                // If another drawing tool is in use, break that action and start a new one
+                if (drawingIndex) {
+                    gameState.saveToHistory();
                 }
-                else {
-                    deltaTrans = gameState.changePixelState<Tool>(offsetX, offsetY); // forwarding for the normal elements
+                drawingIndex = inputHandleIndex;
+                processDrawingTool<Tool>(offsetX, offsetY);
+            } else {
+                // Break the current drawing action if the mouseup is from that tool
+                if (inputHandleIndex == drawingIndex) {
+                    drawingIndex = std::nullopt;
+                    gameState.saveToHistory();
                 }
-
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
             }
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {

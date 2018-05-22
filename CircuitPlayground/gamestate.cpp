@@ -27,3 +27,7 @@ void GameState::fillSurface(uint32_t* pixelBuffer, int32_t left, int32_t top, in
         }
     }
 }
+
+void GameState::saveToHistory() {
+    // TODO
+}

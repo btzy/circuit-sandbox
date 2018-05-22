@@ -35,6 +35,7 @@ private:
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<extensions::point> mouseoverPoint;
 
+    std::optional<size_t> drawingIndex = std::nullopt; // input handle index of currently drawing tool
     bool panning = false; // whether panning is active
 
 public:
@@ -65,4 +66,22 @@ public:
     */
     void processMouseLeave();
 
+    /**
+     * Use a drawing tool on (x, y)
+     */
+    template <typename Tool>
+    void processDrawingTool(int32_t x, int32_t y) {
+        extensions::point deltaTrans;
+
+        // if it is a Pencil, forward the drawing to the gamestate
+        if constexpr (std::is_base_of_v<Eraser, Tool>) {
+            deltaTrans = gameState.changePixelState<std::monostate>(x, y); // special handling for the eraser
+        }
+        else {
+            deltaTrans = gameState.changePixelState<Tool>(x, y); // forwarding for the normal elements
+        }
+
+        translationX -= deltaTrans.x * scale;
+        translationY -= deltaTrans.y * scale;
+    }
 };
