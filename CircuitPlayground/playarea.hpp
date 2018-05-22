@@ -35,7 +35,7 @@ private:
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<extensions::point> mouseoverPoint;
 
-    std::optional<size_t> drawingIndex = std::nullopt; // input handle index of currently drawing tool
+    std::optional<size_t> drawingIndex = std::nullopt; // input handle index of the active drawing tool
     bool panning = false; // whether panning is active
 
 public:

@@ -76,7 +76,7 @@ public:
     SDL_Renderer* renderer;
 
 
-    
+
 
     /**
      * Resolve the mouse button event to the input handle index (used with 'selectedToolIndices');

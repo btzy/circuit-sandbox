@@ -76,7 +76,7 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     SDL_Point position{event.x, event.y};
 
-    if (drawingIndex && mouseoverPoint && SDL_PointInRect(&position, &renderArea)) {
+    if (drawingIndex && SDL_PointInRect(&position, &renderArea)) {
         int offsetX = physicalOffsetX - translationX;
         int offsetY = physicalOffsetY - translationY;
         offsetX = extensions::div_floor(offsetX, scale);
@@ -115,7 +115,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 
     size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
     MainWindow::tool_tags::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, offsetX, offsetY, inputHandleIndex](const auto tool_tag) {
-        // 'Element' is the type of element (e.g. ConductiveWire)
+        // 'Tool' is the type of tool (e.g. Selector)
         using Tool = typename decltype(tool_tag)::type;
 
         if constexpr (std::is_base_of_v<Pencil, Tool>) {
@@ -158,7 +158,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     if (mouseoverPoint) {
         // change the scale factor,
-        // and adjust the translation so that the scaling pixots on the pixel that the mouse is over
+        // and adjust the translation so that the scaling pivots on the pixel that the mouse is over
         int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
         int32_t offsetX = extensions::div_floor(mouseoverPoint->x - translationX + scale / 2, scale); // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
         int32_t offsetY = extensions::div_floor(mouseoverPoint->y - translationY + scale / 2, scale);

@@ -228,7 +228,7 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         if (event.type == SDL_MOUSEBUTTONDOWN) {
             toolbox.processMouseButtonDownEvent(event);
         } else {
-            // forward mouseup event to toolbox
+            // forward mouseup event to playArea
             playArea.processMouseButtonEvent(event);
         }
     }
