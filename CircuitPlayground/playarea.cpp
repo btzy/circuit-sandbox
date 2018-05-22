@@ -74,7 +74,9 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     int physicalOffsetX = event.x - renderArea.x;
     int physicalOffsetY = event.y - renderArea.y;
 
-    if (drawingIndex && mouseoverPoint) {
+    SDL_Point position{event.x, event.y};
+
+    if (drawingIndex && mouseoverPoint && SDL_PointInRect(&position, &renderArea)) {
         int offsetX = physicalOffsetX - translationX;
         int offsetY = physicalOffsetY - translationY;
         offsetX = extensions::div_floor(offsetX, scale);

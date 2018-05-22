@@ -227,6 +227,9 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     else if (SDL_PointInRect(&position, &toolbox.renderArea)) {
         if (event.type == SDL_MOUSEBUTTONDOWN) {
             toolbox.processMouseButtonDownEvent(event);
+        } else {
+            // forward mouseup event to toolbox
+            playArea.processMouseButtonEvent(event);
         }
     }
 }
