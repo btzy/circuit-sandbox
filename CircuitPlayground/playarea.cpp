@@ -30,7 +30,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
     // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
-    gameState.fillSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    stateManager.fillSurface(false, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
@@ -122,7 +122,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 // If another drawing tool is in use, break that action and start a new one
                 if (drawingIndex) {
-                    gameState.saveToHistory();
+                    stateManager.saveToHistory();
                 }
                 drawingIndex = inputHandleIndex;
                 processDrawingTool<Tool>(offsetX, offsetY);
@@ -130,7 +130,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                 // Break the current drawing action if the mouseup is from that tool
                 if (inputHandleIndex == drawingIndex) {
                     drawingIndex = std::nullopt;
-                    gameState.saveToHistory();
+                    stateManager.saveToHistory();
                 }
             }
         }

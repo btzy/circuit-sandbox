@@ -7,13 +7,13 @@
 
 #include "declarations.hpp"
 #include "drawable.hpp"
-#include "gamestate.hpp"
+#include "statemanager.hpp"
 #include "point.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
  * This class handles the drawing onto the game canvas, including all the necessary translation and scaling (due to the adjustable zoom level and panning).
- * This class owns the GameState object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
+ * This class owns the StateManager object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
  */
 
 class PlayArea : public Drawable {
@@ -22,7 +22,7 @@ private:
     MainWindow& mainWindow;
 
     // game state
-    GameState gameState;
+    StateManager stateManager;
 
     // translation (in physical pixels)
     int32_t translationX = 0;
@@ -75,10 +75,10 @@ public:
 
         // if it is a Pencil, forward the drawing to the gamestate
         if constexpr (std::is_base_of_v<Eraser, Tool>) {
-            deltaTrans = gameState.changePixelState<std::monostate>(x, y); // special handling for the eraser
+            deltaTrans = stateManager.changePixelState<std::monostate>(x, y); // special handling for the eraser
         }
         else {
-            deltaTrans = gameState.changePixelState<Tool>(x, y); // forwarding for the normal elements
+            deltaTrans = stateManager.changePixelState<Tool>(x, y); // forwarding for the normal elements
         }
 
         translationX -= deltaTrans.x * scale;

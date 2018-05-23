@@ -2,7 +2,7 @@
 
 /**
  * Simulator class, which runs the simulation (on a different thread)
- * GameState class should invoke this class with the heap_matrix of underlying data (?)
+ * StateManager class should invoke this class with the heap_matrix of underlying data (?)
  * All communication with the simulation engine should use this class
  */
 
@@ -18,19 +18,32 @@ private:
 public:
     
     /**
-     * Compiles and starts (runs) the simulation using the given game state matrix
-     * If there is already a compiled simulation, do not recompile the gamestate
+     * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
      */
-    void startOrResume(GameState::matrix_t gameState);
+    void compile(const GameState& gameState);
     
     /**
-     * Pauses the simulation (but does not destroy the compiled simulation)
+     * Start running the simulation.
+     * @pre simulation is currently stopped.
      */
-    void pause();
+    void start();
 
     /**
-     * Stops and destroys the simulation.
-     * Used when the gamestate was changed by the user, and we definitely need to recompile the simulation anyway.
+     * Stops (i.e. pauses) the simulation.
+     * @pre simulation is currently running.
      */
     void stop();
+
+    /**
+    * Returns true if the simulation is currently running, false otherwise.
+    */
+    bool running() const {
+        // TODO.
+    }
+
+    /**
+     * Take a "snapshot" of the current simulation state, and write it to the supplied argument.
+     * This works regardless whether the simulation is running or stopped.
+     */
+    GameState takeSnapshot() const;
 };

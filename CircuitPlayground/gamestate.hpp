@@ -1,5 +1,11 @@
 #pragma once
 
+/**
+ * Represents the state of the saveable game data.
+ * All the game state that needs to be saved to disk should reside in this class.
+ * Exposes functions for resizing and editing the canvas
+ */
+
 #include <utility> // for std::pair
 #include <variant> // for std::variant
 #include <type_traits>
@@ -11,24 +17,18 @@
 #include "elements.hpp"
 #include "point.hpp"
 
-
-/**
- * Represents the state of the saveable game data.
- * All the game state that needs to be saved to disk should reside in this class.
- * Exposes functions for resizing and editing the canvas
- */
-
 class GameState {
-
 private:
     // std::monostate is a 'default' state, which represents an empty pixel
     using element_variant_t = std::variant<std::monostate, ConductiveWire, InsulatedWire>;
     extensions::heap_matrix<element_variant_t> dataMatrix;
 
+    friend class StateManager;
+
     /**
-     * Modifies the dataMatrix so that the x and y will be within the matrix.
-     * Returns the translation that should be applied on {x,y}.
-     */
+    * Modifies the dataMatrix so that the x and y will be within the matrix.
+    * Returns the translation that should be applied on {x,y}.
+    */
     extensions::point prepareDataMatrixForAddition(int32_t x, int32_t y) {
         if (dataMatrix.empty()) {
             // special case for empty matrix
@@ -117,10 +117,6 @@ public:
 
     using matrix_t = extensions::heap_matrix<element_variant_t>;
 
-    GameState() {
-        // nothing to initialize; 'dataMatrix' is default initialized to the std::monostate
-    }
-
     /**
      * Change the state of a pixel.
      * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
@@ -151,15 +147,4 @@ public:
 
         return translation;
     }
-
-    /**
-     * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.
-     * Pixel format: pixel = R | (G << 8) | (B << 16)
-     */
-    void fillSurface(uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
-
-    /**
-     * Take a snapshot of the gamestate and save it in the history
-     */
-    void saveToHistory();
 };
