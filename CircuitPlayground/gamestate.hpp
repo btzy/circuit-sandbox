@@ -115,6 +115,8 @@ private:
 
 public:
 
+    using matrix_t = extensions::heap_matrix<element_variant_t>;
+
     GameState() {
         // nothing to initialize; 'dataMatrix' is default initialized to the std::monostate
     }
