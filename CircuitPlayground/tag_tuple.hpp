@@ -53,7 +53,7 @@ namespace extensions {
 
 
         /**
-         * Invokes callback(tag<T>) for each T, in order.
+         * Invokes callback(tag<T>, integral_constant<size_t, I>) for each T, in order.
          */
         template <typename Callback>
         inline static void for_each(Callback&& callback) {

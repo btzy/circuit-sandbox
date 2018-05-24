@@ -1,10 +1,7 @@
 #include <variant>
 
 #include "statemanager.hpp"
-
-// this lets us combine lambdas into visitors (not sure if this is the right file to put it)
-template<class... Ts> struct visitor : Ts... { using Ts::operator()...; };
-template<class... Ts> visitor(Ts...) -> visitor<Ts...>;
+#include "visitor.hpp"
 
 void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
     
@@ -20,13 +17,14 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
                 if (x >= 0 && x < renderGameState.dataMatrix.width() && y >= 0 && y < renderGameState.dataMatrix.height()) {
                     std::visit(visitor{
                         [&color](std::monostate) {},
-                        [&color](auto element) {
-                        // 'Element' is the type of tool (e.g. ConductiveWire)
-                        using Element = decltype(element);
+                        [&color](const auto& element) {
+                            // 'Element' is the type of tool (e.g. ConductiveWire)
+                            //using Element = decltype(element);
 
-                        color = Element::displayColor.r | (Element::displayColor.g << 8) | (Element::displayColor.b << 16);
-                    },
-                        }, renderGameState.dataMatrix[{x, y}]);
+                            SDL_Color computedColor = computeDisplayColor(element);
+                            color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
+                        },
+                    }, renderGameState.dataMatrix[{x, y}]);
                 }
                 *pixelBuffer++ = color;
             }

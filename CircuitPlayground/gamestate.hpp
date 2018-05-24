@@ -20,7 +20,7 @@
 class GameState {
 private:
     // std::monostate is a 'default' state, which represents an empty pixel
-    using element_variant_t = std::variant<std::monostate, ConductiveWire, InsulatedWire>;
+    using element_variant_t = std::variant<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
     extensions::heap_matrix<element_variant_t> dataMatrix;
 
     friend class StateManager;

@@ -19,7 +19,7 @@ class MainWindow {
 public:
 
     // compile-time type tag which stores the list of available elements
-    using tool_tags = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire>;
+    using tool_tags = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
