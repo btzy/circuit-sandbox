@@ -24,6 +24,7 @@ private:
     extensions::heap_matrix<element_variant_t> dataMatrix;
 
     friend class StateManager;
+    friend class Simulator;
 
     /**
     * Modifies the dataMatrix so that the x and y will be within the matrix.
@@ -36,17 +37,17 @@ private:
             return { -x, -y };
         }
 
-        if (0 >= x && x < dataMatrix.width() && 0 >= y && y < dataMatrix.height()) { // check if inside the matrix
+        if (0 <= x && x < dataMatrix.width() && 0 <= y && y < dataMatrix.height()) { // check if inside the matrix
             return { 0, 0 }; // no preparation or translation needed
         }
 
         int32_t x_min = std::min(x, 0);
-        int32_t x_max = std::max(x + 1, static_cast<int32_t>(dataMatrix.width()));
+        int32_t x_max = std::max(x + 1, dataMatrix.width());
         int32_t x_translation = -x_min;
         int32_t new_width = x_max + x_translation;
 
         int32_t y_min = std::min(y, 0);
-        int32_t y_max = std::max(y + 1, static_cast<int32_t>(dataMatrix.height()));
+        int32_t y_max = std::max(y + 1, dataMatrix.height());
         int32_t y_translation = -y_min;
         int32_t new_height = y_max + y_translation;
 

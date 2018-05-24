@@ -113,8 +113,11 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
+    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / (BUTTON_HEIGHT + BUTTON_SPACING));
     if (index >= MainWindow::tool_tags::size) return;
+
+    // check if the mouse is on the button spacing instead of on the actual button
+    if ((offsetY - PADDING_VERTICAL) - index * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;
 
     // save the index since it is valid
     mouseoverToolIndex = index;
@@ -130,8 +133,11 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
     if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
 
     // element index
-    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / BUTTON_HEIGHT);
+    size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / (BUTTON_HEIGHT + BUTTON_SPACING));
     if (index >= MainWindow::tool_tags::size) return;
+
+    // check if the mouse is on the button spacing instead of on the actual button
+    if ((offsetY - PADDING_VERTICAL) - index * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;
 
     // if there is already a handle binded to this tool, then swap the handles
     auto it = std::find(mainWindow.selectedToolIndices, mainWindow.selectedToolIndices + NUM_INPUT_HANDLES, index);

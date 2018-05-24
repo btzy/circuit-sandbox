@@ -62,3 +62,8 @@ void StateManager::startSimulator() {
 void StateManager::stopSimulator() {
     simulator.stop();
 }
+
+
+void StateManager::clearLiveView() {
+    simulator.clear();
+}

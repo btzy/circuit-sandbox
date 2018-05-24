@@ -193,6 +193,8 @@ void MainWindow::processEvent(const SDL_Event& event) {
     case SDL_MOUSEWHEEL:
         processMouseWheelEvent(event.wheel);
         break;
+    case SDL_KEYDOWN:
+        processKeyboardEvent(event.key);
     }
 }
 
@@ -241,6 +243,11 @@ void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     if (SDL_PointInRect(&position, &playArea.renderArea)) {
         playArea.processMouseWheelEvent(event);
     }
+}
+
+
+void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
+    playArea.processKeyboardEvent(event);
 }
 
 

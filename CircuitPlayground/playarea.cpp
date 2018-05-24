@@ -30,7 +30,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
     // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
-    stateManager.fillSurface(false, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    stateManager.fillSurface(liveView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
@@ -62,6 +62,18 @@ void PlayArea::render(SDL_Renderer* renderer) const {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
         SDL_RenderFillRect(renderer, &mouseoverRect);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    }
+
+    // draw a square at the top left to denote the live view (TODO: make it a border or something nicer)
+    if (liveView) {
+        SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
+        SDL_Rect squareBox{
+            renderArea.x,
+            renderArea.y,
+            mainWindow.logicalToPhysicalSize(10),
+            mainWindow.logicalToPhysicalSize(10)
+        };
+        SDL_RenderFillRect(renderer, &squareBox);
     }
 
     // reset the clip rect
@@ -179,4 +191,29 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
 
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
+}
+
+
+
+void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
+    // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
+    if (event.type == SDL_KEYDOWN) {
+        switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+        case SDL_SCANCODE_T:
+            // the 'T' key, used to toggle default/live view
+            if (!liveView) {
+                liveView = true;
+                // if we changed to liveView, recompile the state and start the simulator (TODO: change to something more appropriate after discussions)
+                stateManager.resetLiveView();
+                stateManager.startSimulator();
+            }
+            else {
+                liveView = false;
+                // TODO: change to something more appropriate
+                stateManager.stopSimulator();
+                stateManager.clearLiveView();
+            }
+            break;
+        }
+    }
 }

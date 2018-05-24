@@ -17,8 +17,8 @@ namespace extensions {
 
     private:
         T* buffer; // pointer to the buffer that stores all the data; each row is a continguous range of elements
-        size_t _width;
-        size_t _height;
+        int32_t _width;
+        int32_t _height;
 
     public:
 
@@ -52,7 +52,7 @@ namespace extensions {
             }
         }
 
-        heap_matrix(size_t width, size_t height): _width(width), _height(height) {
+        heap_matrix(int32_t width, int32_t height): _width(width), _height(height) {
             if (_width == 0 || _height == 0) {
                 buffer = nullptr;
                 _width = 0;
@@ -73,14 +73,14 @@ namespace extensions {
         /**
         * returns the width of the matrix
         */
-        size_t width() const {
+        int32_t width() const {
             return _width;
         }
 
         /**
         * returns the height of the matrix
         */
-        size_t height() const {
+        int32_t height() const {
             return _height;
         }
 
@@ -101,10 +101,10 @@ namespace extensions {
         }
 
         template <typename TSrc, typename TDest>
-        friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height);
+        friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height);
 
         template <typename TSrc, typename TDest>
-        friend inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height);
+        friend inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height);
     };
 
     /**
@@ -112,10 +112,10 @@ namespace extensions {
     * @pre the rectangles should be within the bounds of their respective matrices
     */
     template <typename TSrc, typename TDest>
-    inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height) {
+    inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) {
         const TSrc* src_buffer = src.buffer;
         TDest* dest_buffer = dest.buffer;
-        for (size_t i = 0; i < height; ++i) {
+        for (int32_t i = 0; i < height; ++i) {
             std::copy(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
             src_buffer += src._width;
             dest_buffer += dest._width;
@@ -127,10 +127,10 @@ namespace extensions {
     * @pre the rectangles should be within the bounds of their respective matrices
     */
     template <typename TSrc, typename TDest>
-    inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, size_t src_x, size_t src_y, size_t dest_x, size_t dest_y, size_t width, size_t height) {
+    inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) {
         TSrc* src_buffer = src.buffer + src_y * src._width;
         TDest* dest_buffer = dest.buffer + dest_y * dest._width;
-        for (size_t i = 0; i < height; ++i) {
+        for (int32_t i = 0; i < height; ++i) {
             std::move(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
             src_buffer += src._width;
             dest_buffer += dest._width;

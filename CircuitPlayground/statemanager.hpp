@@ -29,6 +29,14 @@ public:
      */
     template <typename Element>
     extensions::point changePixelState(int32_t x, int32_t y) {
+        if (simulator.holdsSimulation()) {
+            // If the simulator current holds a simulation, then we need to update it too.
+            if (simulator.running())simulator.stop();
+            GameState simState = simulator.takeSnapshot();
+            simState.changePixelState<Element>(x, y);
+            simulator.compile(simState);
+            simulator.start();
+        }
         return gameState.changePixelState<Element>(x, y);
     }
     
@@ -60,4 +68,9 @@ public:
      * Stops the simulator
      */
     void stopSimulator();
+
+    /**
+     * Clear the transient (live) states
+     */
+    void clearLiveView();
 };

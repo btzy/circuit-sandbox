@@ -38,6 +38,8 @@ private:
     std::optional<size_t> drawingIndex = std::nullopt; // input handle index of the active drawing tool
     bool panning = false; // whether panning is active
 
+    bool liveView = false; // whether live view (instead of default view) is being rendered
+
 public:
     PlayArea(MainWindow&);
 
@@ -59,6 +61,7 @@ public:
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonEvent(const SDL_MouseButtonEvent&);
     void processMouseWheelEvent(const SDL_MouseWheelEvent&);
+    void processKeyboardEvent(const SDL_KeyboardEvent&);
 
 
     /**
