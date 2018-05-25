@@ -150,7 +150,7 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
         using std::swap;
         swap(mainWindow.selectedToolIndices[MainWindow::resolveInputHandleIndex(event)], *it);
     }
-    
+
 }
 
 

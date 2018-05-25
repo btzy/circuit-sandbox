@@ -4,7 +4,7 @@
 #include "visitor.hpp"
 
 void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
-    
+
     // This is kinda yucky, but I can't think of a better way such that:
     // 1) If useLiveView is false, we don't make a *copy* of gameState
     // 2) If useLiveView is true, we take a snapshot from the simulator and use it
@@ -38,7 +38,7 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
         lambda(gameState);
     }
 
-    
+
 }
 
 void StateManager::saveToHistory() {

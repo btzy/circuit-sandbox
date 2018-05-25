@@ -39,7 +39,7 @@ public:
         }
         return gameState.changePixelState<Element>(x, y);
     }
-    
+
 
     /**
      * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.

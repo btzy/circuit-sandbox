@@ -35,13 +35,13 @@ private:
 public:
 
     ~Simulator();
-    
+
     /**
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
      * @pre simulation is currently stopped.
      */
     void compile(const GameState& gameState);
-    
+
     /**
      * Start running the simulation.
      * @pre simulation is currently stopped.

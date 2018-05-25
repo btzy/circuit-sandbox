@@ -35,7 +35,7 @@ void Simulator::start() {
     // Unset the 'stopping' flag
     // note:  // std::memory_order_relaxed, because when starting the thread, the std::thread constructor automatically does synchronization.
     simStopping.store(false, std::memory_order_relaxed);
-    
+
     // Spawn the simulator thread
     simThread = std::thread([this]() {
         this->run();
@@ -50,7 +50,7 @@ void Simulator::stop() {
 
     // Wait for the simulation thread to be done
     simThread.join();
-    
+
     // Free up resources used by the std::thread object by assigning an empty std::thread
     simThread = std::thread();
 }
@@ -122,7 +122,7 @@ void Simulator::run() {
         // holds the new state after simulating this step
         GameState newState;
         newState.dataMatrix = typename GameState::matrix_t(oldState.dataMatrix.width(), oldState.dataMatrix.height());
-        
+
         // clone all the element types, but set them all to LOW
         for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
             for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
@@ -131,7 +131,7 @@ void Simulator::run() {
                         return GameState::element_variant_t{};
                     },
                     [](auto element) {
-                        using Element = typename decltype(element);
+                        using Element = decltype(element);
                         return GameState::element_variant_t{ Element{} }; // a new element is set to LOW by default, see elements.hpp
                     }
                 }, oldState.dataMatrix[{x, y}]);
@@ -206,7 +206,7 @@ void Simulator::run() {
                     }
 
                     extensions::point newPoint{ adjX, adjY };
-                    
+
                     // TODO: probably we should make heap_matrix have a within_bounds() method
                     if (0 <= newPoint.x && newPoint.x < oldState.dataMatrix.width() && 0 <= newPoint.y && newPoint.y < oldState.dataMatrix.height()
                         && intermediateState[newPoint] != ElementState::INSULATOR &&
