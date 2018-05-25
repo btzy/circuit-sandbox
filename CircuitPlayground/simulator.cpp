@@ -252,7 +252,7 @@ void Simulator::run() {
         {
             using namespace std::literals::chrono_literals; // <-- placed here because the sleeping for fixed amount of time is a temporary thing
             std::unique_lock<std::mutex> lock(simSleepMutex);
-            simSleepCV.wait_for(lock, 500ms, [this] {
+            simSleepCV.wait_for(lock, 200ms, [this] {
                 return simStopping.load(std::memory_order_relaxed);
             });
         }

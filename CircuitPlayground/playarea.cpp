@@ -214,6 +214,8 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 stateManager.clearLiveView();
             }
             break;
+        default:
+            break;
         }
     }
 }
