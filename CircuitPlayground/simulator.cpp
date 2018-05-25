@@ -46,7 +46,11 @@ void Simulator::start() {
 
 void Simulator::stop() {
     // Set the 'stopping' flag, and flush it so that the simulation thread can see it
-    simStopping.store(true, std::memory_order_release);
+    {
+        std::lock_guard<std::mutex> lock(simSleepMutex);
+        simStopping.store(true, std::memory_order_relaxed);
+    }
+    simSleepCV.notify_one();
 
     // Wait for the simulation thread to be done
     simThread.join();
@@ -176,8 +180,6 @@ void Simulator::run() {
                 auto[currentPoint, axis] = pendingVisit.top();
                 pendingVisit.pop();
 
-                // TODO: consider if using a proper visited matrix is faster than the variant visiting
-
                 // check if we have already processed this location
                 if (visitedMatrix[currentPoint].dir[axis]) {
                     continue; // if it's already set to HIGH, it means we already processed it
@@ -247,7 +249,12 @@ void Simulator::run() {
         // sleep for 500 milliseconds
         // TODO: this will become configurable, or to not sleep at all.
         // TODO: make it such that if the main thread calls stop(), it will wake a sleeping simulation thread, so that the main thread won't freeze up waiting for the simulation thread to stop.
-        using namespace std::literals::chrono_literals; // <-- placed here because the sleeping for fixed amount of time is a temporary thing
-        std::this_thread::sleep_for(500ms);
+        {
+            using namespace std::literals::chrono_literals; // <-- placed here because the sleeping for fixed amount of time is a temporary thing
+            std::unique_lock<std::mutex> lock(simSleepMutex);
+            simSleepCV.wait_for(lock, 500ms, [this] {
+                return simStopping.load(std::memory_order_relaxed);
+            });
+        }
     }
 }

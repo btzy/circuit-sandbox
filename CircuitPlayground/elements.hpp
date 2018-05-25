@@ -91,7 +91,7 @@ public:
 template <typename ElementVariant>
 constexpr inline bool isSignal(const ElementVariant& v) {
     return std::visit([](const auto& element) {
-        if constexpr(std::is_base_of<Element, std::decay_t<decltype(element)>>::value) {
+        if constexpr(std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
             return element.isSignal();
         }
         else return false;
@@ -100,7 +100,7 @@ constexpr inline bool isSignal(const ElementVariant& v) {
 template <typename ElementVariant>
 constexpr inline bool isSignalReceiver(const ElementVariant& v) {
     return std::visit([](const auto& element) {
-        if constexpr(std::is_base_of<Element, std::decay_t<decltype(element)>>::value) {
+        if constexpr(std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
             return element.isSignalReceiver();
         }
         else return false;

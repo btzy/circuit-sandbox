@@ -10,6 +10,8 @@
 #include <thread>
 #include <memory>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 #include "gamestate.hpp"
 #include "heap_matrix.hpp"
@@ -23,6 +25,10 @@ private:
     // The last GameState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
     std::shared_ptr<GameState> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<GameState>>.
     std::atomic<bool> simStopping; // flag for the UI thread to tell the simulation thread to stop.
+
+    // synchronization stuff to wake the simulator thread if its sleeping
+    std::mutex simSleepMutex;
+    std::condition_variable simSleepCV;
 
     /**
      * Method that actually runs the simulator.
