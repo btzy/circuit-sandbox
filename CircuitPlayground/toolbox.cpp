@@ -22,6 +22,8 @@ void Toolbox::updateDpi() {
     BUTTON_HEIGHT = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_HEIGHT);
     PADDING_HORIZONTAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_HORIZONTAL);
     PADDING_VERTICAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_VERTICAL);
+    BUTTON_PADDING = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_PADDING);
+    BUTTON_SPACING = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_SPACING);
 }
 
 
