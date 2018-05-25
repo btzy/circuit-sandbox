@@ -208,7 +208,7 @@ void Simulator::run() {
                     extensions::point newPoint{ adjX, adjY };
                     
                     // TODO: probably we should make heap_matrix have a within_bounds() method
-                    if (0 <= newPoint.x && newPoint.x <= oldState.dataMatrix.width() && 0 <= newPoint.y && newPoint.y < oldState.dataMatrix.height()
+                    if (0 <= newPoint.x && newPoint.x < oldState.dataMatrix.width() && 0 <= newPoint.y && newPoint.y < oldState.dataMatrix.height()
                         && intermediateState[newPoint] != ElementState::INSULATOR &&
                         !(isSignal(oldState.dataMatrix[currentPoint]) && isSignalReceiver(oldState.dataMatrix[newPoint])) &&
                         !(isSignalReceiver(oldState.dataMatrix[currentPoint]) && isSignal(oldState.dataMatrix[newPoint])) &&
