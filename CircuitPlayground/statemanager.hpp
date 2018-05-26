@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint> // for int32_t and uint32_t
+#include <string>
 
 #include "gamestate.hpp"
 #include "simulator.hpp"
@@ -18,9 +19,8 @@ private:
 
 public:
 
-    StateManager() {
-        // nothing to initialize; 'dataMatrix' is default initialized to the std::monostate
-    }
+    StateManager();
+    ~StateManager();
 
     /**
      * Change the state of a pixel.
@@ -73,4 +73,12 @@ public:
      * Clear the transient (live) states
      */
     void clearLiveView();
+
+    /**
+     * Read/write the save file. The path is hardcoded for now.
+     * Save format: [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth*matrixHeight)x [size_t index]
+     */
+    std::string savePath = "circuitplayground.sav";
+    void readSave();
+    void writeSave();
 };

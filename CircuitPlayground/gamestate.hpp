@@ -16,11 +16,14 @@
 #include "heap_matrix.hpp"
 #include "elements.hpp"
 #include "point.hpp"
+#include "tag_tuple.hpp"
 
 class GameState {
 private:
     // std::monostate is a 'default' state, which represents an empty pixel
-    using element_variant_t = std::variant<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    using element_variant_t =     std::variant<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    // for consistency, the element order in this tag_tuple should be the same as the variant above
+    using element_tags = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
     extensions::heap_matrix<element_variant_t> dataMatrix;
 
     friend class StateManager;

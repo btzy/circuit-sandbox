@@ -266,4 +266,3 @@ void MainWindow::render() {
     // Then display to the user
     SDL_RenderPresent(renderer);
 }
-

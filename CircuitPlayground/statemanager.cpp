@@ -1,7 +1,19 @@
 #include <variant>
+#include <iostream>
+#include <fstream>
 
 #include "statemanager.hpp"
 #include "visitor.hpp"
+
+StateManager::StateManager() {
+    // read dataMatrix from disk if a savefile exists, otherwise it is initialized to std::monostate by default
+    readSave();
+}
+
+StateManager::~StateManager() {
+    // autosave dataMatrix to disk
+    writeSave();
+}
 
 void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
 
@@ -64,4 +76,51 @@ void StateManager::stopSimulator() {
 
 void StateManager::clearLiveView() {
     simulator.clear();
+}
+
+void StateManager::readSave() {
+    std::ifstream saveFile(savePath, std::ios::binary);
+    if (!saveFile.is_open()) return;
+
+    int32_t matrixWidth, matrixHeight;
+    saveFile.read(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
+    saveFile.read(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
+
+    gameState.dataMatrix = typename GameState::matrix_t(matrixWidth, matrixHeight);
+
+    for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
+        for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
+            size_t element_index;
+            saveFile.read(reinterpret_cast<char*>(&element_index), sizeof element_index);
+
+            GameState::element_variant_t element;
+            GameState::element_tags::get(element_index, [&element](const auto element_tag) {
+                using Element = typename decltype(element_tag)::type;
+                element = Element();
+            });
+            gameState.dataMatrix[{x, y}] = element;
+        }
+    }
+}
+
+void StateManager::writeSave() {
+    std::ofstream saveFile(savePath, std::ios::binary);
+    if (!saveFile.is_open()) return;
+
+    int32_t matrixWidth = gameState.dataMatrix.width();
+    int32_t matrixHeight = gameState.dataMatrix.height();
+    saveFile.write(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
+    saveFile.write(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
+
+    for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
+        for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
+            GameState::element_variant_t element = gameState.dataMatrix[{x, y}];
+            GameState::element_tags::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
+                size_t index = element.index();
+                if (index == decltype(index_tag)::value) {
+                    saveFile.write(reinterpret_cast<char*>(&index), sizeof index);
+                }
+            });
+        }
+    }
 }
