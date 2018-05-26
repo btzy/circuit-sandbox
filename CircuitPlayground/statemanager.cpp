@@ -94,7 +94,7 @@ void StateManager::readSave() {
             saveFile.read(reinterpret_cast<char*>(&element_index), sizeof element_index);
 
             GameState::element_variant_t element;
-            GameState::element_tags::get(element_index, [&element](const auto element_tag) {
+            GameState::element_tags_t::get(element_index, [&element](const auto element_tag) {
                 using Element = typename decltype(element_tag)::type;
                 element = Element();
             });
@@ -115,7 +115,7 @@ void StateManager::writeSave() {
     for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
             GameState::element_variant_t element = gameState.dataMatrix[{x, y}];
-            GameState::element_tags::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
+            GameState::element_tags_t::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
                 size_t index = element.index();
                 if (index == decltype(index_tag)::value) {
                     saveFile.write(reinterpret_cast<char*>(&index), sizeof index);

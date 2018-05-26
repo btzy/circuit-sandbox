@@ -20,10 +20,13 @@
 
 class GameState {
 private:
+
+    // the possible elements that a pixel can represent
     // std::monostate is a 'default' state, which represents an empty pixel
-    using element_variant_t =     std::variant<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
-    // for consistency, the element order in this tag_tuple should be the same as the variant above
-    using element_tags = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    using element_tags_t = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    
+    using element_variant_t = element_tags_t::instantiate<std::variant>;
+    
     extensions::heap_matrix<element_variant_t> dataMatrix;
 
     friend class StateManager;

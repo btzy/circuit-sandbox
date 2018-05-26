@@ -64,10 +64,10 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
 
     // draw the buttons to the screen one-by-one
-    MainWindow::tool_tags::for_each([this, renderer, button_font](const auto tool_tag, const auto index_tag) {
+    MainWindow::tool_tags_t::for_each([this, renderer, button_font](const auto tool_tag, const auto index_tag) {
         // 'Tool' is the type of tool (e.g. ConductiveWire)
         using Tool = typename decltype(tool_tag)::type;
-        // 'index' is the index of this element inside the tool_tags
+        // 'index' is the index of this element inside the tool_tags_t
         constexpr size_t index = decltype(index_tag)::value;
 
         SDL_Color backgroundColorForText = MainWindow::backgroundColor;
@@ -116,7 +116,7 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     // element index
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / (BUTTON_HEIGHT + BUTTON_SPACING));
-    if (index >= MainWindow::tool_tags::size) return;
+    if (index >= MainWindow::tool_tags_t::size) return;
 
     // check if the mouse is on the button spacing instead of on the actual button
     if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;
@@ -136,7 +136,7 @@ void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
 
     // element index
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / (BUTTON_HEIGHT + BUTTON_SPACING));
-    if (index >= MainWindow::tool_tags::size) return;
+    if (index >= MainWindow::tool_tags_t::size) return;
 
     // check if the mouse is on the button spacing instead of on the actual button
     if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;

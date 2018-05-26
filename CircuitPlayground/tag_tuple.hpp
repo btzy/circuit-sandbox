@@ -62,13 +62,19 @@ namespace extensions {
 
 
         /**
-        * Invokes callback(tag<T>) for the T at the given index.
-        * If index is out of bounds, then callback will not be invoked.
-        */
+         * Invokes callback(tag<T>) for the T at the given index.
+         * If index is out of bounds, then callback will not be invoked.
+         */
         template <typename Callback>
         inline static void get(const size_t index, Callback&& callback) {
             get_by_index<0>(index, std::forward<Callback>(callback));
         }
+
+        /**
+         * Generic template instantiation helper
+         */
+        template <template <typename...> typename TemplateType>
+        using instantiate = TemplateType<T...>;
 
     };
 

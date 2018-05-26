@@ -93,7 +93,7 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
         int offsetY = physicalOffsetY - translationY;
         offsetX = extensions::div_floor(offsetX, scale);
         offsetY = extensions::div_floor(offsetY, scale);
-        MainWindow::tool_tags::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
+        MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
             using Tool = typename decltype(tool_tag)::type;
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
                 processDrawingTool<Tool>(offsetX, offsetY);
@@ -126,7 +126,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     offsetY = extensions::div_floor(offsetY, scale);
 
     size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-    MainWindow::tool_tags::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, offsetX, offsetY, inputHandleIndex](const auto tool_tag) {
+    MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, offsetX, offsetY, inputHandleIndex](const auto tool_tag) {
         // 'Tool' is the type of tool (e.g. Selector)
         using Tool = typename decltype(tool_tag)::type;
 

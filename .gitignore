@@ -48,3 +48,6 @@ Release/
 *.sln
 *.filters
 *.user
+
+# Save files for Circuit Playground
+*.sav
