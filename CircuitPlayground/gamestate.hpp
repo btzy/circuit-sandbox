@@ -162,7 +162,8 @@ public:
             dataMatrix[{x, y}] = Element{};
         }
 
-        deltaTrans = translation;
+        deltaTrans.x += translation.x;
+        deltaTrans.y += translation.y;
         return translation;
     }
 };

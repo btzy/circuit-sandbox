@@ -62,24 +62,26 @@ void StateManager::saveToHistory() {
     }
     gameState.changed = false;
     history.push_back(gameState);
+    gameState.deltaTrans = { 0, 0 };
     historyIndex++;
 }
 
 extensions::point StateManager::undo() {
     if (historyIndex == 0) return { 0, 0 };
+    extensions::point deltaTrans = history[historyIndex].deltaTrans;
     historyIndex--;
-    extensions::point deltaTrans = gameState.deltaTrans;
     gameState = history[historyIndex];
     if (simulator.holdsSimulation()) {
         if (simulator.running()) simulator.stop();
         simulator.compile(gameState);
         simulator.start();
     }
+    gameState.deltaTrans = { 0, 0 };
     return deltaTrans;
 }
 
 extensions::point StateManager::redo() {
-    if (historyIndex+1 == history.size()) return { 0, 0 };
+    if (historyIndex == history.size() - 1) return { 0, 0 };
     historyIndex++;
     gameState = history[historyIndex];
     if (simulator.holdsSimulation()) {
@@ -87,7 +89,9 @@ extensions::point StateManager::redo() {
         simulator.compile(gameState);
         simulator.start();
     }
-    return gameState.deltaTrans;
+    extensions::point deltaTrans = gameState.deltaTrans;
+    gameState.deltaTrans = { 0, 0 };
+    return deltaTrans;
 }
 
 
