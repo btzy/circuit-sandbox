@@ -29,6 +29,7 @@ private:
 
     extensions::heap_matrix<element_variant_t> dataMatrix;
     bool changed = false; // whether dataMatrix changed since the last write to the undo stack
+    extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
 
     friend class StateManager;
     friend class Simulator;
@@ -136,12 +137,12 @@ public:
 
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
-        // flag the gamestate as having changed
-        if (!std::holds_alternative<Element>(dataMatrix[{x, y}])) {
-            changed = true;
-        }
         if constexpr (std::is_same_v<std::monostate, Element>) {
             if (x >= 0 && x < dataMatrix.width() && y >= 0 && y < dataMatrix.height()) {
+                // flag the gamestate as having changed
+                if (!std::holds_alternative<Element>(dataMatrix[{x, y}])) {
+                    changed = true;
+                }
                 dataMatrix[{x, y}] = Element{};
 
                 // Element is std::monostate, so we have to see if we can shrink the matrix size
@@ -154,9 +155,14 @@ public:
             x += translation.x;
             y += translation.y;
 
+            // flag the gamestate as having changed
+            if (!std::holds_alternative<Element>(dataMatrix[{x, y}])) {
+                changed = true;
+            }
             dataMatrix[{x, y}] = Element{};
         }
 
+        deltaTrans = translation;
         return translation;
     }
 };

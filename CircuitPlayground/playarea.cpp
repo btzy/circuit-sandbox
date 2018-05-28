@@ -133,16 +133,13 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         if constexpr (std::is_base_of_v<Pencil, Tool>) {
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 // If another drawing tool is in use, break that action and start a new one
-                if (drawingIndex) {
-                    stateManager.saveToHistory();
-                }
+                finishAction();
                 drawingIndex = inputHandleIndex;
                 processDrawingTool<Tool>(offsetX, offsetY);
             } else {
                 // Break the current drawing action if the mouseup is from that tool
                 if (inputHandleIndex == drawingIndex) {
-                    drawingIndex = std::nullopt;
-                    stateManager.saveToHistory();
+                    finishAction();
                 }
             }
         }
@@ -217,16 +214,28 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
             break;
         case SDL_SCANCODE_Y:
             if (modifiers & KMOD_CTRL) {
-                stateManager.redo();
+                finishAction();
+                extensions::point deltaTrans = stateManager.redo();
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
             }
             break;
         case SDL_SCANCODE_Z:
             if (modifiers & KMOD_CTRL) {
-                stateManager.undo();
+                finishAction();
+                extensions::point deltaTrans = stateManager.undo();
+                // apply inverse translation
+                translationX += deltaTrans.x * scale;
+                translationY += deltaTrans.y * scale;
             }
             break;
         default:
             break;
         }
     }
+}
+
+void PlayArea::finishAction() {
+    drawingIndex = std::nullopt;
+    stateManager.saveToHistory();
 }

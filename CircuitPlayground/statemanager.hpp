@@ -56,11 +56,11 @@ public:
     void saveToHistory();
 
     /**
-     * Undo/redo. Returns whether the gamestate changed.
-     * The gamestate should change unless it's already the oldest/newest state.
+     * Undo/redo. Returns the translation to apply to center viewport.
+     * The gamestate will not change if it is already the oldest/newest state.
      */
-    bool undo();
-    bool redo();
+    extensions::point undo();
+    extensions::point redo();
 
     /**
      * Reset the transient (live) states to the default states for all elements

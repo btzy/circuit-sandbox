@@ -45,30 +45,34 @@ public:
     PlayArea(MainWindow&);
 
     /**
-    * Informs the play area that the dpi has been updated, so the play area should set its physical unit fields.
-    */
+     * Informs the play area that the dpi has been updated, so the play area should set its physical unit fields.
+     */
     void updateDpi();
 
     /**
-    * Renders this play area on the given area of the renderer.
-    * This method is called by MainWindow
-    * @pre renderer must not be null.
-    */
+     * Renders this play area on the given area of the renderer.
+     * This method is called by MainWindow
+     * @pre renderer must not be null.
+     */
     void render(SDL_Renderer* renderer) const;
 
     /**
-    * Processing of events.
-    */
+     * Processing of events.
+     */
     void processMouseMotionEvent(const SDL_MouseMotionEvent&);
     void processMouseButtonEvent(const SDL_MouseButtonEvent&);
     void processMouseWheelEvent(const SDL_MouseWheelEvent&);
     void processKeyboardEvent(const SDL_KeyboardEvent&);
 
+    /**
+     * This is called to reset all the hovering of stuff, because mousemove events are only triggered when the mouse is still on the canvas
+     */
+    void processMouseLeave();
 
     /**
-    * This is called to reset all the hovering of stuff, because mousemove events are only triggered when the mouse is still on the canvas
-    */
-    void processMouseLeave();
+     * Finish the current action and write to the undo stack.
+     */
+    void finishAction();
 
     /**
      * Use a drawing tool on (x, y)

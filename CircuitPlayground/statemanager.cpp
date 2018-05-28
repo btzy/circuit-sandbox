@@ -60,25 +60,26 @@ void StateManager::saveToHistory() {
     if (historyIndex+1 < history.size()) {
         history.resize(historyIndex+1);
     }
-    history.push_back(gameState);
     gameState.changed = false;
+    history.push_back(gameState);
     historyIndex++;
 }
 
-bool StateManager::undo() {
-    if (historyIndex == 0) return false;
+extensions::point StateManager::undo() {
+    if (historyIndex == 0) return { 0, 0 };
     historyIndex--;
+    extensions::point deltaTrans = gameState.deltaTrans;
     gameState = history[historyIndex];
     if (simulator.holdsSimulation()) {
         if (simulator.running()) simulator.stop();
         simulator.compile(gameState);
         simulator.start();
     }
-    return true;
+    return deltaTrans;
 }
 
-bool StateManager::redo() {
-    if (historyIndex+1 == history.size()) return false;
+extensions::point StateManager::redo() {
+    if (historyIndex+1 == history.size()) return { 0, 0 };
     historyIndex++;
     gameState = history[historyIndex];
     if (simulator.holdsSimulation()) {
@@ -86,7 +87,7 @@ bool StateManager::redo() {
         simulator.compile(gameState);
         simulator.start();
     }
-    return true;
+    return gameState.deltaTrans;
 }
 
 
