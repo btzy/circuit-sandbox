@@ -24,10 +24,11 @@ private:
     // the possible elements that a pixel can represent
     // std::monostate is a 'default' state, which represents an empty pixel
     using element_tags_t = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
-    
+
     using element_variant_t = element_tags_t::instantiate<std::variant>;
-    
+
     extensions::heap_matrix<element_variant_t> dataMatrix;
+    bool changed = false; // whether dataMatrix changed since the last write to the undo stack
 
     friend class StateManager;
     friend class Simulator;
@@ -135,6 +136,10 @@ public:
 
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
+        // flag the gamestate as having changed
+        if (!std::holds_alternative<Element>(dataMatrix[{x, y}])) {
+            changed = true;
+        }
         if constexpr (std::is_same_v<std::monostate, Element>) {
             if (x >= 0 && x < dataMatrix.width() && y >= 0 && y < dataMatrix.height()) {
                 dataMatrix[{x, y}] = Element{};

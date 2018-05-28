@@ -198,6 +198,7 @@ void PlayArea::processMouseLeave() {
 void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
     // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
     if (event.type == SDL_KEYDOWN) {
+        SDL_Keymod modifiers = SDL_GetModState();
         switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
         case SDL_SCANCODE_T:
             // the 'T' key, used to toggle default/live view
@@ -212,6 +213,16 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 // TODO: change to something more appropriate
                 stateManager.stopSimulator();
                 stateManager.clearLiveView();
+            }
+            break;
+        case SDL_SCANCODE_Y:
+            if (modifiers & KMOD_CTRL) {
+                stateManager.redo();
+            }
+            break;
+        case SDL_SCANCODE_Z:
+            if (modifiers & KMOD_CTRL) {
+                stateManager.undo();
             }
             break;
         default:

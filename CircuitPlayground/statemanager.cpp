@@ -8,6 +8,7 @@
 StateManager::StateManager() {
     // read dataMatrix from disk if a savefile exists, otherwise it is initialized to std::monostate by default
     readSave();
+    saveToHistory();
 }
 
 StateManager::~StateManager() {
@@ -54,9 +55,39 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
 }
 
 void StateManager::saveToHistory() {
-    // TODO
+    // don't write to the undo stack if the gameState did not change
+    if (!gameState.changed) return;
+    if (historyIndex+1 < history.size()) {
+        history.resize(historyIndex+1);
+    }
+    history.push_back(gameState);
+    gameState.changed = false;
+    historyIndex++;
 }
 
+bool StateManager::undo() {
+    if (historyIndex == 0) return false;
+    historyIndex--;
+    gameState = history[historyIndex];
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+    return true;
+}
+
+bool StateManager::redo() {
+    if (historyIndex+1 == history.size()) return false;
+    historyIndex++;
+    gameState = history[historyIndex];
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+    return true;
+}
 
 
 void StateManager::resetLiveView() {
@@ -101,6 +132,7 @@ void StateManager::readSave() {
             gameState.dataMatrix[{x, y}] = element;
         }
     }
+    gameState.changed = true;
 }
 
 void StateManager::writeSave() {

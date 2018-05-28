@@ -40,6 +40,7 @@ private:
 
     bool liveView = false; // whether live view (instead of default view) is being rendered
 
+
 public:
     PlayArea(MainWindow&);
 
