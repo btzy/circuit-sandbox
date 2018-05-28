@@ -64,10 +64,25 @@ void PlayArea::render(SDL_Renderer* renderer) const {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
 
+    // render the selection rectangle if it exists
+    if (selectorState != Selector::INACTIVE) {
+        SDL_Rect selectionArea {
+            selectionRect.x * scale + translationX,
+            selectionRect.y * scale + translationY,
+            selectionRect.w * scale,
+            selectionRect.h * scale
+        };
+
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+        SDL_RenderFillRect(renderer, &selectionArea);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    }
+
     // draw a square at the top left to denote the live view (TODO: make it a border or something nicer)
     if (liveView) {
         SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
-        SDL_Rect squareBox{
+        SDL_Rect squareBox {
             renderArea.x,
             renderArea.y,
             mainWindow.logicalToPhysicalSize(10),
@@ -88,17 +103,25 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     SDL_Point position{event.x, event.y};
 
-    if (drawingIndex && SDL_PointInRect(&position, &renderArea)) {
-        int offsetX = physicalOffsetX - translationX;
-        int offsetY = physicalOffsetY - translationY;
-        offsetX = extensions::div_floor(offsetX, scale);
-        offsetY = extensions::div_floor(offsetY, scale);
-        MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
-            using Tool = typename decltype(tool_tag)::type;
-            if constexpr (std::is_base_of_v<Pencil, Tool>) {
-                processDrawingTool<Tool>(offsetX, offsetY);
-            }
-        });
+    if (SDL_PointInRect(&position, &renderArea)) {
+        if (drawingIndex) {
+            int offsetX = physicalOffsetX - translationX;
+            int offsetY = physicalOffsetY - translationY;
+            offsetX = extensions::div_floor(offsetX, scale);
+            offsetY = extensions::div_floor(offsetY, scale);
+            MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
+                using Tool = typename decltype(tool_tag)::type;
+                if constexpr (std::is_base_of_v<Pencil, Tool>) {
+                    processDrawingTool<Tool>(offsetX, offsetY);
+                }
+            });
+        } else if (selectorState == Selector::SELECTING) {
+            int offsetX = physicalOffsetX - translationX;
+            int offsetY = physicalOffsetY - translationY;
+            offsetX = extensions::div_floor(offsetX, scale);
+            offsetY = extensions::div_floor(offsetY, scale);
+            selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+        }
     }
 
     // update translation if panning
@@ -146,6 +169,30 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.
             // TODO.
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                finishAction();
+                if (selectorState == Selector::SELECTED) {
+                    SDL_Point position{ offsetX, offsetY };
+                    if (!SDL_PointInRect(&position, &selectionRect)) {
+                        selectorState = Selector::INACTIVE;
+                    }
+                }
+                if (selectorState == Selector::INACTIVE) {
+                    selectorState = Selector::SELECTING;
+                    selectionOriginX = offsetX;
+                    selectionOriginY = offsetY;
+                    selectionRect = { selectionOriginX, selectionOriginY, 1, 1 };
+                }
+            } else {
+                if (selectorState == Selector::SELECTING) {
+                    selectorState = Selector::SELECTED;
+                    SDL_Point position{ event.x, event.y };
+                    // TODO: consider using viewports to eliminate these checks
+                    if (SDL_PointInRect(&position, &renderArea)) {
+                        selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+                    }
+                }
+            }
         }
         else if constexpr (std::is_base_of_v<Panner, Tool>) {
             // it is a Panner.
@@ -238,4 +285,13 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 void PlayArea::finishAction() {
     drawingIndex = std::nullopt;
     stateManager.saveToHistory();
+}
+
+SDL_Rect PlayArea::getRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
+    return SDL_Rect {
+        std::min(x1, x2),
+        std::min(y1, y2),
+        std::abs(x1 - x2) + 1,
+        std::abs(y1 - y2) + 1,
+    };
 }

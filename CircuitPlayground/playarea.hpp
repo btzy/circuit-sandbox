@@ -38,6 +38,10 @@ private:
     std::optional<size_t> drawingIndex = std::nullopt; // input handle index of the active drawing tool
     bool panning = false; // whether panning is active
 
+    int32_t selectionOriginX, selectionOriginY; // the first point of the selection rectangle
+    SDL_Rect selectionRect;
+    Selector::State selectorState = Selector::INACTIVE;
+
     bool liveView = false; // whether live view (instead of default view) is being rendered
 
 
@@ -92,4 +96,9 @@ public:
         translationX -= deltaTrans.x * scale;
         translationY -= deltaTrans.y * scale;
     }
+
+    /**
+     * Returns the rectangle given by two opposite corners.
+     */
+    SDL_Rect getRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 };
