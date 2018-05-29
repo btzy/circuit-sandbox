@@ -90,4 +90,12 @@ public:
     std::string savePath = "circuitplayground.sav";
     void readSave();
     void writeSave();
+
+    void clearSelection();
+
+    /**
+     * These invocations are forwarded to gameState.
+     */
+    void selectRect(SDL_Rect selectionRect);
+    bool pointInSelection(int32_t x, int32_t y);
 };

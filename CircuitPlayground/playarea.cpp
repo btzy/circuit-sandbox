@@ -65,7 +65,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     }
 
     // render the selection rectangle if it exists
-    if (selectorState != Selector::INACTIVE) {
+    if (selectorState == Selector::SELECTING) {
         SDL_Rect selectionArea {
             selectionRect.x * scale + translationX,
             selectionRect.y * scale + translationY,
@@ -170,11 +170,9 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
             // it is a Selector.
             // TODO.
             if (event.type == SDL_MOUSEBUTTONDOWN) {
-                finishAction();
                 if (selectorState == Selector::SELECTED) {
-                    SDL_Point position{ offsetX, offsetY };
-                    if (!SDL_PointInRect(&position, &selectionRect)) {
-                        selectorState = Selector::INACTIVE;
+                    if (!stateManager.pointInSelection(offsetX, offsetY)) {
+                        finishAction();
                     }
                 }
                 if (selectorState == Selector::INACTIVE) {
@@ -190,6 +188,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                     // TODO: consider using viewports to eliminate these checks
                     if (SDL_PointInRect(&position, &renderArea)) {
                         selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+                        stateManager.selectRect(selectionRect);
                     }
                 }
             }
@@ -284,6 +283,8 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 
 void PlayArea::finishAction() {
     drawingIndex = std::nullopt;
+    selectorState = Selector::INACTIVE;
+    stateManager.clearSelection();
     stateManager.saveToHistory();
 }
 

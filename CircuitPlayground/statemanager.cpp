@@ -31,13 +31,18 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
                     std::visit(visitor{
                         [&color](std::monostate) {},
                         [&color](const auto& element) {
-                            // 'Element' is the type of tool (e.g. ConductiveWire)
-                            //using Element = decltype(element);
-
                             SDL_Color computedColor = computeDisplayColor(element);
                             color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
                         },
                     }, renderGameState.dataMatrix[{x, y}]);
+
+                    int32_t select_x = x - gameState.selectionX;
+                    int32_t select_y = y - gameState.selectionY;
+                    if (select_x >= 0 && select_x < gameState.selection.width() && select_y >= 0 && select_y < gameState.selection.height()) {
+                        if (!std::holds_alternative<std::monostate>(gameState.selection[{select_x, select_y}])) {
+                            color |= 0xFF0000;
+                        }
+                    }
                 }
                 *pixelBuffer++ = color;
             }
@@ -50,7 +55,6 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
     else {
         lambda(gameState);
     }
-
 
 }
 
@@ -160,4 +164,18 @@ void StateManager::writeSave() {
             });
         }
     }
+}
+
+void StateManager::clearSelection() {
+    gameState.selection = GameState::matrix_t();
+    gameState.selectionX = 0;
+    gameState.selectionY = 0;
+}
+
+void StateManager::selectRect(SDL_Rect selectionRect) {
+    gameState.selectRect(selectionRect);
+}
+
+bool StateManager::pointInSelection(int32_t x, int32_t y) {
+    return gameState.pointInSelection(x, y);
 }
