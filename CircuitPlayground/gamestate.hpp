@@ -33,8 +33,9 @@ private:
     // stuff needed to implement selection
     // we need to update gameState even before the selection actually merges with dataMatrix (so that the simulation looks correct)
     matrix_t selection; // stores the selection
-    matrix_t tempData; // stores dataMatrix without the selection
+    matrix_t base; // the 'base' layer is a copy of dataMatrix minus selection at the time the selection was made
     int32_t selectionX = 0, selectionY = 0; // position of selection in dataMatrix's coordinate system
+    int32_t baseX = 0, baseY = 0; // position of base in dataMatrix's coordinate system
 
     bool changed = false; // whether dataMatrix changed since the last write to the undo stack
     extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
@@ -76,18 +77,22 @@ private:
     }
 
     /**
-    * Shrinks the matrix to the minimal bounding rectangle.
-    * As an optimization, will only shrink if {x,y} is along a border.
-    * Returns the translation that should be applied on {x,y}.
-    */
+     * Shrinks the matrix to the minimal bounding rectangle.
+     * As an optimization, will only shrink if {x,y} is along a border.
+     * Returns the translation that should be applied on {x,y}.
+     */
     extensions::point shrinkMatrix(matrix_t& matrix, int32_t x, int32_t y) {
-
         if (x > 0 && x + 1 < matrix.width() && y > 0 && y + 1 < matrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
         }
+        return shrinkMatrix(matrix);
+    }
 
-
-        // otherwise, we simply iterate the whole matrix to get the min and max values
+    /**
+     * Shrink with no optimization.
+     */
+    extensions::point shrinkMatrix(matrix_t& matrix) {
+        // we simply iterate the whole matrix to get the min and max values
         int32_t x_min = std::numeric_limits<int32_t>::max();
         int32_t x_max = std::numeric_limits<int32_t>::min();
         int32_t y_min = std::numeric_limits<int32_t>::max();
@@ -174,7 +179,7 @@ public:
     }
 
     /**
-     * Add elements in selectionRect to selection matrix.
+     * Move elements within selectionRect from dataMatrix to selection.
      */
     void selectRect(SDL_Rect selectionRect);
 
@@ -182,4 +187,20 @@ public:
      * Check if (x, y) has been selected.
      */
     bool pointInSelection(int32_t x, int32_t y);
+
+    /**
+     * Clear the selection and merge it with dataMatrix.
+     */
+    void clearSelection();
+
+    /**
+     * Merge base and selection. The result is stored in dataMatrix.
+     * Pre: selectionX/Y and baseX/Y are correct so dataMatrix does not have to be further resized
+     */
+    void mergeSelection();
+
+    /**
+     * Move the selection. Gamestate may resize and shift so this returns the translation.
+     */
+    extensions::point moveSelection(int32_t dx, int32_t dy);
 };

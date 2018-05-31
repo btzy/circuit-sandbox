@@ -39,6 +39,7 @@ private:
     bool panning = false; // whether panning is active
 
     int32_t selectionOriginX, selectionOriginY; // the first point of the selection rectangle
+    int32_t moveOriginX, moveOriginY; // the reference point (in matrix units) when moving a selection
     SDL_Rect selectionRect;
     Selector::State selectorState = Selector::INACTIVE;
 

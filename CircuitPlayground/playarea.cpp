@@ -103,12 +103,13 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     SDL_Point position{event.x, event.y};
 
+    // this check is necessary as PlayArea receives mousemotion events even if the cursor is outside its render area
     if (SDL_PointInRect(&position, &renderArea)) {
+        int offsetX = physicalOffsetX - translationX;
+        int offsetY = physicalOffsetY - translationY;
+        offsetX = extensions::div_floor(offsetX, scale);
+        offsetY = extensions::div_floor(offsetY, scale);
         if (drawingIndex) {
-            int offsetX = physicalOffsetX - translationX;
-            int offsetY = physicalOffsetY - translationY;
-            offsetX = extensions::div_floor(offsetX, scale);
-            offsetY = extensions::div_floor(offsetY, scale);
             MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
                 using Tool = typename decltype(tool_tag)::type;
                 if constexpr (std::is_base_of_v<Pencil, Tool>) {
@@ -116,11 +117,16 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
                 }
             });
         } else if (selectorState == Selector::SELECTING) {
-            int offsetX = physicalOffsetX - translationX;
-            int offsetY = physicalOffsetY - translationY;
-            offsetX = extensions::div_floor(offsetX, scale);
-            offsetY = extensions::div_floor(offsetY, scale);
             selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+        } else if (selectorState == Selector::MOVING) {
+            if (moveOriginX != offsetX || moveOriginY != offsetY) {
+                extensions::point deltaTrans;
+                deltaTrans = stateManager.moveSelection(offsetX - moveOriginX, offsetY - moveOriginY);
+                moveOriginX = offsetX + deltaTrans.x;
+                moveOriginY = offsetY + deltaTrans.y;
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
+            }
         }
     }
 
@@ -173,6 +179,10 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                 if (selectorState == Selector::SELECTED) {
                     if (!stateManager.pointInSelection(offsetX, offsetY)) {
                         finishAction();
+                    } else {
+                        selectorState = Selector::MOVING;
+                        moveOriginX = offsetX;
+                        moveOriginY = offsetY;
                     }
                 }
                 if (selectorState == Selector::INACTIVE) {
@@ -190,6 +200,8 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                         selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
                         stateManager.selectRect(selectionRect);
                     }
+                } else if (selectorState == Selector::MOVING) {
+                    selectorState = Selector::SELECTED;
                 }
             }
         }

@@ -131,8 +131,8 @@ namespace extensions {
      */
     template <typename TSrc, typename TDest>
         inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) {
-            const TSrc* src_buffer = src.buffer;
-            TDest* dest_buffer = dest.buffer;
+            const TSrc* src_buffer = src.buffer + src_y * src._width;
+            TDest* dest_buffer = dest.buffer + dest_y * dest._width;
             for (int32_t i = 0; i < height; ++i) {
                 std::copy(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
                 src_buffer += src._width;

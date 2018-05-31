@@ -58,9 +58,29 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
 
 }
 
+bool StateManager::checkIfChanged() {
+    if (history.size() == 0 ||
+        gameState.dataMatrix.width() != history[historyIndex].dataMatrix.width() ||
+        gameState.dataMatrix.height() != history[historyIndex].dataMatrix.height()) {
+        gameState.changed = true;
+        return true;
+    }
+    for (int32_t y = 0; y < gameState.dataMatrix.height(); ++y) {
+        for (int32_t x = 0; x < gameState.dataMatrix.width(); ++x) {
+            if (gameState.dataMatrix[{x, y}].index() != history[historyIndex].dataMatrix[{x, y}].index()) {
+                gameState.changed = true;
+                return true;
+            }
+        }
+    }
+    gameState.changed = false;
+    return false;
+}
+
 void StateManager::saveToHistory() {
     // don't write to the undo stack if the gameState did not change
     if (!gameState.changed) return;
+
     if (historyIndex+1 < history.size()) {
         history.resize(historyIndex+1);
     }
@@ -166,16 +186,29 @@ void StateManager::writeSave() {
     }
 }
 
-void StateManager::clearSelection() {
-    gameState.selection = GameState::matrix_t();
-    gameState.selectionX = 0;
-    gameState.selectionY = 0;
-}
-
 void StateManager::selectRect(SDL_Rect selectionRect) {
     gameState.selectRect(selectionRect);
 }
 
 bool StateManager::pointInSelection(int32_t x, int32_t y) {
     return gameState.pointInSelection(x, y);
+}
+
+void StateManager::clearSelection() {
+    // TODO: optimize this (e.g. deletion always result in a change)
+    checkIfChanged();
+    gameState.clearSelection();
+}
+
+extensions::point StateManager::moveSelection(int32_t dx, int32_t dy) {
+    extensions::point translation = gameState.moveSelection(dx, dy);
+
+    // update the simulator after moving
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+
+    return translation;
 }

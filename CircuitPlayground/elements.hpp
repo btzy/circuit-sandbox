@@ -135,7 +135,8 @@ struct Selector {
     enum State {
         INACTIVE,
         SELECTING,
-        SELECTED
+        SELECTED,
+        MOVING
     };
 };
 

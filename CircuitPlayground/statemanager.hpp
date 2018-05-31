@@ -51,6 +51,12 @@ public:
     void fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
 
     /**
+     * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.
+     * This should only be used if no faster alternative exists.
+     */
+    bool checkIfChanged();
+
+    /**
      * Take a snapshot of the gamestate and save it in the history
      */
     void saveToHistory();
@@ -91,11 +97,12 @@ public:
     void readSave();
     void writeSave();
 
-    void clearSelection();
 
     /**
      * These invocations are forwarded to gameState.
      */
     void selectRect(SDL_Rect selectionRect);
     bool pointInSelection(int32_t x, int32_t y);
+    void clearSelection();
+    extensions::point moveSelection(int32_t dx, int32_t dy);
 };
