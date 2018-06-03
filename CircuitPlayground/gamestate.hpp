@@ -204,4 +204,10 @@ public:
      * Move the selection. Gamestate may resize and shift so this returns the translation.
      */
     extensions::point moveSelection(int32_t dx, int32_t dy);
+
+    /**
+     * Delete the elements in the selection.
+     * NOTE: This method and clearSelection() have potential to get mixed up.
+     */
+    extensions::point deleteSelection();
 };

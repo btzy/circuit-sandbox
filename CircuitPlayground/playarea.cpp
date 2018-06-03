@@ -270,6 +270,15 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 stateManager.clearLiveView();
             }
             break;
+        case SDL_SCANCODE_D:
+        case SDL_SCANCODE_DELETE:
+            {
+                extensions::point deltaTrans = stateManager.deleteSelection();
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
+                finishAction();
+            }
+            break;
         case SDL_SCANCODE_Y:
             if (modifiers & KMOD_CTRL) {
                 finishAction();

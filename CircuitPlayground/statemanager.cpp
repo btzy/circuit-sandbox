@@ -195,7 +195,7 @@ bool StateManager::pointInSelection(int32_t x, int32_t y) {
 }
 
 void StateManager::clearSelection() {
-    // TODO: optimize this (e.g. deletion always result in a change)
+    // TODO: try to reduce these calls
     checkIfChanged();
     gameState.clearSelection();
 }
@@ -204,6 +204,19 @@ extensions::point StateManager::moveSelection(int32_t dx, int32_t dy) {
     extensions::point translation = gameState.moveSelection(dx, dy);
 
     // update the simulator after moving
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+
+    return translation;
+}
+
+extensions::point StateManager::deleteSelection() {
+    extensions::point translation = gameState.deleteSelection();
+
+    // update the simulator after deleting
     if (simulator.holdsSimulation()) {
         if (simulator.running()) simulator.stop();
         simulator.compile(gameState);

@@ -107,3 +107,23 @@ extensions::point GameState::moveSelection(int32_t dx, int32_t dy) {
     deltaTrans.y += translation.y;
     return translation;
 }
+
+extensions::point GameState::deleteSelection() {
+    // if selection is empty, there is nothing to delete
+    if (selection.empty()) {
+        return { 0, 0 };
+    }
+
+    // delete the selection
+    selection = matrix_t();
+    selectionX = 0;
+    selectionY = 0;
+
+    // merge base back to gamestate
+    extensions::point translation{ -baseX, -baseY};
+    baseX = 0;
+    baseY = 0;
+    mergeSelection();
+
+    return translation;
+}

@@ -42,7 +42,6 @@ public:
         return gameState.changePixelState<Element>(x, y);
     }
 
-
     /**
      * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.
      * Pixel format: pixel = R | (G << 8) | (B << 16)
@@ -73,7 +72,6 @@ public:
      */
     void resetLiveView();
 
-
     /**
      * Starts the simulator
      */
@@ -97,7 +95,6 @@ public:
     void readSave();
     void writeSave();
 
-
     /**
      * These invocations are forwarded to gameState.
      */
@@ -105,4 +102,5 @@ public:
     bool pointInSelection(int32_t x, int32_t y);
     void clearSelection();
     extensions::point moveSelection(int32_t dx, int32_t dy);
+    extensions::point deleteSelection();
 };
