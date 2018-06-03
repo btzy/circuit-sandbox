@@ -26,6 +26,9 @@ void GameState::selectRect(SDL_Rect selectionRect) {
         }
     }
 
+    if (selection.empty()) return;
+    hasSelection = true;
+
     // only shrink after removing all selected elements
     translation = shrinkMatrix(base);
     baseX = -translation.x;
@@ -48,14 +51,11 @@ void GameState::clearSelection() {
     selection = matrix_t();
     selectionX = 0;
     selectionY = 0;
+    hasSelection = false;
 }
 
 void GameState::mergeSelection() {
-    // no selection so we don't do anything
-    if (selection.empty()) {
-        return;
-    }
-
+    if (!hasSelection) return;
     assert(selectionX == 0 || baseX == 0);
     assert(selectionY == 0 || baseY == 0);
 
