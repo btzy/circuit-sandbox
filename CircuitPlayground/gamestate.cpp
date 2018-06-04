@@ -125,5 +125,7 @@ extensions::point GameState::deleteSelection() {
     baseY = 0;
     mergeSelection();
 
+    deltaTrans.x += translation.x;
+    deltaTrans.y += translation.y;
     return translation;
 }
