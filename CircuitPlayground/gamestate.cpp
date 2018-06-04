@@ -38,10 +38,10 @@ void GameState::selectRect(SDL_Rect selectionRect) {
 }
 
 bool GameState::pointInSelection(int32_t x, int32_t y) {
-    int32_t select_x = x - selectionX;
-    int32_t select_y = y - selectionY;
-    if (select_x >= 0 && select_x < selection.width() && select_y >= 0 && select_y < selection.height()) {
-        return !std::holds_alternative<std::monostate>(selection[{select_x, select_y}]);
+    x -= selectionX;
+    y -= selectionY;
+    if (x >= 0 && x < selection.width() && y >= 0 && y < selection.height()) {
+        return !std::holds_alternative<std::monostate>(selection[{x, y}]);
     }
     return false;
 }
