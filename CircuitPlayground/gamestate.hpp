@@ -38,6 +38,8 @@ private:
     int32_t baseX = 0, baseY = 0; // position of base in dataMatrix's coordinate system
     bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting gamestate)
 
+    matrix_t clipboard;
+
     bool changed = false; // whether dataMatrix changed since the last write to the undo stack
     extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
 
@@ -210,4 +212,14 @@ public:
      * NOTE: This method and clearSelection() have potential to get mixed up.
      */
     extensions::point deleteSelection();
+
+    /**
+     * Copy the contents in the selection to the clipboard.
+     */
+    void copySelectionToClipboard();
+
+    /**
+     * Copy the contents of the clipboard to the selection.
+     */
+    extensions::point pasteSelection(int32_t x, int32_t y);
 };

@@ -225,3 +225,32 @@ extensions::point StateManager::deleteSelection() {
 
     return translation;
 }
+
+void StateManager::copy() {
+    gameState.copySelectionToClipboard();
+}
+
+extensions::point StateManager::cut() {
+    extensions::point translation = gameState.deleteSelection();
+    gameState.copySelectionToClipboard();
+
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+
+    return translation;
+}
+
+extensions::point StateManager::paste(int32_t x, int32_t y) {
+    extensions::point translation = gameState.pasteSelection(x, y);
+
+    if (simulator.holdsSimulation()) {
+        if (simulator.running()) simulator.stop();
+        simulator.compile(gameState);
+        simulator.start();
+    }
+
+    return translation;
+}

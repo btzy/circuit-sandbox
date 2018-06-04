@@ -51,6 +51,8 @@ void GameState::clearSelection() {
     selection = matrix_t();
     selectionX = 0;
     selectionY = 0;
+    baseX = 0;
+    baseY = 0;
     hasSelection = false;
 }
 
@@ -90,15 +92,15 @@ extensions::point GameState::moveSelection(int32_t dx, int32_t dy) {
         return { -dx, -dy };
     }
 
-    // update selectionX/Y and baseX/Y such that selection and base are flushed towards the top left corner of datamatrix
     selectionX += dx;
-    translation.x = -std::min(selectionX, baseX);
-    selectionX += translation.x;
-    baseX += translation.x;
-
     selectionY += dy;
+
+    // update selectionX/Y and baseX/Y such that selection and base are flushed towards the top left corner of datamatrix
+    translation.x = -std::min(selectionX, baseX);
     translation.y = -std::min(selectionY, baseY);
+    selectionX += translation.x;
     selectionY += translation.y;
+    baseX += translation.x;
     baseY += translation.y;
 
     mergeSelection();
@@ -120,9 +122,36 @@ extensions::point GameState::deleteSelection() {
     selectionY = 0;
 
     // merge base back to gamestate
-    extensions::point translation{ -baseX, -baseY};
+    extensions::point translation{ -baseX, -baseY };
     baseX = 0;
     baseY = 0;
+    mergeSelection();
+
+    deltaTrans.x += translation.x;
+    deltaTrans.y += translation.y;
+    return translation;
+}
+
+void GameState::copySelectionToClipboard() {
+    clipboard = selection;
+}
+
+extensions::point GameState::pasteSelection(int32_t x, int32_t y) {
+    selection = clipboard;
+    if (selection.empty()) return { 0, 0 };
+    hasSelection = true;
+    selectionX = x;
+    selectionY = y;
+
+    extensions::point translation;
+    translation.x = -std::min(selectionX, baseX);
+    translation.y = -std::min(selectionY, baseY);
+    selectionX += translation.x;
+    selectionY += translation.y;
+    baseX += translation.x;
+    baseY += translation.y;
+
+    base = dataMatrix;
     mergeSelection();
 
     deltaTrans.x += translation.x;

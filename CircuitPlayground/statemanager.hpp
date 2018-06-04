@@ -103,4 +103,7 @@ public:
     void clearSelection();
     extensions::point moveSelection(int32_t dx, int32_t dy);
     extensions::point deleteSelection();
+    void copy();
+    extensions::point cut();
+    extensions::point paste(int32_t x, int32_t y);
 };

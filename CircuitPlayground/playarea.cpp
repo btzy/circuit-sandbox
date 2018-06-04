@@ -279,6 +279,41 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 finishAction();
             }
             break;
+        case SDL_SCANCODE_C:
+            if (modifiers & KMOD_CTRL) {
+                stateManager.copy();
+            }
+            break;
+        case SDL_SCANCODE_X:
+            if (modifiers & KMOD_CTRL) {
+                extensions::point deltaTrans = stateManager.cut();
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
+                finishAction();
+            }
+            break;
+        case SDL_SCANCODE_V:
+            if (modifiers & KMOD_CTRL) {
+                finishAction();
+                selectorState = Selector::SELECTED;
+
+                int32_t physicalOffsetX, physicalOffsetY;
+                SDL_GetMouseState(&physicalOffsetX, &physicalOffsetY);
+                int offsetX = physicalOffsetX - translationX;
+                int offsetY = physicalOffsetY - translationY;
+                offsetX = extensions::div_floor(offsetX, scale);
+                offsetY = extensions::div_floor(offsetY, scale);
+
+                SDL_Point position{ physicalOffsetX, physicalOffsetY};
+                if (!SDL_PointInRect(&position, &renderArea)) {
+                    offsetX = 0;
+                    offsetY = 0;
+                }
+                extensions::point deltaTrans = stateManager.paste(offsetX, offsetY);
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
+            }
+            break;
         case SDL_SCANCODE_Y:
             if (modifiers & KMOD_CTRL) {
                 finishAction();
