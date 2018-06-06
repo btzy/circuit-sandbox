@@ -326,9 +326,8 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
             if (modifiers & KMOD_CTRL) {
                 finishAction();
                 extensions::point deltaTrans = stateManager.undo();
-                // apply inverse translation
-                translationX += deltaTrans.x * scale;
-                translationY += deltaTrans.y * scale;
+                translationX -= deltaTrans.x * scale;
+                translationY -= deltaTrans.y * scale;
             }
             break;
         default:

@@ -93,6 +93,11 @@ void StateManager::saveToHistory() {
 extensions::point StateManager::undo() {
     if (historyIndex == 0) return { 0, 0 };
     extensions::point deltaTrans = history[historyIndex].deltaTrans;
+
+    // apply the inverse translation
+    deltaTrans.x = -deltaTrans.x;
+    deltaTrans.y = -deltaTrans.y;
+
     historyIndex--;
     gameState = history[historyIndex];
     if (simulator.holdsSimulation()) {
