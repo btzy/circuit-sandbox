@@ -187,7 +187,7 @@ public:
     void selectRect(SDL_Rect selectionRect);
 
     /**
-     * Check if (x, y) has been selected.
+     * Check if (x, y) is within selection.
      */
     bool pointInSelection(int32_t x, int32_t y);
 
