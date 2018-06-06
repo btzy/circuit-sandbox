@@ -8,28 +8,49 @@ void GameState::selectRect(SDL_Rect selectionRect) {
 
     extensions::point translation{ selectionRect.x, selectionRect.y };
     // restrict selectionRect to the area within base
-    int32_t y_min = std::max(selectionRect.y, 0);
-    int32_t x_min = std::max(selectionRect.x, 0);
-    int32_t y_max = std::min(selectionRect.y + selectionRect.h, base.height());
-    int32_t x_max = std::min(selectionRect.x + selectionRect.w, base.width());
+    int32_t sy_min = std::max(selectionRect.y, 0);
+    int32_t sx_min = std::max(selectionRect.x, 0);
+    int32_t sy_max = std::min(selectionRect.y + selectionRect.h, base.height());
+    int32_t sx_max = std::min(selectionRect.x + selectionRect.w, base.width());
+
+    int32_t x_min = std::numeric_limits<int32_t>::max();
+    int32_t x_max = std::numeric_limits<int32_t>::min();
+    int32_t y_min = std::numeric_limits<int32_t>::max();
+    int32_t y_max = std::numeric_limits<int32_t>::min();
+
+    // determine bounds of selection
+    for (int32_t y = sy_min; y < sy_max; ++y) {
+        for (int32_t x = sx_min; x < sx_max; ++x) {
+            if (!std::holds_alternative<std::monostate>(base[{x, y}])) {
+                y_min = std::min(y, y_min);
+                x_min = std::min(x, x_min);
+                y_max = std::max(y, y_max);
+                x_max = std::max(x, x_max);
+            }
+        }
+    }
+
+    // no elements in the selection rect
+    if (x_min > x_max) return;
+    hasSelection = true;
+
+    int32_t new_width = x_max - x_min + 1;
+    int32_t new_height = y_max - y_min + 1;
+    selection = matrix_t(new_width, new_height);
+    selectionX = x_min;
+    selectionY = y_min;
 
     // move elements from base to selection
-    for (int32_t y = y_min; y < y_max; ++y) {
-        for (int32_t x = x_min; x < x_max; ++x) {
+    for (int32_t y = y_min; y <= y_max; ++y) {
+        for (int32_t x = x_min; x <= x_max; ++x) {
             if (!std::holds_alternative<std::monostate>(base[{x, y}])) {
-                translation = prepareMatrixForAddition(selection, x - selectionX, y - selectionY);
-                selectionX -= translation.x;
-                selectionY -= translation.y;
                 selection[{x - selectionX, y - selectionY}] = base[{x, y}];
                 base[{x, y}] = std::monostate{};
             }
         }
     }
 
-    if (selection.empty()) return;
-    hasSelection = true;
-
-    // only shrink after removing all selected elements
+    // shrink base after removing all selected elements
     translation = shrinkMatrix(base);
     baseX = -translation.x;
     baseY = -translation.y;
