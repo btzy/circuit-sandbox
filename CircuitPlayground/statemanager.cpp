@@ -195,6 +195,10 @@ void StateManager::selectRect(SDL_Rect selectionRect) {
     gameState.selectRect(selectionRect);
 }
 
+void StateManager::selectAll() {
+    gameState.selectAll();
+}
+
 bool StateManager::pointInSelection(int32_t x, int32_t y) {
     return gameState.pointInSelection(x, y);
 }

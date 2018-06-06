@@ -58,6 +58,12 @@ void GameState::selectRect(SDL_Rect selectionRect) {
     mergeSelection();
 }
 
+void GameState::selectAll() {
+    clearSelection();
+    selection = dataMatrix;
+    hasSelection = true;
+}
+
 bool GameState::pointInSelection(int32_t x, int32_t y) {
     x -= selectionX;
     y -= selectionY;
@@ -69,6 +75,7 @@ void GameState::clearSelection() {
     selection = matrix_t();
     selectionX = 0;
     selectionY = 0;
+    base = matrix_t();
     baseX = 0;
     baseY = 0;
     hasSelection = false;

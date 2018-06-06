@@ -279,6 +279,12 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 finishAction();
             }
             break;
+        case SDL_SCANCODE_A:
+            if (modifiers & KMOD_CTRL) {
+                stateManager.selectAll();
+                selectorState = Selector::SELECTED;
+            }
+            break;
         case SDL_SCANCODE_C:
             if (modifiers & KMOD_CTRL) {
                 stateManager.copy();

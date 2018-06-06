@@ -99,6 +99,7 @@ public:
      * These invocations are forwarded to gameState.
      */
     void selectRect(SDL_Rect selectionRect);
+    void selectAll();
     bool pointInSelection(int32_t x, int32_t y);
     void clearSelection();
     extensions::point moveSelection(int32_t dx, int32_t dy);
@@ -107,3 +108,4 @@ public:
     extensions::point cut();
     extensions::point paste(int32_t x, int32_t y);
 };
+

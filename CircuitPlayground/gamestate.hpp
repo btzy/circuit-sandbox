@@ -187,6 +187,11 @@ public:
     void selectRect(SDL_Rect selectionRect);
 
     /**
+     * Move all elements in dataMatrix to selection.
+     */
+    void selectAll();
+
+    /**
      * Check if (x, y) is within selection.
      */
     bool pointInSelection(int32_t x, int32_t y);
