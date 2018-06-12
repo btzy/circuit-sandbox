@@ -1,3 +1,4 @@
+#include <cassert>
 #include <variant>
 #include <iostream>
 #include <fstream>
@@ -19,31 +20,39 @@ StateManager::~StateManager() {
 void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
 
     // This is kinda yucky, but I can't think of a better way such that:
-    // 1) If useLiveView is false, we don't make a *copy* of gameState
+    // 1) If useLiveView is false, we don't make a *copy* of defaultState
     // 2) If useLiveView is true, we take a snapshot from the simulator and use it
-    auto lambda = [this, &pixelBuffer, left, top, width, height](const GameState& renderGameState) {
+    auto lambda = [this, &pixelBuffer, left, top, width, height](const CanvasState& renderGameState) {
         for (int32_t y = top; y != top + height; ++y) {
             for (int32_t x = left; x != left + width; ++x) {
-                uint32_t color = 0;
+                SDL_Color computedColor{ 0, 0, 0, 0 };
 
                 // check if the requested pixel inside the buffer
-                if (x >= 0 && x < renderGameState.dataMatrix.width() && y >= 0 && y < renderGameState.dataMatrix.height()) {
-                    std::visit(visitor{
-                        [&color](std::monostate) {},
-                        [&color](const auto& element) {
-                            SDL_Color computedColor = computeDisplayColor(element);
-                            color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
-                        },
-                    }, renderGameState.dataMatrix[{x, y}]);
-
-                    int32_t select_x = x - gameState.selectionX;
-                    int32_t select_y = y - gameState.selectionY;
-                    if (select_x >= 0 && select_x < gameState.selection.width() && select_y >= 0 && select_y < gameState.selection.height()) {
-                        if (!std::holds_alternative<std::monostate>(gameState.selection[{select_x, select_y}])) {
-                            color |= 0xFF0000;
-                        }
+                if (x >= 0 && x < renderGameState.width() && y >= 0 && y < renderGameState.height()) {
+                    if (!hasSelection || (x >= baseTrans.x && x < baseTrans.x + base.width() && y >= baseTrans.y && y < baseTrans.y + base.height() && !std::holds_alternative<std::monostate>(base.dataMatrix[{x - baseTrans.x, y - baseTrans.y}]))) {
+                        std::visit(visitor{
+                            [](std::monostate) {},
+                            [&computedColor](const auto& element) {
+                                computedColor = computeDisplayColor(element);
+                            },
+                        }, renderGameState.dataMatrix[{x, y}]);
                     }
                 }
+
+                if (hasSelection) {
+                    int32_t select_x = x - selectionTrans.x;
+                    int32_t select_y = y - selectionTrans.y;
+                    if (select_x >= 0 && select_x < selection.width() && select_y >= 0 && select_y < selection.height()) {
+                        std::visit(visitor{
+                            [](std::monostate) {},
+                            [&computedColor](const auto& element) {
+                                computedColor = std::decay_t<decltype(element)>::displayColor;
+                                computedColor.b = 0xFF;
+                            },
+                        }, selection.dataMatrix[{select_x, select_y}]);
+                    }
+                }
+                uint32_t color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
                 *pixelBuffer++ = color;
             }
         }
@@ -53,79 +62,99 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
         lambda(simulator.takeSnapshot());
     }
     else {
-        lambda(gameState);
+        lambda(defaultState);
     }
 
 }
 
-bool StateManager::checkIfChanged() {
-    if (history.size() == 0 ||
-        gameState.dataMatrix.width() != history[historyIndex].dataMatrix.width() ||
-        gameState.dataMatrix.height() != history[historyIndex].dataMatrix.height()) {
-        gameState.changed = true;
+bool StateManager::evaluateChangedState() {
+    // return immediately if it isn't indeterminate
+    if (changed != boost::indeterminate) {
+        return changed;
+    }
+    
+    if (defaultState.width() != currentHistoryState.width() ||
+        defaultState.height() != currentHistoryState.height()) {
+        
+        changed = true;
         return true;
     }
-    for (int32_t y = 0; y < gameState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x < gameState.dataMatrix.width(); ++x) {
-            if (gameState.dataMatrix[{x, y}].index() != history[historyIndex].dataMatrix[{x, y}].index()) {
-                gameState.changed = true;
+    for (int32_t y = 0; y < defaultState.height(); ++y) {
+        for (int32_t x = 0; x < defaultState.width(); ++x) {
+            if (defaultState.dataMatrix[{x, y}].index() != currentHistoryState.dataMatrix[{x, y}].index()) {
+                changed = true;
                 return true;
             }
         }
     }
-    gameState.changed = false;
+    changed = false;
     return false;
 }
 
-void StateManager::saveToHistory() {
-    // don't write to the undo stack if the gameState did not change
-    if (!gameState.changed) return;
 
-    if (historyIndex+1 < history.size()) {
-        history.resize(historyIndex+1);
+void StateManager::reloadSimulator() {
+    if (simulator.holdsSimulation()) {
+        bool simulatorRunning = simulator.running();
+        if (simulatorRunning) simulator.stop();
+        simulator.compile(defaultState);
+        if (simulatorRunning) simulator.start();
     }
-    gameState.changed = false;
-    history.push_back(gameState);
-    gameState.deltaTrans = { 0, 0 };
-    historyIndex++;
+}
+
+
+void StateManager::saveToHistory() {
+    // check if changed if necessary
+    evaluateChangedState();
+    
+    // don't write to the undo stack if the gameState did not change
+    if (!changed) return;
+
+    // note: we save the inverse translation
+    undoStack.emplace(std::move(currentHistoryState), -deltaTrans);
+    currentHistoryState = defaultState;
+    deltaTrans = { 0, 0 };
+
+    changed = false;
+
+    // flush the redoStack
+    while (!redoStack.empty()) redoStack.pop();
 }
 
 extensions::point StateManager::undo() {
-    if (historyIndex == 0) return { 0, 0 };
-    extensions::point deltaTrans = history[historyIndex].deltaTrans;
+    if (undoStack.empty()) return { 0, 0 };
 
-    // apply the inverse translation
-    deltaTrans.x = -deltaTrans.x;
-    deltaTrans.y = -deltaTrans.y;
+    auto [canvasState, tmpDeltaTrans] = std::move(undoStack.top());
+    undoStack.pop();
 
-    historyIndex--;
-    gameState = history[historyIndex];
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
-    gameState.deltaTrans = { 0, 0 };
-    return deltaTrans;
+    // note: we save the inverse of the undo translation into the redo stack
+    redoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
+    defaultState = currentHistoryState = std::move(canvasState);
+    deltaTrans = { 0, 0 };
+
+    reloadSimulator();
+
+    return tmpDeltaTrans;
 }
 
 extensions::point StateManager::redo() {
-    if (historyIndex == history.size() - 1) return { 0, 0 };
-    historyIndex++;
-    gameState = history[historyIndex];
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
-    extensions::point deltaTrans = gameState.deltaTrans;
-    gameState.deltaTrans = { 0, 0 };
-    return deltaTrans;
+    if (redoStack.empty()) return { 0, 0 };
+
+    auto[canvasState, tmpDeltaTrans] = std::move(redoStack.top());
+    redoStack.pop();
+
+    // note: we save the inverse of the redo translation into the undo stack
+    undoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
+    defaultState = currentHistoryState = std::move(canvasState);
+    deltaTrans = { 0, 0 };
+
+    reloadSimulator();
+
+    return tmpDeltaTrans;
 }
 
 
 void StateManager::resetLiveView() {
-    simulator.compile(gameState);
+    simulator.compile(defaultState);
 }
 
 
@@ -151,37 +180,38 @@ void StateManager::readSave() {
     saveFile.read(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
     saveFile.read(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
 
-    gameState.dataMatrix = typename GameState::matrix_t(matrixWidth, matrixHeight);
+    defaultState.dataMatrix = typename CanvasState::matrix_t(matrixWidth, matrixHeight);
 
-    for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
+    for (int32_t y = 0; y != defaultState.height(); ++y) {
+        for (int32_t x = 0; x != defaultState.width(); ++x) {
             size_t element_index;
             saveFile.read(reinterpret_cast<char*>(&element_index), sizeof element_index);
 
-            GameState::element_variant_t element;
-            GameState::element_tags_t::get(element_index, [&element](const auto element_tag) {
+            CanvasState::element_variant_t element;
+            CanvasState::element_tags_t::get(element_index, [&element](const auto element_tag) {
                 using Element = typename decltype(element_tag)::type;
                 element = Element();
             });
-            gameState.dataMatrix[{x, y}] = element;
+            defaultState.dataMatrix[{x, y}] = element;
         }
     }
-    gameState.changed = true;
+
+    changed = true;
 }
 
 void StateManager::writeSave() {
     std::ofstream saveFile(savePath, std::ios::binary);
     if (!saveFile.is_open()) return;
 
-    int32_t matrixWidth = gameState.dataMatrix.width();
-    int32_t matrixHeight = gameState.dataMatrix.height();
+    int32_t matrixWidth = defaultState.width();
+    int32_t matrixHeight = defaultState.height();
     saveFile.write(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
     saveFile.write(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
 
-    for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
-            GameState::element_variant_t element = gameState.dataMatrix[{x, y}];
-            GameState::element_tags_t::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
+    for (int32_t y = 0; y != defaultState.height(); ++y) {
+        for (int32_t x = 0; x != defaultState.width(); ++x) {
+            CanvasState::element_variant_t element = defaultState.dataMatrix[{x, y}];
+            CanvasState::element_tags_t::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
                 size_t index = element.index();
                 if (index == decltype(index_tag)::value) {
                     saveFile.write(reinterpret_cast<char*>(&index), sizeof index);
@@ -192,74 +222,114 @@ void StateManager::writeSave() {
 }
 
 void StateManager::selectRect(SDL_Rect selectionRect) {
-    gameState.selectRect(selectionRect);
+    // make a copy of dataMatrix
+    base = defaultState;
+
+    // TODO: proper rectangle clamping functions
+    extensions::point translation{ selectionRect.x, selectionRect.y };
+    // restrict selectionRect to the area within base
+    int32_t sx_min = std::max(selectionRect.x, 0);
+    int32_t sy_min = std::max(selectionRect.y, 0);
+    int32_t swidth = std::min(selectionRect.w, base.width() - selectionRect.x);
+    int32_t sheight = std::min(selectionRect.h, base.height() - selectionRect.y);
+    
+    // no elements in the selection rect
+    if (swidth <= 0 || sheight <= 0) return;
+
+    // splice out the selection from the base
+    selection = base.splice(sx_min, sy_min, swidth, sheight);
+
+    // shrink the selection
+    extensions::point selectionShrinkTrans = selection.shrinkDataMatrix();
+
+    // no elements in the selection rect
+    if (selection.empty()) return;
+
+    hasSelection = true;
+
+    selectionTrans = translation - selectionShrinkTrans;
+
+    baseTrans = -base.shrinkDataMatrix();
 }
 
 void StateManager::selectAll() {
-    gameState.selectAll();
+    finishSelection();
+    selection = defaultState;
+    hasSelection = true;
 }
 
-bool StateManager::pointInSelection(int32_t x, int32_t y) {
-    return gameState.pointInSelection(x, y);
+bool StateManager::pointInSelection(extensions::point pt) const {
+    pt -= selectionTrans;
+    return pt.x >= 0 && pt.x < selection.width() && pt.y >= 0 && pt.y < selection.height();
 }
 
-void StateManager::clearSelection() {
-    // TODO: try to reduce these calls
-    checkIfChanged();
-    gameState.clearSelection();
+void StateManager::finishSelection() {
+    selection = CanvasState();
+    selectionTrans = { 0, 0 };
+    base = CanvasState();
+    baseTrans = { 0, 0 };
+    hasSelection = false;
 }
 
-extensions::point StateManager::moveSelection(int32_t dx, int32_t dy) {
-    extensions::point translation = gameState.moveSelection(dx, dy);
+extensions::point StateManager::commitSelection() {
+    extensions::point ans = mergeSelection();
+    finishSelection();
+    return ans;
+}
 
-    // update the simulator after moving
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
+extensions::point StateManager::mergeSelection() {
+    if (!hasSelection) return { 0, 0 };
+
+    auto [tmpDefaultState, translation] = CanvasState::merge(std::move(base), baseTrans, std::move(selection), selectionTrans);
+    defaultState = std::move(tmpDefaultState);
+    deltaTrans += translation;
+
+    changed = boost::indeterminate; // is there's a possibility that the merge does nothing?
+
+    // update the simulator after merging
+    reloadSimulator();
 
     return translation;
+}
+
+void StateManager::moveSelection(int32_t dx, int32_t dy) {
+    selectionTrans.x += dx;
+    selectionTrans.y += dy;
 }
 
 extensions::point StateManager::deleteSelection() {
-    extensions::point translation = gameState.deleteSelection();
+    defaultState = std::move(base);
+
+    changed = true; // since the selection can never be empty
+
+    extensions::point translation = -baseTrans;
+    
+    deltaTrans += translation;
+
+    // merge base back to gamestate (and update the simulator)
+    finishSelection();
 
     // update the simulator after deleting
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
+    reloadSimulator();
 
     return translation;
 }
 
-void StateManager::copy() {
-    gameState.copySelectionToClipboard();
+void StateManager::copySelectionToClipboard() {
+    clipboard = selection;
 }
 
-extensions::point StateManager::cut() {
-    extensions::point translation = gameState.deleteSelection();
-    gameState.copySelectionToClipboard();
-
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
+extensions::point StateManager::cutSelectionToClipboard() {
+    clipboard = std::move(selection);
+    extensions::point translation = deleteSelection();
 
     return translation;
 }
 
-extensions::point StateManager::paste(int32_t x, int32_t y) {
-    extensions::point translation = gameState.pasteSelection(x, y);
-
-    if (simulator.holdsSimulation()) {
-        if (simulator.running()) simulator.stop();
-        simulator.compile(gameState);
-        simulator.start();
-    }
-
-    return translation;
+void StateManager::pasteSelectionFromClipboard(int32_t x, int32_t y) {
+    selection = clipboard;
+    selectionTrans = { x, y };
 }
+
+
+

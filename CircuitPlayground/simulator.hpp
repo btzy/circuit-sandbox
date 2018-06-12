@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "gamestate.hpp"
+#include "canvasstate.hpp"
 #include "heap_matrix.hpp"
 
 
@@ -22,8 +22,8 @@ private:
     // The thread on which the simulation will run.
     std::thread simThread;
 
-    // The last GameState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
-    std::shared_ptr<GameState> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<GameState>>.
+    // The last CanvasState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
+    std::shared_ptr<CanvasState> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<CanvasState>>.
     std::atomic<bool> simStopping; // flag for the UI thread to tell the simulation thread to stop.
 
     // synchronization stuff to wake the simulator thread if its sleeping
@@ -46,7 +46,7 @@ public:
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
      * @pre simulation is currently stopped.
      */
-    void compile(const GameState& gameState);
+    void compile(const CanvasState& gameState);
 
     /**
      * Start running the simulation.
@@ -71,7 +71,7 @@ public:
      * Returns true is the simulator currently holds a compiled simulation.
      */
     bool holdsSimulation() const {
-        std::shared_ptr<GameState> tmpState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
+        std::shared_ptr<CanvasState> tmpState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
         return tmpState != nullptr;
     }
 
@@ -87,5 +87,5 @@ public:
      * Take a "snapshot" of the current simulation state, and write it to the supplied argument.
      * This works regardless whether the simulation is running or stopped.
      */
-    GameState takeSnapshot() const;
+    CanvasState takeSnapshot() const;
 };

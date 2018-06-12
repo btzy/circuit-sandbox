@@ -2,9 +2,11 @@
 
 #include <cstdint> // for int32_t and uint32_t
 #include <string>
-#include <vector>
+#include <stack>
 
-#include "gamestate.hpp"
+#include <boost/logic/tribool.hpp>
+
+#include "canvasstate.hpp"
 #include "simulator.hpp"
 
 
@@ -15,10 +17,36 @@
 class StateManager {
 
 private:
-    GameState gameState; // stores the 'default' states, which is the state that can be saved to disk
+    CanvasState defaultState; // stores the 'default' states, which is the state that can be saved to disk
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
-    std::vector<GameState> history; // the undo stack stores entire GameStates for now
-    size_t historyIndex = -1; // index of current gamestate in history (constructor will initialise it to 0)
+    
+    // fields for undo/redo stack
+    std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    std::stack<std::pair<CanvasState, extensions::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    CanvasState currentHistoryState; // the canvas state treated as 'current' by the history manager; this is either the state when saveToHistory() was last called, or the state after an undo/redo operation.
+    boost::tribool changed = false; // whether canvasstate changed since the last write to the undo stack
+    extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
+
+    // fields for selection mechanism
+    CanvasState selection; // stores the selection
+    CanvasState base; // the 'base' layer is a copy of dataMatrix minus selection at the time the selection was made
+    extensions::point selectionTrans{ 0, 0 }; // position of selection in defaultState's coordinate system
+    extensions::point baseTrans{ 0, 0 }; // position of base in defaultState's coordinate system
+    bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting gamestate)
+
+    CanvasState clipboard;
+    
+
+    /**
+     * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.
+     * This should only be used if no faster alternative exists.
+     */
+    bool evaluateChangedState();
+
+    /**
+     * If a current simulator exists, stop and recompiles the simulator.
+     */
+    void reloadSimulator();
 
 public:
 
@@ -27,19 +55,29 @@ public:
 
     /**
      * Change the state of a pixel.
-     * Currently forwards the invocation to gameState.
+     * Currently forwards the invocation to defaultState.
      */
     template <typename Element>
     extensions::point changePixelState(int32_t x, int32_t y) {
         if (simulator.holdsSimulation()) {
             // If the simulator current holds a simulation, then we need to update it too.
-            if (simulator.running()) simulator.stop();
-            GameState simState = simulator.takeSnapshot();
+            bool simulatorRunning = simulator.running();
+            if (simulatorRunning) simulator.stop();
+            CanvasState simState = simulator.takeSnapshot();
             simState.changePixelState<Element>(x, y);
             simulator.compile(simState);
-            simulator.start();
+            if (simulatorRunning) simulator.start();
         }
-        return gameState.changePixelState<Element>(x, y);
+
+        auto [canvasChanged, translation] = defaultState.changePixelState<Element>(x, y);
+
+        if (canvasChanged) {
+            changed = true;
+        }
+
+        deltaTrans += translation;
+
+        return translation;
     }
 
     /**
@@ -48,12 +86,6 @@ public:
      * useLiveView: whether we want to render the live view (instead of the default view)
      */
     void fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
-
-    /**
-     * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.
-     * This should only be used if no faster alternative exists.
-     */
-    bool checkIfChanged();
 
     /**
      * Take a snapshot of the gamestate and save it in the history
@@ -96,16 +128,71 @@ public:
     void writeSave();
 
     /**
-     * These invocations are forwarded to gameState.
+     * Move elements within selectionRect from dataMatrix to selection.
      */
     void selectRect(SDL_Rect selectionRect);
+
+    /**
+     * Move all elements in dataMatrix to selection.
+     */
     void selectAll();
-    bool pointInSelection(int32_t x, int32_t y);
-    void clearSelection();
-    extensions::point moveSelection(int32_t dx, int32_t dy);
+
+    /**
+     * Check if (x, y) is within selection.
+     */
+    bool pointInSelection(extensions::point pt) const;
+
+    /**
+     * Clear the selection and merge it with dataMatrix, then exits selection mode.
+     * This method will update the live simulation if necessary.
+     * It is okay for selectionTrans and baseTrans to be nonzero.
+     */
+    extensions::point commitSelection();
+
+    /**
+     * Merge base and selection. The result is stored in dataMatrix.
+     * This method will update the live simulation if necessary.
+     * It is okay for selectionTrans and baseTrans to be nonzero.
+     * WARNING: `base` and `selection` will be left in an indeterminate state! Use finishSelection() after mergeSelection() to clear them.
+     */
+    extensions::point mergeSelection();
+
+    /**
+     * Move the selection.
+     */
+    void moveSelection(int32_t dx, int32_t dy);
+
+    /**
+     * Delete the elements in the selection, then exit selection mode.
+     * NOTE: This method and clearSelection() have potential to get mixed up.
+     * This method will update the live simulation if necessary.
+     */
     extensions::point deleteSelection();
-    void copy();
-    extensions::point cut();
-    extensions::point paste(int32_t x, int32_t y);
+
+    /**
+     * Copy the contents of the clipboard to the selection.
+     */
+    extensions::point pasteSelection(int32_t x, int32_t y);
+
+    /**
+     * Exit selection mode without saving anything.
+     */
+    void finishSelection();
+
+    /**
+     * Cut the selection into the clipboard.
+     * This method will update the live simulation if necessary.
+     */
+    extensions::point cutSelectionToClipboard();
+
+    /**
+     * Copy the selection into the clipboard.
+     */
+    void copySelectionToClipboard();
+
+    /**
+     * Paste the selection from the clipboard.
+     */
+    void pasteSelectionFromClipboard(int32_t x, int32_t y);
 };
 

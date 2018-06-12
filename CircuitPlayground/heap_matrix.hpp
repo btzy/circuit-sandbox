@@ -119,10 +119,13 @@ namespace extensions {
         }
 
         template <typename TSrc, typename TDest>
-        friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept;
+        friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::copy(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>())));
 
         template <typename TSrc, typename TDest>
-        friend inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept;
+        friend inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::move(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>())));
+
+        template <typename TSrc, typename TDest>
+        friend inline void swap_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::swap_ranges(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>())));
     };
 
     /**
@@ -130,7 +133,7 @@ namespace extensions {
      * @pre the rectangles should be within the bounds of their respective matrices
      */
     template <typename TSrc, typename TDest>
-    inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept {
+    inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::copy(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>()))) {
         const TSrc* src_buffer = src.buffer + src_y * src._width;
         TDest* dest_buffer = dest.buffer + dest_y * dest._width;
         for (int32_t i = 0; i < height; ++i) {
@@ -145,11 +148,22 @@ namespace extensions {
      * @pre the rectangles should be within the bounds of their respective matrices
      */
     template <typename TSrc, typename TDest>
-    inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept {
+    inline void move_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::move(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>()))) {
         TSrc* src_buffer = src.buffer + src_y * src._width;
         TDest* dest_buffer = dest.buffer + dest_y * dest._width;
         for (int32_t i = 0; i < height; ++i) {
             std::move(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
+            src_buffer += src._width;
+            dest_buffer += dest._width;
+        }
+    }
+
+    template <typename TSrc, typename TDest>
+    inline void swap_range(heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height) noexcept(noexcept(std::swap_ranges(std::declval<TSrc*>(), std::declval<TSrc*>(), std::declval<TDest*>()))) {
+        TSrc* src_buffer = src.buffer + src_y * src._width;
+        TDest* dest_buffer = dest.buffer + dest_y * dest._width;
+        for (int32_t i = 0; i < height; ++i) {
+            std::swap_ranges(src_buffer + src_x, src_buffer + src_x + width, dest_buffer + dest_x);
             src_buffer += src._width;
             dest_buffer += dest._width;
         }

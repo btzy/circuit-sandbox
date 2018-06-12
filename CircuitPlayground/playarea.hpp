@@ -25,8 +25,7 @@ private:
     StateManager stateManager;
 
     // translation (in physical pixels)
-    int32_t translationX = 0;
-    int32_t translationY = 0;
+    extensions::point translation{ 0, 0 };
 
     // length (in physical pixels) of each element; changes with zoom level
     int32_t scale = 20;
@@ -44,6 +43,15 @@ private:
     Selector::State selectorState = Selector::INACTIVE;
 
     bool liveView = false; // whether live view (instead of default view) is being rendered
+
+    extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
+        
+        // translation:
+        extensions::point offset = physicalOffset - translation;
+
+        // scaling:
+        return extensions::div_floor(offset, scale);
+    }
 
 
 public:
@@ -83,19 +91,18 @@ public:
      * Use a drawing tool on (x, y)
      */
     template <typename Tool>
-    void processDrawingTool(int32_t x, int32_t y) {
+    void processDrawingTool(extensions::point pt) {
         extensions::point deltaTrans;
 
         // if it is a Pencil, forward the drawing to the gamestate
         if constexpr (std::is_base_of_v<Eraser, Tool>) {
-            deltaTrans = stateManager.changePixelState<std::monostate>(x, y); // special handling for the eraser
+            deltaTrans = stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
         }
         else {
-            deltaTrans = stateManager.changePixelState<Tool>(x, y); // forwarding for the normal elements
+            deltaTrans = stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
         }
 
-        translationX -= deltaTrans.x * scale;
-        translationY -= deltaTrans.y * scale;
+        translation -= deltaTrans * scale;
     }
 
     /**

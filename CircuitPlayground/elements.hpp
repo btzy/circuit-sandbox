@@ -108,7 +108,6 @@ constexpr inline bool isSignalReceiver(const ElementVariant& v) {
 }
 
 
-
 // display colour functions
 template <typename Element>
 constexpr inline SDL_Color computeDisplayColor(const Element& element) {

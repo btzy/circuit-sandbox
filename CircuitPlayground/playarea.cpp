@@ -23,12 +23,12 @@ void PlayArea::updateDpi() {
 void PlayArea::render(SDL_Renderer* renderer) const {
     // calculate the rectangle (in gamestate coordinates) that we will be drawing:
     SDL_Rect surfaceRect;
-    surfaceRect.x = extensions::div_floor(-translationX, scale);
-    surfaceRect.y = extensions::div_floor(-translationY, scale);
-    surfaceRect.w = extensions::div_ceil(renderArea.w - translationX, scale) - surfaceRect.x;
-    surfaceRect.h = extensions::div_ceil(renderArea.h - translationY, scale) - surfaceRect.y;
+    surfaceRect.x = extensions::div_floor(-translation.x, scale);
+    surfaceRect.y = extensions::div_floor(-translation.y, scale);
+    surfaceRect.w = extensions::div_ceil(renderArea.w - translation.x, scale) - surfaceRect.x;
+    surfaceRect.h = extensions::div_ceil(renderArea.h - translation.y, scale) - surfaceRect.y;
 
-    // render the gamestate
+    // render the gamestated
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
     stateManager.fillSurface(liveView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -38,8 +38,8 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     // scale and translate the surface according to the the pan and zoom level
     // the section of the surface enclosed within surfaceRect is mapped to dstRect
     const SDL_Rect dstRect {
-        renderArea.x + surfaceRect.x * scale + translationX,
-        renderArea.y + surfaceRect.y * scale + translationY,
+        renderArea.x + surfaceRect.x * scale + translation.x,
+        renderArea.y + surfaceRect.y * scale + translation.y,
         surfaceRect.w * scale,
         surfaceRect.h * scale
     };
@@ -48,12 +48,12 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
     // render a mouseover rectangle (if the mouseoverPoint is non-empty)
     if (mouseoverPoint) {
-        int32_t gameStateX = extensions::div_floor(mouseoverPoint->x - translationX, scale);
-        int32_t gameStateY = extensions::div_floor(mouseoverPoint->y - translationY, scale);
+        int32_t gameStateX = extensions::div_floor(mouseoverPoint->x - translation.x, scale);
+        int32_t gameStateY = extensions::div_floor(mouseoverPoint->y - translation.y, scale);
 
         SDL_Rect mouseoverRect{
-            gameStateX * scale + translationX,
-            gameStateY * scale + translationY,
+            gameStateX * scale + translation.x,
+            gameStateY * scale + translation.y,
             scale,
             scale
         };
@@ -67,8 +67,8 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     // render the selection rectangle if it exists
     if (selectorState == Selector::SELECTING) {
         SDL_Rect selectionArea {
-            selectionRect.x * scale + translationX,
-            selectionRect.y * scale + translationY,
+            selectionRect.x * scale + translation.x,
+            selectionRect.y * scale + translation.y,
             selectionRect.w * scale,
             selectionRect.h * scale
         };
@@ -105,35 +105,30 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
     // this check is necessary as PlayArea receives mousemotion events even if the cursor is outside its render area
     if (SDL_PointInRect(&position, &renderArea)) {
-        int offsetX = physicalOffsetX - translationX;
-        int offsetY = physicalOffsetY - translationY;
-        offsetX = extensions::div_floor(offsetX, scale);
-        offsetY = extensions::div_floor(offsetY, scale);
+        extensions::point offset = computeCanvasCoords({ physicalOffsetX, physicalOffsetY });
         if (drawingIndex) {
-            MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offsetX, offsetY](const auto tool_tag) {
+            MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offset](const auto tool_tag) {
                 using Tool = typename decltype(tool_tag)::type;
                 if constexpr (std::is_base_of_v<Pencil, Tool>) {
-                    processDrawingTool<Tool>(offsetX, offsetY);
+                    processDrawingTool<Tool>(offset);
                 }
             });
         } else if (selectorState == Selector::SELECTING) {
-            selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+            selectionRect = getRect(selectionOriginX, selectionOriginY, offset.x, offset.y);
         } else if (selectorState == Selector::MOVING) {
-            if (moveOriginX != offsetX || moveOriginY != offsetY) {
+            if (moveOriginX != offset.x || moveOriginY != offset.y) {
                 extensions::point deltaTrans;
-                deltaTrans = stateManager.moveSelection(offsetX - moveOriginX, offsetY - moveOriginY);
-                moveOriginX = offsetX + deltaTrans.x;
-                moveOriginY = offsetY + deltaTrans.y;
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                stateManager.moveSelection(offset.x - moveOriginX, offset.y - moveOriginY);
+                moveOriginX = offset.x;
+                moveOriginY = offset.y;
             }
         }
     }
 
     // update translation if panning
     if (panning && mouseoverPoint) {
-        translationX += physicalOffsetX - mouseoverPoint->x;
-        translationY += physicalOffsetY - mouseoverPoint->y;
+        translation.x += physicalOffsetX - mouseoverPoint->x;
+        translation.y += physicalOffsetY - mouseoverPoint->y;
     }
 
     // store the new mouseover point
@@ -143,19 +138,11 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
 void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    int physicalOffsetX = event.x - renderArea.x;
-    int physicalOffsetY = event.y - renderArea.y;
-
-    // translation:
-    int offsetX = physicalOffsetX - translationX;
-    int offsetY = physicalOffsetY - translationY;
-
-    // scaling:
-    offsetX = extensions::div_floor(offsetX, scale);
-    offsetY = extensions::div_floor(offsetY, scale);
+    extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{renderArea.x, renderArea.y};
+   
 
     size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-    MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, offsetX, offsetY, inputHandleIndex](const auto tool_tag) {
+    MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
         // 'Tool' is the type of tool (e.g. Selector)
         using Tool = typename decltype(tool_tag)::type;
 
@@ -164,7 +151,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                 // If another drawing tool is in use, break that action and start a new one
                 finishAction();
                 drawingIndex = inputHandleIndex;
-                processDrawingTool<Tool>(offsetX, offsetY);
+                processDrawingTool<Tool>(computeCanvasCoords(physicalOffset));
             } else {
                 // Break the current drawing action if the mouseup is from that tool
                 if (inputHandleIndex == drawingIndex) {
@@ -174,21 +161,22 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         }
         else if constexpr (std::is_base_of_v<Selector, Tool>) {
             // it is a Selector.
-            // TODO.
+            extensions::point offset = computeCanvasCoords(physicalOffset);
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (selectorState == Selector::SELECTED) {
-                    if (!stateManager.pointInSelection(offsetX, offsetY)) {
+                    if (!stateManager.pointInSelection(offset)) {
                         finishAction();
+                        offset = computeCanvasCoords(physicalOffset);
                     } else {
                         selectorState = Selector::MOVING;
-                        moveOriginX = offsetX;
-                        moveOriginY = offsetY;
+                        moveOriginX = offset.x;
+                        moveOriginY = offset.y;
                     }
                 }
                 if (selectorState == Selector::INACTIVE) {
                     selectorState = Selector::SELECTING;
-                    selectionOriginX = offsetX;
-                    selectionOriginY = offsetY;
+                    selectionOriginX = offset.x;
+                    selectionOriginY = offset.y;
                     selectionRect = { selectionOriginX, selectionOriginY, 1, 1 };
                 }
             } else {
@@ -197,7 +185,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                     SDL_Point position{ event.x, event.y };
                     // TODO: consider using viewports to eliminate these checks
                     if (SDL_PointInRect(&position, &renderArea)) {
-                        selectionRect = getRect(selectionOriginX, selectionOriginY, offsetX, offsetY);
+                        selectionRect = getRect(selectionOriginX, selectionOriginY, offset.x, offset.y);
                         stateManager.selectRect(selectionRect);
                     }
                 } else if (selectorState == Selector::MOVING) {
@@ -227,18 +215,18 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
         // change the scale factor,
         // and adjust the translation so that the scaling pivots on the pixel that the mouse is over
         int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
-        int32_t offsetX = extensions::div_floor(mouseoverPoint->x - translationX + scale / 2, scale); // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
-        int32_t offsetY = extensions::div_floor(mouseoverPoint->y - translationY + scale / 2, scale);
+        int32_t offsetX = extensions::div_floor(mouseoverPoint->x - translation.x + scale / 2, scale); // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
+        int32_t offsetY = extensions::div_floor(mouseoverPoint->y - translation.y + scale / 2, scale);
 
         if (scrollAmount > 0) {
             scale++;
-            translationX -= offsetX;
-            translationY -= offsetY;
+            translation.x -= offsetX;
+            translation.y -= offsetY;
         }
         else if (scrollAmount < 0 && scale > 1) {
             scale--;
-            translationX += offsetX;
-            translationY += offsetY;
+            translation.x += offsetX;
+            translation.y += offsetY;
         }
     }
 }
@@ -274,8 +262,7 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
         case SDL_SCANCODE_DELETE:
             {
                 extensions::point deltaTrans = stateManager.deleteSelection();
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                translation -= deltaTrans * scale;
                 finishAction();
             }
             break;
@@ -287,14 +274,13 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
             break;
         case SDL_SCANCODE_C:
             if (modifiers & KMOD_CTRL) {
-                stateManager.copy();
+                stateManager.copySelectionToClipboard();
             }
             break;
         case SDL_SCANCODE_X:
             if (modifiers & KMOD_CTRL) {
-                extensions::point deltaTrans = stateManager.cut();
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                extensions::point deltaTrans = stateManager.cutSelectionToClipboard();
+                translation -= deltaTrans * scale;
                 finishAction();
             }
             break;
@@ -305,8 +291,8 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 
                 int32_t physicalOffsetX, physicalOffsetY;
                 SDL_GetMouseState(&physicalOffsetX, &physicalOffsetY);
-                int offsetX = physicalOffsetX - translationX;
-                int offsetY = physicalOffsetY - translationY;
+                int offsetX = physicalOffsetX - translation.x;
+                int offsetY = physicalOffsetY - translation.y;
                 offsetX = extensions::div_floor(offsetX, scale);
                 offsetY = extensions::div_floor(offsetY, scale);
 
@@ -315,25 +301,21 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                     offsetX = 0;
                     offsetY = 0;
                 }
-                extensions::point deltaTrans = stateManager.paste(offsetX, offsetY);
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                stateManager.pasteSelectionFromClipboard(offsetX, offsetY);
             }
             break;
         case SDL_SCANCODE_Y:
             if (modifiers & KMOD_CTRL) {
                 finishAction();
                 extensions::point deltaTrans = stateManager.redo();
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                translation -= deltaTrans * scale;
             }
             break;
         case SDL_SCANCODE_Z:
             if (modifiers & KMOD_CTRL) {
                 finishAction();
                 extensions::point deltaTrans = stateManager.undo();
-                translationX -= deltaTrans.x * scale;
-                translationY -= deltaTrans.y * scale;
+                translation -= deltaTrans * scale;
             }
             break;
         default:
@@ -345,8 +327,9 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 void PlayArea::finishAction() {
     drawingIndex = std::nullopt;
     selectorState = Selector::INACTIVE;
-    stateManager.clearSelection();
-    stateManager.saveToHistory();
+    extensions::point deltaTrans = stateManager.commitSelection();
+    translation -= deltaTrans * scale;
+    stateManager.saveToHistory(); // TODO: check drawingIndex and selectorState to tell if state definitely hasn't changed.
 }
 
 SDL_Rect PlayArea::getRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2) {

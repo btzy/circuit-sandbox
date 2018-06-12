@@ -16,10 +16,10 @@ Simulator::~Simulator() {
 }
 
 
-void Simulator::compile(const GameState& gameState) {
-    // Note: (TODO) for now it seems that we are modifying the innards of tmpState, but when we do proper compilation we will need another data structure instead, not just plain GameState.
-    GameState tmpState;
-    tmpState.dataMatrix = typename GameState::matrix_t(gameState.dataMatrix.width(), gameState.dataMatrix.height());
+void Simulator::compile(const CanvasState& gameState) {
+    // Note: (TODO) for now it seems that we are modifying the innards of tmpState, but when we do proper compilation we will need another data structure instead, not just plain CanvasState.
+    CanvasState tmpState;
+    tmpState.dataMatrix = typename CanvasState::matrix_t(gameState.dataMatrix.width(), gameState.dataMatrix.height());
     for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
             tmpState.dataMatrix[{x, y}] = gameState.dataMatrix[{x, y}];
@@ -27,7 +27,7 @@ void Simulator::compile(const GameState& gameState) {
     }
 
     // Note: no atomics required here because the simulation thread has not started, and starting the thread automatically does synchronization.
-    latestCompleteState = std::make_shared<GameState>(std::move(tmpState));
+    latestCompleteState = std::make_shared<CanvasState>(std::move(tmpState));
 }
 
 
@@ -61,11 +61,11 @@ void Simulator::stop() {
 
 
 
-GameState Simulator::takeSnapshot() const {
+CanvasState Simulator::takeSnapshot() const {
     // Note (TODO): will be replaced with the proper compiled graph representation
-    GameState returnState;
-    const std::shared_ptr<GameState> gameState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
-    returnState.dataMatrix = typename GameState::matrix_t(gameState->dataMatrix.width(), gameState->dataMatrix.height());
+    CanvasState returnState;
+    const std::shared_ptr<CanvasState> gameState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
+    returnState.dataMatrix = typename CanvasState::matrix_t(gameState->dataMatrix.width(), gameState->dataMatrix.height());
     for (int32_t y = 0; y != gameState->dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != gameState->dataMatrix.width(); ++x) {
             returnState.dataMatrix[{x, y}] = gameState->dataMatrix[{x, y}];
@@ -81,7 +81,7 @@ void Simulator::run() {
     while (true) {
         // note: we just use the member field 'latestCompleteState' directly without any synchronization,
         // because when the simulator thread is running, no other thread will modify 'latestCompleteState'.
-        const GameState& oldState = *latestCompleteState;
+        const CanvasState& oldState = *latestCompleteState;
 
         // holds the new state after simulating this step
         extensions::heap_matrix<ElementState> intermediateState(oldState.dataMatrix.width(), oldState.dataMatrix.height());
@@ -124,19 +124,19 @@ void Simulator::run() {
         }
 
         // holds the new state after simulating this step
-        GameState newState;
-        newState.dataMatrix = typename GameState::matrix_t(oldState.dataMatrix.width(), oldState.dataMatrix.height());
+        CanvasState newState;
+        newState.dataMatrix = typename CanvasState::matrix_t(oldState.dataMatrix.width(), oldState.dataMatrix.height());
 
         // clone all the element types, but set them all to LOW
         for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
             for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
                 newState.dataMatrix[{x, y}] = std::visit(visitor{
                     [](std::monostate) {
-                        return GameState::element_variant_t{};
+                        return CanvasState::element_variant_t{};
                     },
                     [](auto element) {
                         using Element = decltype(element);
-                        return GameState::element_variant_t{ Element{} }; // a new element is set to LOW by default, see elements.hpp
+                        return CanvasState::element_variant_t{ Element{} }; // a new element is set to LOW by default, see elements.hpp
                     }
                 }, oldState.dataMatrix[{x, y}]);
             }
@@ -244,7 +244,7 @@ void Simulator::run() {
         // we aren't asked to stop.
         // so commit the new state (i.e. replace 'latestCompleteState' with the new state).
         // also, std::memory_order_release to flush the changes so that the main thread can see them
-        std::atomic_store_explicit(&latestCompleteState, std::make_shared<GameState>(std::move(newState)), std::memory_order_release);
+        std::atomic_store_explicit(&latestCompleteState, std::make_shared<CanvasState>(std::move(newState)), std::memory_order_release);
 
         // sleep for 500 milliseconds
         // TODO: this will become configurable, or to not sleep at all.

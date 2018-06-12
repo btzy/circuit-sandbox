@@ -6,7 +6,7 @@ namespace extensions {
 
     // division towards negative infinity
     template <typename T>
-    inline T div_floor(T numerator, T divisor) {
+    inline T div_floor(T numerator, T divisor) noexcept {
         auto div_result = std::div(numerator, divisor);
         T ans = div_result.quot;
         if (div_result.rem < 0)--ans;
@@ -15,7 +15,7 @@ namespace extensions {
 
     // division towards positive infinity
     template <typename T>
-    inline T div_ceil(T numerator, T divisor) {
+    inline T div_ceil(T numerator, T divisor) noexcept {
         auto div_result = std::div(numerator, divisor);
         T ans = div_result.quot;
         if (div_result.rem > 0)++ans;
