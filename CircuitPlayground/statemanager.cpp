@@ -7,13 +7,13 @@
 #include "visitor.hpp"
 
 StateManager::StateManager() {
-    // read dataMatrix from disk if a savefile exists, otherwise it is initialized to std::monostate by default
+    // read defaultState from disk if a savefile exists
     readSave();
     saveToHistory();
 }
 
 StateManager::~StateManager() {
-    // autosave dataMatrix to disk
+    // autosave defaultState to disk
     writeSave();
 }
 
@@ -29,7 +29,9 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
 
                 // check if the requested pixel inside the buffer
                 if (x >= 0 && x < renderGameState.width() && y >= 0 && y < renderGameState.height()) {
-                    if (!hasSelection || (x >= baseTrans.x && x < baseTrans.x + base.width() && y >= baseTrans.y && y < baseTrans.y + base.height() && !std::holds_alternative<std::monostate>(base.dataMatrix[{x - baseTrans.x, y - baseTrans.y}]))) {
+                    if (!hasSelection || (x >= baseTrans.x && x < baseTrans.x + base.width() &&
+                                          y >= baseTrans.y && y < baseTrans.y + base.height() &&
+                                          !std::holds_alternative<std::monostate>(base.dataMatrix[{x - baseTrans.x, y - baseTrans.y}]))) {
                         std::visit(visitor{
                             [](std::monostate) {},
                             [&computedColor](const auto& element) {
@@ -72,10 +74,10 @@ bool StateManager::evaluateChangedState() {
     if (changed != boost::indeterminate) {
         return changed;
     }
-    
+
     if (defaultState.width() != currentHistoryState.width() ||
         defaultState.height() != currentHistoryState.height()) {
-        
+
         changed = true;
         return true;
     }
@@ -91,7 +93,6 @@ bool StateManager::evaluateChangedState() {
     return false;
 }
 
-
 void StateManager::reloadSimulator() {
     if (simulator.holdsSimulation()) {
         bool simulatorRunning = simulator.running();
@@ -101,12 +102,11 @@ void StateManager::reloadSimulator() {
     }
 }
 
-
 void StateManager::saveToHistory() {
     // check if changed if necessary
     evaluateChangedState();
-    
-    // don't write to the undo stack if the gameState did not change
+
+    // don't write to the undo stack if defaultState did not change
     if (!changed) return;
 
     // note: we save the inverse translation
@@ -152,21 +152,17 @@ extensions::point StateManager::redo() {
     return tmpDeltaTrans;
 }
 
-
 void StateManager::resetLiveView() {
     simulator.compile(defaultState);
 }
-
 
 void StateManager::startSimulator() {
     simulator.start();
 }
 
-
 void StateManager::stopSimulator() {
     simulator.stop();
 }
-
 
 void StateManager::clearLiveView() {
     simulator.clear();
@@ -222,11 +218,10 @@ void StateManager::writeSave() {
 }
 
 void StateManager::selectRect(SDL_Rect selectionRect) {
-    // make a copy of dataMatrix
+    // make a copy of defaultState
     base = defaultState;
 
     // TODO: proper rectangle clamping functions
-    extensions::point translation{ selectionRect.x, selectionRect.y };
     // restrict selectionRect to the area within base
     int32_t sx_min = std::max(selectionRect.x, 0);
     int32_t sy_min = std::max(selectionRect.y, 0);
@@ -234,7 +229,7 @@ void StateManager::selectRect(SDL_Rect selectionRect) {
     int32_t sy_max = std::min(selectionRect.y + selectionRect.h, base.height());
     int32_t swidth = sx_max - sx_min;
     int32_t sheight = sy_max - sy_min;
-    
+
     // no elements in the selection rect
     if (swidth <= 0 || sheight <= 0) return;
 
@@ -305,10 +300,9 @@ extensions::point StateManager::deleteSelection() {
     changed = true; // since the selection can never be empty
 
     extensions::point translation = -baseTrans;
-    
+
     deltaTrans += translation;
 
-    // merge base back to gamestate (and update the simulator)
     finishSelection();
 
     // update the simulator after deleting
@@ -334,6 +328,3 @@ void StateManager::pasteSelectionFromClipboard(int32_t x, int32_t y) {
     selectionTrans = { x, y };
     hasSelection = true;
 }
-
-
-

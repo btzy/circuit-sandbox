@@ -19,7 +19,7 @@ class StateManager {
 private:
     CanvasState defaultState; // stores the 'default' states, which is the state that can be saved to disk
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
-    
+
     // fields for undo/redo stack
     std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
     std::stack<std::pair<CanvasState, extensions::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
@@ -29,13 +29,12 @@ private:
 
     // fields for selection mechanism
     CanvasState selection; // stores the selection
-    CanvasState base; // the 'base' layer is a copy of dataMatrix minus selection at the time the selection was made
+    CanvasState base; // the 'base' layer is a copy of defaultState minus selection at the time the selection was made
     extensions::point selectionTrans{ 0, 0 }; // position of selection in defaultState's coordinate system
     extensions::point baseTrans{ 0, 0 }; // position of base in defaultState's coordinate system
-    bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting gamestate)
+    bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting defaultState)
 
     CanvasState clipboard;
-    
 
     /**
      * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.
@@ -128,12 +127,12 @@ public:
     void writeSave();
 
     /**
-     * Move elements within selectionRect from dataMatrix to selection.
+     * Copy elements within selectionRect from defaultState to selection.
      */
     void selectRect(SDL_Rect selectionRect);
 
     /**
-     * Move all elements in dataMatrix to selection.
+     * Copy all elements in defaultState to selection.
      */
     void selectAll();
 
@@ -143,14 +142,14 @@ public:
     bool pointInSelection(extensions::point pt) const;
 
     /**
-     * Clear the selection and merge it with dataMatrix, then exits selection mode.
+     * Clear the selection and merge it with defaultState, then exits selection mode.
      * This method will update the live simulation if necessary.
      * It is okay for selectionTrans and baseTrans to be nonzero.
      */
     extensions::point commitSelection();
 
     /**
-     * Merge base and selection. The result is stored in dataMatrix.
+     * Merge base and selection. The result is stored in defaultState.
      * This method will update the live simulation if necessary.
      * It is okay for selectionTrans and baseTrans to be nonzero.
      * WARNING: `base` and `selection` will be left in an indeterminate state! Use finishSelection() after mergeSelection() to clear them.

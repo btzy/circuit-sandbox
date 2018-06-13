@@ -45,7 +45,6 @@ private:
     bool liveView = false; // whether live view (instead of default view) is being rendered
 
     extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
-        
         // translation:
         extensions::point offset = physicalOffset - translation;
 

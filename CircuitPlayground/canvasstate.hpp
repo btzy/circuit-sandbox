@@ -35,9 +35,9 @@ private:
     friend class Simulator;
 
     /**
-    * Modifies the dataMatrix so that the x and y will be within the matrix.
-    * Returns the translation that should be applied on {x,y}.
-    */
+     * Modifies the dataMatrix so that the x and y will be within the matrix.
+     * Returns the translation that should be applied on {x,y}.
+     */
     extensions::point prepareDataMatrixForAddition(int32_t x, int32_t y) {
         if (dataMatrix.empty()) {
             // special case for empty matrix
@@ -68,10 +68,10 @@ private:
     }
 
     /**
-    * Shrinks the dataMatrix to the minimal bounding rectangle.
-    * As an optimization, will only shrink if {x,y} is along a border.
-    * Returns the translation that should be applied on {x,y}.
-    */
+     * Shrinks the dataMatrix to the minimal bounding rectangle.
+     * As an optimization, will only shrink if {x,y} is along a border.
+     * Returns the translation that should be applied on {x,y}.
+     */
     extensions::point shrinkDataMatrix(int32_t x, int32_t y) {
 
         if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
@@ -131,16 +131,13 @@ private:
 
 public:
 
-    
-
     /**
-    * Change the state of a pixel.
-    * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
-    * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
-    */
+     * Change the state of a pixel.
+     * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
+     * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
+     */
     template <typename Element>
     std::pair<bool, extensions::point> changePixelState(int32_t x, int32_t y) {
-        
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
         if constexpr (std::is_same_v<std::monostate, Element>) {
@@ -180,7 +177,7 @@ public:
     /**
      * Moves elements from an area of dataMatrix to a new CanvasState and returns them.
      * The area becomes empty on the current dataMatrix.
-     * Return matrix will be of the exact width and height; it will not be shrinked.
+     * Returned matrix will be of the exact width and height; it will not be shrinked.
      * @pre Assumes that the parameters are within the bounds of this canvas state
      */
     CanvasState splice(int32_t x, int32_t y, int32_t width, int32_t height) {
@@ -193,7 +190,8 @@ public:
 
     /**
      * Merges a CanvasState with another, potentially modifying both of them.
-     * Returns a matrix (not shrinked) and the translation rerquired.
+     * Elements from the second CanvasState will be written over those from the first in the output.
+     * Returns a matrix (not shrinked) and the translation required.
      * @pre Assumes that the parameters are within the bounds of this canvas state
      */
     static std::pair<CanvasState, extensions::point> merge(CanvasState&& first, const extensions::point& firstTrans, CanvasState&& second, const extensions::point& secondTrans) {
@@ -207,11 +205,10 @@ public:
         CanvasState newState;
         newState.dataMatrix = matrix_t(new_xmax - new_xmin, new_ymax - new_ymin);
 
-        // move base to dataMatrix
+        // move first to newstate
         extensions::move_range(first.dataMatrix, newState.dataMatrix, 0, 0, firstTrans.x - new_xmin, firstTrans.y - new_ymin, first.width(), first.height());
 
-
-        // move non-monostate elements from selection to dataMatrix
+        // move non-monostate elements from second to newstate
         for (int32_t y = 0; y < second.height(); ++y) {
             for (int32_t x = 0; x < second.width(); ++x) {
                 if (!std::holds_alternative<std::monostate>(second.dataMatrix[{x, y}])) {

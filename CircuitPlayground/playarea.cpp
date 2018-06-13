@@ -117,7 +117,6 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
             selectionRect = getRect(selectionOriginX, selectionOriginY, offset.x, offset.y);
         } else if (selectorState == Selector::MOVING) {
             if (moveOriginX != offset.x || moveOriginY != offset.y) {
-                extensions::point deltaTrans;
                 stateManager.moveSelection(offset.x - moveOriginX, offset.y - moveOriginY);
                 moveOriginX = offset.x;
                 moveOriginY = offset.y;
@@ -139,7 +138,6 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{renderArea.x, renderArea.y};
-   
 
     size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
     MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
