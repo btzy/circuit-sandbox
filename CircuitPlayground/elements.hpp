@@ -55,8 +55,9 @@ struct Element : public Pencil {
 protected:
     // the current logic level (for display/rendering purposes only!)
     bool logicLevel; // true = HIGH, false = LOW
+    bool defaultLogicLevel;
 
-    Element(bool logicLevel) :logicLevel(logicLevel) {}
+    Element(bool logicLevel, bool defaultLogicLevel) : logicLevel(logicLevel), defaultLogicLevel(defaultLogicLevel) {}
 
 public:
 
@@ -72,6 +73,10 @@ public:
         return logicLevel;
     }
 
+    bool getDefaultLogicLevel() const {
+        return defaultLogicLevel;
+    }
+
     void setLogicLevel(bool level) {
         logicLevel = level;
     }
@@ -79,7 +84,7 @@ public:
 
 struct SignalReceivingElement : public Element {
 protected:
-    SignalReceivingElement(bool logicLevel) :Element(logicLevel) {}
+    SignalReceivingElement(bool logicLevel, bool defaultLogicLevel) :Element(logicLevel, defaultLogicLevel) {}
 public:
     constexpr bool isSignalReceiver() const {
         return true;
@@ -153,7 +158,7 @@ struct ConductiveWire : public Element {
     static constexpr SDL_Color displayColor{0x99, 0x99, 0x99, 0xFF};
     static constexpr const char* displayName = "Conductive Wire";
 
-    ConductiveWire(bool logicLevel = false) :Element(logicLevel) {}
+    ConductiveWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -166,7 +171,7 @@ struct InsulatedWire : public Element {
     static constexpr SDL_Color displayColor{0, 0x66, 0x44, 0xFF};
     static constexpr const char* displayName = "Insulated Wire";
 
-    InsulatedWire(bool logicLevel = false) :Element(logicLevel) {}
+    InsulatedWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -179,7 +184,7 @@ struct Signal : public Element {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Signal";
 
-    Signal(bool logicLevel = false) :Element(logicLevel) {}
+    Signal(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -196,7 +201,7 @@ struct Source : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Source";
 
-    Source(bool logicLevel = true) :SignalReceivingElement(logicLevel) {}
+    Source(bool logicLevel = true, bool defaultLogicLevel = true) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -209,7 +214,7 @@ struct AndGate : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0xFF, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "AND Gate";
 
-    AndGate(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    AndGate(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -222,7 +227,7 @@ struct OrGate : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0x99, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "OR Gate";
 
-    OrGate(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    OrGate(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -235,7 +240,7 @@ struct NandGate : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0x66, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NAND Gate";
 
-    NandGate(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    NandGate(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -248,7 +253,7 @@ struct NorGate : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0x0, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NOR Gate";
 
-    NorGate(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    NorGate(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -261,7 +266,7 @@ struct PositiveRelay : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0xFF, 0x99, 0, 0xFF };
     static constexpr const char* displayName = "Positive Relay";
 
-    PositiveRelay(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    PositiveRelay(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
@@ -274,7 +279,7 @@ struct NegativeRelay : public SignalReceivingElement {
     static constexpr SDL_Color displayColor{ 0xFF, 0x33, 0x0, 0xFF };
     static constexpr const char* displayName = "Negative Relay";
 
-    NegativeRelay(bool logicLevel = false) :SignalReceivingElement(logicLevel) {}
+    NegativeRelay(bool logicLevel = false, bool defaultLogicLevel = false) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {

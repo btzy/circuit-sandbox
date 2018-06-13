@@ -16,7 +16,7 @@ Simulator::~Simulator() {
 }
 
 
-void Simulator::compile(const CanvasState& gameState) {
+void Simulator::compile(const CanvasState& gameState, bool useDefaultLogicLevel) {
     // Note: (TODO) for now it seems that we are modifying the innards of tmpState, but when we do proper compilation we will need another data structure instead, not just plain CanvasState.
     CanvasState tmpState;
     tmpState.dataMatrix = typename CanvasState::matrix_t(gameState.dataMatrix.width(), gameState.dataMatrix.height());

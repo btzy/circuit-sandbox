@@ -9,7 +9,7 @@
 StateManager::StateManager() {
     // read defaultState from disk if a savefile exists
     readSave();
-    saveToHistory();
+    simulator.compile(defaultState, false);
 }
 
 StateManager::~StateManager() {
@@ -17,11 +17,11 @@ StateManager::~StateManager() {
     writeSave();
 }
 
-void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
+void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
 
     // This is kinda yucky, but I can't think of a better way such that:
-    // 1) If useLiveView is false, we don't make a *copy* of defaultState
-    // 2) If useLiveView is true, we take a snapshot from the simulator and use it
+    // 1) If useDefaultView is false, we don't make a *copy* of defaultState
+    // 2) If useDefaultView is true, we take a snapshot from the simulator and use it
     auto lambda = [this, &pixelBuffer, left, top, width, height](const CanvasState& renderGameState) {
         for (int32_t y = top; y != top + height; ++y) {
             for (int32_t x = left; x != left + width; ++x) {
@@ -60,11 +60,11 @@ void StateManager::fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t 
         }
     };
 
-    if (useLiveView) {
-        lambda(simulator.takeSnapshot());
+    if (useDefaultView) {
+        lambda(defaultState);
     }
     else {
-        lambda(defaultState);
+        lambda(simulator.takeSnapshot());
     }
 
 }
@@ -97,7 +97,7 @@ void StateManager::reloadSimulator() {
     if (simulator.holdsSimulation()) {
         bool simulatorRunning = simulator.running();
         if (simulatorRunning) simulator.stop();
-        simulator.compile(defaultState);
+        simulator.compile(defaultState, false);
         if (simulatorRunning) simulator.start();
     }
 }
@@ -111,7 +111,8 @@ void StateManager::saveToHistory() {
 
     // note: we save the inverse translation
     undoStack.emplace(std::move(currentHistoryState), -deltaTrans);
-    currentHistoryState = defaultState;
+    // save a snapshot of the simulator
+    currentHistoryState = simulator.takeSnapshot();
     deltaTrans = { 0, 0 };
 
     changed = false;
@@ -152,20 +153,28 @@ extensions::point StateManager::redo() {
     return tmpDeltaTrans;
 }
 
-void StateManager::resetLiveView() {
-    simulator.compile(defaultState);
-}
-
 void StateManager::startSimulator() {
     simulator.start();
+}
+
+void StateManager::startOrStopSimulator() {
+    if (simulator.holdsSimulation()) {
+        bool simulatorRunning = simulator.running();
+        if (simulatorRunning) {
+            simulator.stop();
+        }
+        else {
+            simulator.start();
+        }
+    }
 }
 
 void StateManager::stopSimulator() {
     simulator.stop();
 }
 
-void StateManager::clearLiveView() {
-    simulator.clear();
+void StateManager::resetSimulator() {
+    simulator.compile(defaultState, true);
 }
 
 void StateManager::readSave() {
@@ -181,12 +190,18 @@ void StateManager::readSave() {
     for (int32_t y = 0; y != defaultState.height(); ++y) {
         for (int32_t x = 0; x != defaultState.width(); ++x) {
             size_t element_index;
+            bool logicLevel;
+            bool defaultLogicLevel;
             saveFile.read(reinterpret_cast<char*>(&element_index), sizeof element_index);
+            saveFile.read(reinterpret_cast<char*>(&logicLevel), sizeof logicLevel);
+            saveFile.read(reinterpret_cast<char*>(&defaultLogicLevel), sizeof defaultLogicLevel);
 
             CanvasState::element_variant_t element;
-            CanvasState::element_tags_t::get(element_index, [&element](const auto element_tag) {
+            CanvasState::element_tags_t::get(element_index, [&element, logicLevel, defaultLogicLevel](const auto element_tag) {
                 using Element = typename decltype(element_tag)::type;
-                element = Element();
+                if constexpr (!std::is_same<Element, std::monostate>::value) {
+                    element = Element(logicLevel, defaultLogicLevel);
+                }
             });
             defaultState.dataMatrix[{x, y}] = element;
         }
@@ -206,11 +221,23 @@ void StateManager::writeSave() {
 
     for (int32_t y = 0; y != defaultState.height(); ++y) {
         for (int32_t x = 0; x != defaultState.width(); ++x) {
-            CanvasState::element_variant_t element = defaultState.dataMatrix[{x, y}];
-            CanvasState::element_tags_t::for_each([&element, &saveFile](const auto element_tag, const auto index_tag) {
+            CanvasState snapshot = simulator.takeSnapshot();
+            CanvasState::element_variant_t element = snapshot.dataMatrix[{x, y}];
+            bool logicLevel = false;
+            bool defaultLogicLevel = false;
+            std::visit(visitor{
+                [](std::monostate) {},
+                [&logicLevel, &defaultLogicLevel](const auto& element) {
+                    logicLevel = element.getLogicLevel();
+                    defaultLogicLevel = element.getDefaultLogicLevel();
+                },
+            }, snapshot.dataMatrix[{x, y}]);
+            CanvasState::element_tags_t::for_each([&element, &saveFile, &logicLevel, &defaultLogicLevel](const auto element_tag, const auto index_tag) {
                 size_t index = element.index();
                 if (index == decltype(index_tag)::value) {
                     saveFile.write(reinterpret_cast<char*>(&index), sizeof index);
+                    saveFile.write(reinterpret_cast<char*>(&logicLevel), sizeof logicLevel);
+                    saveFile.write(reinterpret_cast<char*>(&defaultLogicLevel), sizeof defaultLogicLevel);
                 }
             });
         }

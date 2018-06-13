@@ -42,7 +42,7 @@ private:
     SDL_Rect selectionRect;
     Selector::State selectorState = Selector::INACTIVE;
 
-    bool liveView = false; // whether live view (instead of default view) is being rendered
+    bool defaultView = false; // whether default view (instead of live view) is being rendered
 
     extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
         // translation:

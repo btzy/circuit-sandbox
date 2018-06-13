@@ -58,20 +58,20 @@ public:
      */
     template <typename Element>
     extensions::point changePixelState(int32_t x, int32_t y) {
-        if (simulator.holdsSimulation()) {
-            // If the simulator current holds a simulation, then we need to update it too.
-            bool simulatorRunning = simulator.running();
-            if (simulatorRunning) simulator.stop();
-            CanvasState simState = simulator.takeSnapshot();
-            simState.changePixelState<Element>(x, y);
-            simulator.compile(simState);
-            if (simulatorRunning) simulator.start();
-        }
-
         auto [canvasChanged, translation] = defaultState.changePixelState<Element>(x, y);
 
         if (canvasChanged) {
             changed = true;
+            // only update the simulation if the canvas changed
+            if (simulator.holdsSimulation()) {
+                // If the simulator current holds a simulation, then we need to update it too.
+                bool simulatorRunning = simulator.running();
+                if (simulatorRunning) simulator.stop();
+                CanvasState simState = simulator.takeSnapshot();
+                simState.changePixelState<Element>(x, y);
+                simulator.compile(simState, false);
+                if (simulatorRunning) simulator.start();
+            }
         }
 
         deltaTrans += translation;
@@ -82,9 +82,9 @@ public:
     /**
      * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.
      * Pixel format: pixel = R | (G << 8) | (B << 16)
-     * useLiveView: whether we want to render the live view (instead of the default view)
+     * useDefaultView: whether we want to render the default view (instead of live view)
      */
-    void fillSurface(bool useLiveView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
+    void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
 
     /**
      * Take a snapshot of the gamestate and save it in the history
@@ -99,14 +99,14 @@ public:
     extensions::point redo();
 
     /**
-     * Reset the transient (live) states to the default states for all elements
-     */
-    void resetLiveView();
-
-    /**
      * Starts the simulator
      */
     void startSimulator();
+
+    /**
+     * Toggle between running and pausing the simulator.
+     */
+    void startOrStopSimulator();
 
     /**
      * Stops the simulator
@@ -114,9 +114,9 @@ public:
     void stopSimulator();
 
     /**
-     * Clear the transient (live) states
+     * Reset all elements in the simulation to their default state.
      */
-    void clearLiveView();
+    void resetSimulator();
 
     /**
      * Read/write the save file. The path is hardcoded for now.
@@ -194,4 +194,3 @@ public:
      */
     void pasteSelectionFromClipboard(int32_t x, int32_t y);
 };
-

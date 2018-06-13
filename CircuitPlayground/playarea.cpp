@@ -28,9 +28,9 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     surfaceRect.w = extensions::div_ceil(renderArea.w - translation.x, scale) - surfaceRect.x;
     surfaceRect.h = extensions::div_ceil(renderArea.h - translation.y, scale) - surfaceRect.y;
 
-    // render the gamestated
+    // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
-    stateManager.fillSurface(liveView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
@@ -79,8 +79,8 @@ void PlayArea::render(SDL_Renderer* renderer) const {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
 
-    // draw a square at the top left to denote the live view (TODO: make it a border or something nicer)
-    if (liveView) {
+    // draw a square at the top left to denote default view (TODO: make it a border or something nicer)
+    if (defaultView) {
         SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
         SDL_Rect squareBox {
             renderArea.x,
@@ -233,19 +233,11 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
         SDL_Keymod modifiers = SDL_GetModState();
         switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
         case SDL_SCANCODE_T:
-            // the 'T' key, used to toggle default/live view
-            if (!liveView) {
-                liveView = true;
-                // if we changed to liveView, recompile the state and start the simulator (TODO: change to something more appropriate after discussions)
-                stateManager.resetLiveView();
-                stateManager.startSimulator();
-            }
-            else {
-                liveView = false;
-                // TODO: change to something more appropriate
-                stateManager.stopSimulator();
-                stateManager.clearLiveView();
-            }
+            // default view is active while T is held
+            defaultView = true;
+            break;
+        case SDL_SCANCODE_R:
+            stateManager.resetSimulator();
             break;
         case SDL_SCANCODE_D:
         case SDL_SCANCODE_DELETE:
@@ -303,6 +295,18 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 extensions::point deltaTrans = stateManager.undo();
                 translation -= deltaTrans * scale;
             }
+            break;
+        case SDL_SCANCODE_SPACE:
+            stateManager.startOrStopSimulator();
+            break;
+        default:
+            break;
+        }
+    } else if (event.type == SDL_KEYUP) {
+        switch (event.keysym.scancode) {
+        case SDL_SCANCODE_T:
+            // default view is active while T is held
+            defaultView = false;
             break;
         default:
             break;

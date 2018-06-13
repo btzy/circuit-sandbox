@@ -194,7 +194,9 @@ void MainWindow::processEvent(const SDL_Event& event) {
         processMouseWheelEvent(event.wheel);
         break;
     case SDL_KEYDOWN:
+    case SDL_KEYUP:
         processKeyboardEvent(event.key);
+        break;
     }
 }
 
