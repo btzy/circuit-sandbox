@@ -63,6 +63,14 @@ namespace extensions {
             return { -x, -y };
         }
 
+        // equality operators
+        bool operator==(const point& other) const noexcept {
+            return this->x == other.x && this->y == other.y;
+        }
+        bool operator!=(const point& other) const noexcept {
+            return this->x != other.x || this->y != other.y;
+        }
+
     };
 
     // integral division functions

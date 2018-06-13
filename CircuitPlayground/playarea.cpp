@@ -98,14 +98,13 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
 void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    int physicalOffsetX = event.x - renderArea.x;
-    int physicalOffsetY = event.y - renderArea.y;
+    extensions::point physicalOffset{ event.x - renderArea.x, event.y - renderArea.y };
 
     SDL_Point position{event.x, event.y};
 
     // this check is necessary as PlayArea receives mousemotion events even if the cursor is outside its render area
     if (SDL_PointInRect(&position, &renderArea)) {
-        extensions::point offset = computeCanvasCoords({ physicalOffsetX, physicalOffsetY });
+        extensions::point offset = computeCanvasCoords(physicalOffset);
         if (drawingIndex) {
             MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offset](const auto tool_tag) {
                 using Tool = typename decltype(tool_tag)::type;
@@ -114,24 +113,22 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
                 }
             });
         } else if (selectorState == Selector::SELECTING) {
-            selectionRect = getRect(selectionOriginX, selectionOriginY, offset.x, offset.y);
+            selectionRect = getRect(selectionOrigin, offset);
         } else if (selectorState == Selector::MOVING) {
-            if (moveOriginX != offset.x || moveOriginY != offset.y) {
-                stateManager.moveSelection(offset.x - moveOriginX, offset.y - moveOriginY);
-                moveOriginX = offset.x;
-                moveOriginY = offset.y;
+            if (moveOrigin != offset) {
+                stateManager.moveSelection(offset.x - moveOrigin.x, offset.y - moveOrigin.y);
+                moveOrigin = offset;
             }
         }
     }
 
     // update translation if panning
     if (panning && mouseoverPoint) {
-        translation.x += physicalOffsetX - mouseoverPoint->x;
-        translation.y += physicalOffsetY - mouseoverPoint->y;
+        translation += physicalOffset - *mouseoverPoint;
     }
 
     // store the new mouseover point
-    mouseoverPoint = extensions::point{ physicalOffsetX, physicalOffsetY };
+    mouseoverPoint = physicalOffset;
 }
 
 
@@ -167,15 +164,13 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                         offset = computeCanvasCoords(physicalOffset);
                     } else {
                         selectorState = Selector::MOVING;
-                        moveOriginX = offset.x;
-                        moveOriginY = offset.y;
+                        moveOrigin = offset;
                     }
                 }
                 if (selectorState == Selector::INACTIVE) {
                     selectorState = Selector::SELECTING;
-                    selectionOriginX = offset.x;
-                    selectionOriginY = offset.y;
-                    selectionRect = { selectionOriginX, selectionOriginY, 1, 1 };
+                    selectionOrigin = offset;
+                    selectionRect = { selectionOrigin.x, selectionOrigin.y, 1, 1 };
                 }
             } else {
                 if (selectorState == Selector::SELECTING) {
@@ -183,7 +178,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                     SDL_Point position{ event.x, event.y };
                     // TODO: consider using viewports to eliminate these checks
                     if (SDL_PointInRect(&position, &renderArea)) {
-                        selectionRect = getRect(selectionOriginX, selectionOriginY, offset.x, offset.y);
+                        selectionRect = getRect(selectionOrigin, offset);
                         stateManager.selectRect(selectionRect);
                     }
                 } else if (selectorState == Selector::MOVING) {
@@ -213,28 +208,24 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
         // change the scale factor,
         // and adjust the translation so that the scaling pivots on the pixel that the mouse is over
         int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
-        int32_t offsetX = extensions::div_floor(mouseoverPoint->x - translation.x + scale / 2, scale); // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
-        int32_t offsetY = extensions::div_floor(mouseoverPoint->y - translation.y + scale / 2, scale);
+        // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
+        extensions::point offset = *mouseoverPoint - translation + extensions::point{ scale/2, scale/2 };
+        offset = extensions::div_floor(offset, scale);
 
         if (scrollAmount > 0) {
             scale++;
-            translation.x -= offsetX;
-            translation.y -= offsetY;
+            translation -= offset;
         }
         else if (scrollAmount < 0 && scale > 1) {
             scale--;
-            translation.x += offsetX;
-            translation.y += offsetY;
+            translation += offset;
         }
     }
 }
 
-
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
 }
-
-
 
 void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
     // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
@@ -287,19 +278,16 @@ void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 finishAction();
                 selectorState = Selector::SELECTED;
 
-                int32_t physicalOffsetX, physicalOffsetY;
-                SDL_GetMouseState(&physicalOffsetX, &physicalOffsetY);
-                int offsetX = physicalOffsetX - translation.x;
-                int offsetY = physicalOffsetY - translation.y;
-                offsetX = extensions::div_floor(offsetX, scale);
-                offsetY = extensions::div_floor(offsetY, scale);
+                extensions::point physicalOffset;
+                SDL_GetMouseState(&physicalOffset.x, &physicalOffset.y);
+                extensions::point offset = physicalOffset - translation;
+                offset = extensions::div_floor(offset, scale);
 
-                SDL_Point position{ physicalOffsetX, physicalOffsetY};
+                SDL_Point position{ physicalOffset.x, physicalOffset.y };
                 if (!SDL_PointInRect(&position, &renderArea)) {
-                    offsetX = 0;
-                    offsetY = 0;
+                    offset = { 0, 0 };
                 }
-                stateManager.pasteSelectionFromClipboard(offsetX, offsetY);
+                stateManager.pasteSelectionFromClipboard(offset.x, offset.y);
             }
             break;
         case SDL_SCANCODE_Y:
@@ -330,11 +318,11 @@ void PlayArea::finishAction() {
     stateManager.saveToHistory(); // TODO: check drawingIndex and selectorState to tell if state definitely hasn't changed.
 }
 
-SDL_Rect PlayArea::getRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
+SDL_Rect PlayArea::getRect(extensions::point p, extensions::point q) {
     return SDL_Rect {
-        std::min(x1, x2),
-        std::min(y1, y2),
-        std::abs(x1 - x2) + 1,
-        std::abs(y1 - y2) + 1,
+        std::min(p.x, q.x),
+        std::min(p.y, q.y),
+        std::abs(p.x - q.x) + 1,
+        std::abs(p.y - q.y) + 1,
     };
 }

@@ -37,8 +37,8 @@ private:
     std::optional<size_t> drawingIndex = std::nullopt; // input handle index of the active drawing tool
     bool panning = false; // whether panning is active
 
-    int32_t selectionOriginX, selectionOriginY; // the first point of the selection rectangle
-    int32_t moveOriginX, moveOriginY; // the reference point (in matrix units) when moving a selection
+    extensions::point selectionOrigin; // the first point of the selection rectangle
+    extensions::point moveOrigin; // the reference point (in matrix units) when moving a selection
     SDL_Rect selectionRect;
     Selector::State selectorState = Selector::INACTIVE;
 
@@ -107,5 +107,5 @@ public:
     /**
      * Returns the rectangle given by two opposite corners.
      */
-    SDL_Rect getRect(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+    SDL_Rect getRect(extensions::point p, extensions::point q);
 };
