@@ -230,8 +230,10 @@ void StateManager::selectRect(SDL_Rect selectionRect) {
     // restrict selectionRect to the area within base
     int32_t sx_min = std::max(selectionRect.x, 0);
     int32_t sy_min = std::max(selectionRect.y, 0);
-    int32_t swidth = std::min(selectionRect.w, base.width() - selectionRect.x);
-    int32_t sheight = std::min(selectionRect.h, base.height() - selectionRect.y);
+    int32_t sx_max = std::min(selectionRect.x + selectionRect.w, base.width());
+    int32_t sy_max = std::min(selectionRect.y + selectionRect.h, base.height());
+    int32_t swidth = sx_max - sx_min;
+    int32_t sheight = sy_max - sy_min;
     
     // no elements in the selection rect
     if (swidth <= 0 || sheight <= 0) return;
@@ -247,7 +249,7 @@ void StateManager::selectRect(SDL_Rect selectionRect) {
 
     hasSelection = true;
 
-    selectionTrans = translation - selectionShrinkTrans;
+    selectionTrans = extensions::point{ sx_min, sy_min } - selectionShrinkTrans;
 
     baseTrans = -base.shrinkDataMatrix();
 }
@@ -327,8 +329,10 @@ extensions::point StateManager::cutSelectionToClipboard() {
 }
 
 void StateManager::pasteSelectionFromClipboard(int32_t x, int32_t y) {
+    base = defaultState;
     selection = clipboard;
     selectionTrans = { x, y };
+    hasSelection = true;
 }
 
 
