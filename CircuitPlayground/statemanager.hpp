@@ -120,7 +120,7 @@ public:
 
     /**
      * Read/write the save file. The path is hardcoded for now.
-     * Save format: [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth*matrixHeight)x [size_t index]
+     * Save format: [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth*matrixHeight)x [size_t index, bool logicLevel, bool defaultLogicLevel]
      */
     std::string savePath = "circuitplayground.sav";
     void readSave();

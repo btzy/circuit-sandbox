@@ -80,6 +80,10 @@ public:
     void setLogicLevel(bool level) {
         logicLevel = level;
     }
+
+    void resetLogicLevel() {
+        logicLevel = defaultLogicLevel;
+    }
 }; // base class for elements
 
 struct SignalReceivingElement : public Element {
@@ -115,8 +119,8 @@ constexpr inline bool isSignalReceiver(const ElementVariant& v) {
 
 // display colour functions
 template <typename Element>
-constexpr inline SDL_Color computeDisplayColor(const Element& element) {
-    if (element.getLogicLevel()) {
+constexpr inline SDL_Color computeDisplayColor(const Element& element, bool useDefaultLogicLevel) {
+    if (useDefaultLogicLevel ? element.getDefaultLogicLevel() : element.getLogicLevel()) {
         return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.b) * 2 / 3), Element::displayColor.a };
     }
     else {

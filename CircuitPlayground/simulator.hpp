@@ -44,7 +44,7 @@ public:
 
     /**
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
-     * If useDefaultLogicLevel is true, the default logic levels will be used.
+     * If resetLogicLevel is true, the default logic levels will be used.
      * @pre simulation is currently stopped.
      */
     void compile(const CanvasState& gameState, bool useDefaultLogicLevel);

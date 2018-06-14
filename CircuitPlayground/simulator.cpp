@@ -16,13 +16,21 @@ Simulator::~Simulator() {
 }
 
 
-void Simulator::compile(const CanvasState& gameState, bool useDefaultLogicLevel) {
+void Simulator::compile(const CanvasState& gameState, bool resetLogicLevel) {
     // Note: (TODO) for now it seems that we are modifying the innards of tmpState, but when we do proper compilation we will need another data structure instead, not just plain CanvasState.
     CanvasState tmpState;
     tmpState.dataMatrix = typename CanvasState::matrix_t(gameState.dataMatrix.width(), gameState.dataMatrix.height());
     for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
             tmpState.dataMatrix[{x, y}] = gameState.dataMatrix[{x, y}];
+            if (resetLogicLevel) {
+                std::visit(visitor{
+                    [](std::monostate) {},
+                    [](auto& element) {
+                        element.resetLogicLevel();
+                    }
+                }, tmpState.dataMatrix[{x, y}]);
+            }
         }
     }
 
@@ -136,7 +144,7 @@ void Simulator::run() {
                     },
                     [](auto element) {
                         using Element = decltype(element);
-                        return CanvasState::element_variant_t{ Element{} }; // a new element is set to LOW by default, see elements.hpp
+                        return CanvasState::element_variant_t{ Element(false, element.getDefaultLogicLevel()) };
                     }
                 }, oldState.dataMatrix[{x, y}]);
             }

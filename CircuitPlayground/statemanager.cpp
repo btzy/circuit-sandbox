@@ -22,7 +22,7 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32
     // This is kinda yucky, but I can't think of a better way such that:
     // 1) If useDefaultView is false, we don't make a *copy* of defaultState
     // 2) If useDefaultView is true, we take a snapshot from the simulator and use it
-    auto lambda = [this, &pixelBuffer, left, top, width, height](const CanvasState& renderGameState) {
+    auto lambda = [this, &pixelBuffer, left, top, width, height, useDefaultView](const CanvasState& renderGameState) {
         for (int32_t y = top; y != top + height; ++y) {
             for (int32_t x = left; x != left + width; ++x) {
                 SDL_Color computedColor{ 0, 0, 0, 0 };
@@ -34,8 +34,8 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32
                                           !std::holds_alternative<std::monostate>(base.dataMatrix[{x - baseTrans.x, y - baseTrans.y}]))) {
                         std::visit(visitor{
                             [](std::monostate) {},
-                            [&computedColor](const auto& element) {
-                                computedColor = computeDisplayColor(element);
+                            [&computedColor, useDefaultView](const auto& element) {
+                                computedColor = computeDisplayColor(element, useDefaultView);
                             },
                         }, renderGameState.dataMatrix[{x, y}]);
                     }
@@ -174,7 +174,10 @@ void StateManager::stopSimulator() {
 }
 
 void StateManager::resetSimulator() {
+    bool simulatorRunning = simulator.running();
+    if (simulatorRunning) simulator.stop();
     simulator.compile(defaultState, true);
+    if (simulatorRunning) simulator.start();
 }
 
 void StateManager::readSave() {
@@ -214,14 +217,14 @@ void StateManager::writeSave() {
     std::ofstream saveFile(savePath, std::ios::binary);
     if (!saveFile.is_open()) return;
 
-    int32_t matrixWidth = defaultState.width();
-    int32_t matrixHeight = defaultState.height();
+    CanvasState snapshot = simulator.takeSnapshot();
+    int32_t matrixWidth = snapshot.width();
+    int32_t matrixHeight = snapshot.height();
     saveFile.write(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
     saveFile.write(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
 
-    for (int32_t y = 0; y != defaultState.height(); ++y) {
-        for (int32_t x = 0; x != defaultState.width(); ++x) {
-            CanvasState snapshot = simulator.takeSnapshot();
+    for (int32_t y = 0; y != snapshot.height(); ++y) {
+        for (int32_t x = 0; x != snapshot.width(); ++x) {
             CanvasState::element_variant_t element = snapshot.dataMatrix[{x, y}];
             bool logicLevel = false;
             bool defaultLogicLevel = false;
@@ -231,7 +234,7 @@ void StateManager::writeSave() {
                     logicLevel = element.getLogicLevel();
                     defaultLogicLevel = element.getDefaultLogicLevel();
                 },
-            }, snapshot.dataMatrix[{x, y}]);
+            }, element);
             CanvasState::element_tags_t::for_each([&element, &saveFile, &logicLevel, &defaultLogicLevel](const auto element_tag, const auto index_tag) {
                 size_t index = element.index();
                 if (index == decltype(index_tag)::value) {
