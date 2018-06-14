@@ -12,7 +12,7 @@
 #include "integral_division.hpp"
 #include "point.hpp"
 
-PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window) {};
+PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {};
 
 
 void PlayArea::updateDpi() {
@@ -64,20 +64,9 @@ void PlayArea::render(SDL_Renderer* renderer) const {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
 
-    // render the selection rectangle if it exists
-    if (selectorState == Selector::SELECTING) {
-        SDL_Rect selectionArea {
-            selectionRect.x * scale + translation.x,
-            selectionRect.y * scale + translation.y,
-            selectionRect.w * scale,
-            selectionRect.h * scale
-        };
-
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
-        SDL_RenderFillRect(renderer, &selectionArea);
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    }
+    // ask current action to render itself
+    currentAction.render(renderer);
+    
 
     // draw a square at the top left to denote default view (TODO: make it a border or something nicer)
     if (defaultView) {
@@ -97,42 +86,64 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
 
 void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-    // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    extensions::point physicalOffset{ event.x - renderArea.x, event.y - renderArea.y };
+    
+    extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
-    SDL_Point position{event.x, event.y};
+    // TODO: abstract the action-handling code somewhere so it is not repeated for every event type
+    ActionEventResult result = currentAction.processMouseMotionEvent(event);
+    switch (result) {
+    case ActionEventResult::COMPLETED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::PROCESSED:
+        break;
+    case ActionEventResult::CANCELLED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::UNPROCESSED:
 
-    // this check is necessary as PlayArea receives mousemotion events even if the cursor is outside its render area
-    if (SDL_PointInRect(&position, &renderArea)) {
-        extensions::point offset = computeCanvasCoords(physicalOffset);
-        if (drawingIndex) {
-            MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[*drawingIndex], [this, offset](const auto tool_tag) {
-                using Tool = typename decltype(tool_tag)::type;
-                if constexpr (std::is_base_of_v<Pencil, Tool>) {
-                    processDrawingTool<Tool>(offset);
-                }
-            });
-        } else if (selectorState == Selector::SELECTING) {
-            selectionRect = getRect(selectionOrigin, offset);
-        } else if (selectorState == Selector::MOVING) {
-            if (moveOrigin != offset) {
-                stateManager.moveSelection(offset.x - moveOrigin.x, offset.y - moveOrigin.y);
-                moveOrigin = offset;
-            }
+        // have to ask all the actions if they would like to start
+        if (currentAction.startWithMouseMotionEvent(event)) {
+            break;
+        }
+
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+        // update translation if panning
+        if (panning && mouseoverPoint) {
+            translation += physicalOffset - *mouseoverPoint;
         }
     }
 
-    // update translation if panning
-    if (panning && mouseoverPoint) {
-        translation += physicalOffset - *mouseoverPoint;
-    }
-
+    
     // store the new mouseover point
     mouseoverPoint = physicalOffset;
 }
 
 
 void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
+    
+    ActionEventResult result = currentAction.processMouseButtonEvent(event);
+    switch (result) {
+    case ActionEventResult::COMPLETED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::PROCESSED:
+        return;
+    case ActionEventResult::CANCELLED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::UNPROCESSED:
+
+        // have to ask all the actions if they would like to start
+        if (currentAction.startWithMouseButtonEvent(event)) {
+            return;
+        }
+
+    }
+    
+    // at this point, no actions are able to handle this event, so we do the default for playarea
+
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{renderArea.x, renderArea.y};
 
@@ -141,52 +152,7 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         // 'Tool' is the type of tool (e.g. Selector)
         using Tool = typename decltype(tool_tag)::type;
 
-        if constexpr (std::is_base_of_v<Pencil, Tool>) {
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
-                // If another drawing tool is in use, break that action and start a new one
-                finishAction();
-                drawingIndex = inputHandleIndex;
-                processDrawingTool<Tool>(computeCanvasCoords(physicalOffset));
-            } else {
-                // Break the current drawing action if the mouseup is from that tool
-                if (inputHandleIndex == drawingIndex) {
-                    finishAction();
-                }
-            }
-        }
-        else if constexpr (std::is_base_of_v<Selector, Tool>) {
-            // it is a Selector.
-            extensions::point offset = computeCanvasCoords(physicalOffset);
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
-                if (selectorState == Selector::SELECTED) {
-                    if (!stateManager.pointInSelection(offset)) {
-                        finishAction();
-                        offset = computeCanvasCoords(physicalOffset);
-                    } else {
-                        selectorState = Selector::MOVING;
-                        moveOrigin = offset;
-                    }
-                }
-                if (selectorState == Selector::INACTIVE) {
-                    selectorState = Selector::SELECTING;
-                    selectionOrigin = offset;
-                    selectionRect = { selectionOrigin.x, selectionOrigin.y, 1, 1 };
-                }
-            } else {
-                if (selectorState == Selector::SELECTING) {
-                    selectorState = Selector::SELECTED;
-                    SDL_Point position{ event.x, event.y };
-                    // TODO: consider using viewports to eliminate these checks
-                    if (SDL_PointInRect(&position, &renderArea)) {
-                        selectionRect = getRect(selectionOrigin, offset);
-                        stateManager.selectRect(selectionRect);
-                    }
-                } else if (selectorState == Selector::MOVING) {
-                    selectorState = Selector::SELECTED;
-                }
-            }
-        }
-        else if constexpr (std::is_base_of_v<Panner, Tool>) {
+        if constexpr (std::is_base_of_v<Panner, Tool>) {
             // it is a Panner.
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 panning = true;
@@ -194,139 +160,151 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
                 panning = false;
             }
         }
-        else {
-            // if we get here, we will get a compiler error
-            static_assert(std::negation_v<std::is_same<Tool, Tool>>, "Invalid tool type!");
-        }
     });
 
-    // TODO
 }
 
 void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
-    if (mouseoverPoint) {
-        // change the scale factor,
-        // and adjust the translation so that the scaling pivots on the pixel that the mouse is over
-        int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
-        // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
-        extensions::point offset = *mouseoverPoint - translation + extensions::point{ scale/2, scale/2 };
-        offset = extensions::div_floor(offset, scale);
+    
+    ActionEventResult result = currentAction.processMouseWheelEvent(event);
+    switch (result) {
+    case ActionEventResult::COMPLETED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::PROCESSED:
+        break;
+    case ActionEventResult::CANCELLED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::UNPROCESSED:
 
-        if (scrollAmount > 0) {
-            scale++;
-            translation -= offset;
+        // have to ask all the actions if they would like to start
+        if (currentAction.startWithMouseWheelEvent(event)) {
+            break;
         }
-        else if (scrollAmount < 0 && scale > 1) {
-            scale--;
-            translation += offset;
+
+
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+
+        if (mouseoverPoint) {
+            // change the scale factor,
+            // and adjust the translation so that the scaling pivots on the pixel that the mouse is over
+            int32_t scrollAmount = (event.direction == SDL_MOUSEWHEEL_NORMAL) ? (event.y) : (-event.y);
+            // note: "scale / 2" added so that the division will round to the nearest integer instead of floor
+            extensions::point offset = *mouseoverPoint - translation + extensions::point{ scale / 2, scale / 2 };
+            offset = extensions::div_floor(offset, scale);
+
+            if (scrollAmount > 0) {
+                scale++;
+                translation -= offset;
+            }
+            else if (scrollAmount < 0 && scale > 1) {
+                scale--;
+                translation += offset;
+            }
         }
+
     }
+
+    
 }
 
 void PlayArea::processMouseLeave() {
+    ActionEventResult result = currentAction.processMouseLeave();
+    switch (result) {
+    case ActionEventResult::COMPLETED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::PROCESSED:
+        break;
+    case ActionEventResult::CANCELLED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::UNPROCESSED:
+
+        // have to ask all the actions if they would like to start
+        if (currentAction.startWithMouseLeave()) {
+            break;
+        }
+
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+        // no default mouseleave event
+
+    }
+
+    
+
+    
     mouseoverPoint = std::nullopt;
 }
 
 void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
-    // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
-    if (event.type == SDL_KEYDOWN) {
-        SDL_Keymod modifiers = SDL_GetModState();
-        switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
-        case SDL_SCANCODE_T:
-            // default view is active while T is held
-            defaultView = true;
-            break;
-        case SDL_SCANCODE_R:
-            stateManager.resetSimulator();
-            break;
-        case SDL_SCANCODE_D:
-        case SDL_SCANCODE_DELETE:
-            {
-                extensions::point deltaTrans = stateManager.deleteSelection();
-                translation -= deltaTrans * scale;
-                finishAction();
-            }
-            break;
-        case SDL_SCANCODE_A:
-            if (modifiers & KMOD_CTRL) {
-                stateManager.selectAll();
-                selectorState = Selector::SELECTED;
-            }
-            break;
-        case SDL_SCANCODE_C:
-            if (modifiers & KMOD_CTRL) {
-                stateManager.copySelectionToClipboard();
-            }
-            break;
-        case SDL_SCANCODE_X:
-            if (modifiers & KMOD_CTRL) {
-                extensions::point deltaTrans = stateManager.cutSelectionToClipboard();
-                translation -= deltaTrans * scale;
-                finishAction();
-            }
-            break;
-        case SDL_SCANCODE_V:
-            if (modifiers & KMOD_CTRL) {
-                finishAction();
-                selectorState = Selector::SELECTED;
+    
+    ActionEventResult result = currentAction.processKeyboardEvent(event);
+    switch (result) {
+    case ActionEventResult::COMPLETED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::PROCESSED:
+        break;
+    case ActionEventResult::CANCELLED:
+        currentAction.reset();
+        [[fallthrough]];
+    case ActionEventResult::UNPROCESSED:
 
-                extensions::point physicalOffset;
-                SDL_GetMouseState(&physicalOffset.x, &physicalOffset.y);
-                extensions::point offset = physicalOffset - translation;
-                offset = extensions::div_floor(offset, scale);
+        // have to ask all the actions if they would like to start
+        if (currentAction.startWithKeyboardEvent(event)) {
+            break;
+        }
 
-                SDL_Point position{ physicalOffset.x, physicalOffset.y };
-                if (!SDL_PointInRect(&position, &renderArea)) {
-                    offset = { 0, 0 };
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+        // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
+        if (event.type == SDL_KEYDOWN) {
+            SDL_Keymod modifiers = SDL_GetModState();
+            switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+            case SDL_SCANCODE_T:
+                // default view is active while T is held
+                defaultView = true;
+                break;
+            case SDL_SCANCODE_R:
+                stateManager.resetSimulator();
+                break;
+            case SDL_SCANCODE_Y:
+                if (modifiers & KMOD_CTRL) {
+                    currentAction.reset();
+                    extensions::point deltaTrans = stateManager.redo();
+                    translation -= deltaTrans * scale;
                 }
-                stateManager.pasteSelectionFromClipboard(offset.x, offset.y);
+                break;
+            case SDL_SCANCODE_Z:
+                if (modifiers & KMOD_CTRL) {
+                    currentAction.reset();
+                    extensions::point deltaTrans = stateManager.undo();
+                    translation -= deltaTrans * scale;
+                }
+                break;
+            case SDL_SCANCODE_SPACE:
+                stateManager.startOrStopSimulator();
+                break;
+            default:
+                break;
             }
-            break;
-        case SDL_SCANCODE_Y:
-            if (modifiers & KMOD_CTRL) {
-                finishAction();
-                extensions::point deltaTrans = stateManager.redo();
-                translation -= deltaTrans * scale;
-            }
-            break;
-        case SDL_SCANCODE_Z:
-            if (modifiers & KMOD_CTRL) {
-                finishAction();
-                extensions::point deltaTrans = stateManager.undo();
-                translation -= deltaTrans * scale;
-            }
-            break;
-        case SDL_SCANCODE_SPACE:
-            stateManager.startOrStopSimulator();
-            break;
-        default:
-            break;
         }
-    } else if (event.type == SDL_KEYUP) {
-        switch (event.keysym.scancode) {
-        case SDL_SCANCODE_T:
-            // default view is active while T is held
-            defaultView = false;
-            break;
-        default:
-            break;
+        else if (event.type == SDL_KEYUP) {
+            switch (event.keysym.scancode) {
+            case SDL_SCANCODE_T:
+                // default view is active while T is held
+                defaultView = false;
+                break;
+            default:
+                break;
+            }
         }
+
     }
-}
-
-void PlayArea::finishAction() {
-    drawingIndex = std::nullopt;
-    selectorState = Selector::INACTIVE;
-    extensions::point deltaTrans = stateManager.commitSelection();
-    translation -= deltaTrans * scale;
-    stateManager.saveToHistory(); // TODO: check drawingIndex and selectorState to tell if state definitely hasn't changed.
-}
-
-SDL_Rect PlayArea::getRect(extensions::point p, extensions::point q) {
-    return SDL_Rect {
-        std::min(p.x, q.x),
-        std::min(p.y, q.y),
-        std::abs(p.x - q.x) + 1,
-        std::abs(p.y - q.y) + 1,
-    };
+    
+    
 }

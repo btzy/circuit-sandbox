@@ -129,7 +129,7 @@ public:
     /**
      * Copy elements within selectionRect from defaultState to selection.
      */
-    void selectRect(SDL_Rect selectionRect);
+    void selectRect(const extensions::point& pt1, const extensions::point& pt2);
 
     /**
      * Copy all elements in defaultState to selection.

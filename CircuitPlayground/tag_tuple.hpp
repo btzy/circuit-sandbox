@@ -21,28 +21,49 @@ namespace extensions {
 
     private:
 
+        // Note: Verbose multiple functions for invoke is due Visual Studio choking on nested if-constexpr.
+        // See https://stackoverflow.com/q/50857307/1021959
         template <size_t I, typename Callback>
-        inline static void invoke(Callback&& callback) {
+        inline static bool invoke(Callback&& callback) {
             if constexpr (I == sizeof...(T)) {
-                return;
+                return false;
             }
             else {
-                callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{}, std::integral_constant<size_t, I>{});
-                invoke<I + 1>(std::forward<Callback>(callback));
+                return _invoke_impl<I>(std::forward<Callback>(callback));
             }
         }
 
         template <size_t I, typename Callback>
-        inline static void get_by_index(const size_t index, Callback&& callback) {
+        inline static bool _invoke_impl(Callback&& callback) {
+            if constexpr (std::is_convertible_v<std::invoke_result_t<Callback, tag<std::tuple_element_t<I, std::tuple<T...>>>, std::integral_constant<size_t, I>>, bool>) {
+                if (callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{}, std::integral_constant<size_t, I>{})) {
+                    return true;
+                }
+            }
+            else {
+                callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{}, std::integral_constant<size_t, I>{});
+            }
+            return invoke<I + 1>(std::forward<Callback>(callback));
+        }
+
+
+
+        template <size_t I, typename Callback>
+        inline static auto get_by_index(const size_t index, Callback&& callback) {
             if constexpr (I == sizeof...(T)) {
-                return;
+                if constexpr(std::is_void_v<std::invoke_result_t<Callback, tag<std::tuple_element_t<0, std::tuple<T...>>>>>) {
+                    return;
+                }
+                else {
+                    return std::invoke_result_t<Callback, tag<std::tuple_element_t<0, std::tuple<T...>>>>();
+                }
             }
             else {
                 if (I == index) {
-                    callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{});
+                    return callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{});
                 }
                 else {
-                    get_by_index<I + 1>(index, std::forward<Callback>(callback));
+                    return get_by_index<I + 1>(index, std::forward<Callback>(callback));
                 }
             }
         }
@@ -54,10 +75,13 @@ namespace extensions {
 
         /**
          * Invokes callback(tag<T>, integral_constant<size_t, I>) for each T, in order.
+         * If any callback returns true, immediately break and return true.
+         * Otherwise it returns false.
+         * Also accepts callback that do not return any value.
          */
         template <typename Callback>
-        inline static void for_each(Callback&& callback) {
-            invoke<0>(std::forward<Callback>(callback));
+        inline static bool for_each(Callback&& callback) {
+            return invoke<0>(std::forward<Callback>(callback));
         }
 
 
@@ -66,8 +90,8 @@ namespace extensions {
          * If index is out of bounds, then callback will not be invoked.
          */
         template <typename Callback>
-        inline static void get(const size_t index, Callback&& callback) {
-            get_by_index<0>(index, std::forward<Callback>(callback));
+        inline static auto get(const size_t index, Callback&& callback) {
+            return get_by_index<0>(index, std::forward<Callback>(callback));
         }
 
         /**

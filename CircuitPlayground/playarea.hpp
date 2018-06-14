@@ -9,6 +9,9 @@
 #include "drawable.hpp"
 #include "statemanager.hpp"
 #include "point.hpp"
+#include "action.hpp"
+#include "selectionaction.hpp"
+#include "pencilaction.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -34,23 +37,18 @@ private:
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<extensions::point> mouseoverPoint;
 
-    std::optional<size_t> drawingIndex = std::nullopt; // input handle index of the active drawing tool
     bool panning = false; // whether panning is active
 
-    extensions::point selectionOrigin; // the first point of the selection rectangle
-    extensions::point moveOrigin; // the reference point (in matrix units) when moving a selection
-    SDL_Rect selectionRect;
-    Selector::State selectorState = Selector::INACTIVE;
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
-    extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
-        // translation:
-        extensions::point offset = physicalOffset - translation;
+    Action<PlayArea, SelectionAction, PencilAction> currentAction;
 
-        // scaling:
-        return extensions::div_floor(offset, scale);
-    }
+
+    template <typename, typename> friend class CanvasAction; // unfortunately, partial specialization of friends doesn't seem to work
+    friend class PencilAction<PlayArea>;
+    friend class SelectionAction<PlayArea>;
+
 
 
 public:
@@ -86,6 +84,7 @@ public:
      */
     void finishAction();
 
+    // TODO: refractor processDrawingTool into PencilAction
     /**
      * Use a drawing tool on (x, y)
      */
@@ -104,8 +103,15 @@ public:
         translation -= deltaTrans * scale;
     }
 
-    /**
-     * Returns the rectangle given by two opposite corners.
-     */
-    SDL_Rect getRect(extensions::point p, extensions::point q);
+
+    extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
+
+        // translation:
+        extensions::point offset = physicalOffset - translation;
+
+        // scaling:
+        return extensions::div_floor(offset, scale);
+    }
 };
+
+

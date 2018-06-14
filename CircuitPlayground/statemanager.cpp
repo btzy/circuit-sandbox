@@ -247,16 +247,20 @@ void StateManager::writeSave() {
     }
 }
 
-void StateManager::selectRect(SDL_Rect selectionRect) {
+void StateManager::selectRect(const extensions::point& pt1, const extensions::point& pt2) {
     // make a copy of defaultState
     base = defaultState;
 
+    // normalize supplied points
+    extensions::point topLeft = extensions::min(pt1, pt2);
+    extensions::point bottomRight = extensions::max(pt1, pt2) + extensions::point{1, 1};
+
     // TODO: proper rectangle clamping functions
     // restrict selectionRect to the area within base
-    int32_t sx_min = std::max(selectionRect.x, 0);
-    int32_t sy_min = std::max(selectionRect.y, 0);
-    int32_t sx_max = std::min(selectionRect.x + selectionRect.w, base.width());
-    int32_t sy_max = std::min(selectionRect.y + selectionRect.h, base.height());
+    int32_t sx_min = std::max(topLeft.x, 0);
+    int32_t sy_min = std::max(topLeft.y, 0);
+    int32_t sx_max = std::min(bottomRight.x, base.width());
+    int32_t sy_max = std::min(bottomRight.y, base.height());
     int32_t swidth = sx_max - sx_min;
     int32_t sheight = sy_max - sy_min;
 

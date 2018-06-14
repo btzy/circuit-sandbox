@@ -4,6 +4,7 @@
  */
 
 #include <cstddef>
+#include <algorithm>
 
 #include "integral_division.hpp"
 
@@ -33,7 +34,7 @@ namespace extensions {
             return *this;
         }
 
-        // arithmetic operators operators
+        // arithmetic operators
         point operator+(const point& other) const noexcept {
             point ret = *this;
             ret += other;
@@ -65,10 +66,10 @@ namespace extensions {
 
         // equality operators
         bool operator==(const point& other) const noexcept {
-            return this->x == other.x && this->y == other.y;
+            return x == other.x && y == other.y;
         }
         bool operator!=(const point& other) const noexcept {
-            return this->x != other.x || this->y != other.y;
+            return !(*this == other);
         }
 
     };
@@ -79,5 +80,12 @@ namespace extensions {
     }
     inline point div_ceil(point pt, int32_t scale) noexcept {
         return { extensions::div_ceil(pt.x, scale), extensions::div_ceil(pt.y, scale) };
+    }
+
+    inline point min(const point& pt1, const point& pt2) noexcept {
+        return { std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y) };
+    }
+    inline point max(const point& pt1, const point& pt2) noexcept {
+        return { std::max(pt1.x, pt2.x), std::max(pt1.y, pt2.y) };
     }
 }

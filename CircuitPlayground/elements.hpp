@@ -139,13 +139,6 @@ constexpr inline SDL_Color computeDisplayColor(const Element& element, bool useD
 struct Selector {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     static constexpr const char* displayName = "Selector";
-
-    enum State {
-        INACTIVE,
-        SELECTING,
-        SELECTED,
-        MOVING
-    };
 };
 
 struct Panner {
