@@ -157,6 +157,7 @@ public:
                                 selectionEnd = canvasOffset;
                                 playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
                             }
+                            // TODO: end selection immediately if the selection is empty
                         }
                         return ActionEventResult::PROCESSED;
                     case State::MOVING:

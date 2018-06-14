@@ -89,24 +89,8 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     
     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
-    // TODO: abstract the action-handling code somewhere so it is not repeated for every event type
-    ActionEventResult result = currentAction.processMouseMotionEvent(event);
-    switch (result) {
-    case ActionEventResult::COMPLETED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::PROCESSED:
-        break;
-    case ActionEventResult::CANCELLED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::UNPROCESSED:
-
-        // have to ask all the actions if they would like to start
-        if (currentAction.startWithMouseMotionEvent(event)) {
-            break;
-        }
-
+    
+    if (!currentAction.processMouseMotionEvent(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         // update translation if panning
@@ -123,69 +107,37 @@ void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
 void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     
-    ActionEventResult result = currentAction.processMouseButtonEvent(event);
-    switch (result) {
-    case ActionEventResult::COMPLETED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::PROCESSED:
-        return;
-    case ActionEventResult::CANCELLED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::UNPROCESSED:
+    if (!currentAction.processMouseButtonEvent(event)) {
+        // at this point, no actions are able to handle this event, so we do the default for playarea
 
-        // have to ask all the actions if they would like to start
-        if (currentAction.startWithMouseButtonEvent(event)) {
-            return;
-        }
+
+        // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
+        extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
+
+        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
+        MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
+            // 'Tool' is the type of tool (e.g. Selector)
+            using Tool = typename decltype(tool_tag)::type;
+
+            if constexpr (std::is_base_of_v<Panner, Tool>) {
+                // it is a Panner.
+                if (event.type == SDL_MOUSEBUTTONDOWN) {
+                    panning = true;
+                }
+                else {
+                    panning = false;
+                }
+            }
+        });
 
     }
-    
-    // at this point, no actions are able to handle this event, so we do the default for playarea
-
-    // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
-    extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{renderArea.x, renderArea.y};
-
-    size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-    MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
-        // 'Tool' is the type of tool (e.g. Selector)
-        using Tool = typename decltype(tool_tag)::type;
-
-        if constexpr (std::is_base_of_v<Panner, Tool>) {
-            // it is a Panner.
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
-                panning = true;
-            } else {
-                panning = false;
-            }
-        }
-    });
 
 }
 
 void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     
-    ActionEventResult result = currentAction.processMouseWheelEvent(event);
-    switch (result) {
-    case ActionEventResult::COMPLETED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::PROCESSED:
-        break;
-    case ActionEventResult::CANCELLED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::UNPROCESSED:
-
-        // have to ask all the actions if they would like to start
-        if (currentAction.startWithMouseWheelEvent(event)) {
-            break;
-        }
-
-
+    if (!currentAction.processMouseWheelEvent(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
-
 
         if (mouseoverPoint) {
             // change the scale factor,
@@ -211,23 +163,8 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
 }
 
 void PlayArea::processMouseLeave() {
-    ActionEventResult result = currentAction.processMouseLeave();
-    switch (result) {
-    case ActionEventResult::COMPLETED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::PROCESSED:
-        break;
-    case ActionEventResult::CANCELLED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::UNPROCESSED:
-
-        // have to ask all the actions if they would like to start
-        if (currentAction.startWithMouseLeave()) {
-            break;
-        }
-
+    
+    if (!currentAction.processMouseLeave()) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         // no default mouseleave event
@@ -242,25 +179,9 @@ void PlayArea::processMouseLeave() {
 
 void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
     
-    ActionEventResult result = currentAction.processKeyboardEvent(event);
-    switch (result) {
-    case ActionEventResult::COMPLETED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::PROCESSED:
-        break;
-    case ActionEventResult::CANCELLED:
-        currentAction.reset();
-        [[fallthrough]];
-    case ActionEventResult::UNPROCESSED:
-
-        // have to ask all the actions if they would like to start
-        if (currentAction.startWithKeyboardEvent(event)) {
-            break;
-        }
-
+    if (!currentAction.processKeyboardEvent(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
-
+        
         // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
