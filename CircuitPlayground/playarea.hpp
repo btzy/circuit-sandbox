@@ -84,24 +84,6 @@ public:
      */
     void finishAction();
 
-    // TODO: refractor processDrawingTool into PencilAction
-    /**
-     * Use a drawing tool on (x, y)
-     */
-    template <typename Tool>
-    void processDrawingTool(extensions::point pt) {
-        extensions::point deltaTrans;
-
-        // if it is a Pencil, forward the drawing to the gamestate
-        if constexpr (std::is_base_of_v<Eraser, Tool>) {
-            deltaTrans = stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
-        }
-        else {
-            deltaTrans = stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
-        }
-
-        translation -= deltaTrans * scale;
-    }
 
 
     extensions::point computeCanvasCoords(extensions::point physicalOffset) const {

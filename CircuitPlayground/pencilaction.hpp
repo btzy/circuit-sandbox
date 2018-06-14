@@ -13,6 +13,24 @@ private:
     // index of this tool on the toolbox
     size_t toolIndex;
 
+    /**
+     * Use a drawing tool on (x, y)
+     */
+    template <typename Tool>
+    void processDrawingTool(extensions::point pt) {
+        extensions::point deltaTrans;
+
+        // if it is a Pencil, forward the drawing to the gamestate
+        if constexpr (std::is_base_of_v<Eraser, Tool>) {
+            deltaTrans = playArea.stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
+        }
+        else {
+            deltaTrans = playArea.stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
+        }
+
+        playArea.translation -= deltaTrans * playArea.scale;
+    }
+
 
 public:
 
@@ -35,12 +53,12 @@ public:
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
                 if (event.type == SDL_MOUSEBUTTONDOWN) {
                     // create the new action
-                    output.emplace<PencilAction<PlayArea>>(playArea, currentToolIndex);
+                    auto& action = output.emplace<PencilAction<PlayArea>>(playArea, currentToolIndex);
 
                     // draw the element at the current location
                     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
                     extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
-                    playArea.processDrawingTool<Tool>(canvasOffset);
+                    action.processDrawingTool<Tool>(canvasOffset);
                     return true;
                 }
             }
@@ -55,7 +73,7 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
-                playArea.processDrawingTool<Tool>(canvasOffset);
+                processDrawingTool<Tool>(canvasOffset);
                 return ActionEventResult::PROCESSED;
             }
             else {

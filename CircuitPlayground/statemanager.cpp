@@ -10,6 +10,7 @@ StateManager::StateManager() {
     // read defaultState from disk if a savefile exists
     readSave();
     simulator.compile(defaultState, false);
+    
 }
 
 StateManager::~StateManager() {

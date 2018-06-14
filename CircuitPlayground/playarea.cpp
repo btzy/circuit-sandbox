@@ -12,7 +12,9 @@
 #include "integral_division.hpp"
 #include "point.hpp"
 
-PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {};
+PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {
+    stateManager.saveToHistory(); // so that the loaded savefile will be in the history
+};
 
 
 void PlayArea::updateDpi() {
