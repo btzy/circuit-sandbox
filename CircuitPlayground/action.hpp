@@ -1,12 +1,13 @@
 #pragma once
 
-#include <variant>
-#include <optional>
+#include <memory>
 
 #include <SDL.h>
 
 #include "tag_tuple.hpp"
 #include "point.hpp"
+
+#include "declarations.hpp"
 
 #include "baseaction.hpp"
 
@@ -18,23 +19,13 @@
  * The action object should not be destroyed until the game is quitting.
  */
 
-
-
-
-class DummyAction : public BaseAction {};
-
-
-
-template <typename PlayArea, template <typename> typename... Actions>
 class Action {
 
 private:
 
     PlayArea& playArea;
 
-    using actions_tag_t = typename extensions::tag_tuple<DummyAction, Actions<PlayArea>...>;
-    using variant_t = typename actions_tag_t::template instantiate<std::variant>;
-    variant_t data;
+    std::unique_ptr<BaseAction> data;
     
     /**
      * returns true if event is consumed, false otherwise
@@ -67,94 +58,37 @@ public:
     // disable all the copy and move constructors and assignment operators, because this class is intended to be a 'policy' type class
     
 
-    Action(PlayArea& playArea) : playArea(playArea) {}
+    Action(PlayArea& playArea) : playArea(playArea), data(std::make_unique<BaseAction>()) {}
 
     ~Action() {}
 
 
     void reset() {
-        data.emplace<DummyAction>();
+        data = std::make_unique<BaseAction>();
     }
 
 
 
     // returns true if the event was consumed, false otherwise
-    inline bool processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-        return forwardEvent([&, this]() {
-            return std::visit([&](auto& action) {
-                return action.processMouseMotionEvent(event);
-            }, data);
-        }, [&, this]() {
-            return actions_tag_t::for_each([&, this](auto action_tag, auto) {
-                using action_t = typename decltype(action_tag)::type;
-                return action_t::startWithMouseMotionEvent(event, playArea, data);
-            });
-        });
-    }
+    bool processMouseMotionEvent(const SDL_MouseMotionEvent& event);
 
     // expects the mouse to be in the playarea, unless it is a mouseup
     // returns true if the event was consumed, false otherwise
-    inline bool processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
-        return forwardEvent([&, this]() {
-            return std::visit([&](auto& action) {
-                return action.processMouseButtonEvent(event);
-            }, data);
-        }, [&, this]() {
-            return actions_tag_t::for_each([&, this](auto action_tag, auto) {
-                using action_t = typename decltype(action_tag)::type;
-                return action_t::startWithMouseButtonEvent(event, playArea, data);
-            });
-        });
-    }
+    bool processMouseButtonEvent(const SDL_MouseButtonEvent& event);
 
     // should we expect the mouse to be in the playarea?
     // returns true if the event was consumed, false otherwise
-    inline bool processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
-        return forwardEvent([&, this]() {
-            return std::visit([&](auto& action) {
-                return action.processMouseWheelEvent(event);
-            }, data);
-        }, [&, this]() {
-            return actions_tag_t::for_each([&, this](auto action_tag, auto) {
-                using action_t = typename decltype(action_tag)::type;
-                return action_t::startWithMouseWheelEvent(event, playArea, data);
-            });
-        });
-    }
+    bool processMouseWheelEvent(const SDL_MouseWheelEvent& event);
 
     // returns true if the event was consumed, false otherwise
-    inline bool processKeyboardEvent(const SDL_KeyboardEvent& event) {
-        return forwardEvent([&, this]() {
-            return std::visit([&](auto& action) {
-                return action.processKeyboardEvent(event);
-            }, data);
-        }, [&, this]() {
-            return actions_tag_t::for_each([&, this](auto action_tag, auto) {
-                using action_t = typename decltype(action_tag)::type;
-                return action_t::startWithKeyboardEvent(event, playArea, data);
-            });
-        });
-    }
+    bool processKeyboardEvent(const SDL_KeyboardEvent& event);
 
     // expects to be called when the mouse leaves the playarea
     // returns true if the event was consumed, false otherwise
-    inline bool processMouseLeave() {
-        return forwardEvent([this]() {
-            return std::visit([](auto& action) {
-                return action.processMouseLeave();
-            }, data);
-        }, [this]() {
-            return actions_tag_t::for_each([this](auto action_tag, auto) {
-                using action_t = typename decltype(action_tag)::type;
-                return action_t::startWithMouseLeave(playArea, data);
-            });
-        });
-    }
+    bool processMouseLeave();
 
     // renderer
     void render(SDL_Renderer* renderer) const {
-        std::visit([&renderer](const auto& action) {
-            action.render(renderer);
-        }, data);
+        data->render(renderer);
     }
 };

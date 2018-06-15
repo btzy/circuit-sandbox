@@ -1,13 +1,16 @@
 #pragma once
 
-#include "baseaction.hpp"
+#include "point.hpp"
+#include "canvasaction.hpp"
+#include "playarea.hpp"
+#include "mainwindow.hpp"
+
 
 /**
  * Action that represents a pencil that can draw an element (or eraser).
  */
 
-template <typename PlayArea>
-class PencilAction : public CanvasAction<PencilAction<PlayArea>, PlayArea> {
+class PencilAction : public CanvasAction<PencilAction> {
 
 private:
     // index of this tool on the toolbox
@@ -22,38 +25,38 @@ private:
 
         // if it is a Pencil, forward the drawing to the gamestate
         if constexpr (std::is_base_of_v<Eraser, Tool>) {
-            deltaTrans = playArea.stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
+            deltaTrans = this->playArea.stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
         }
         else {
-            deltaTrans = playArea.stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
+            deltaTrans = this->playArea.stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
         }
 
-        playArea.translation -= deltaTrans * playArea.scale;
+        this->playArea.translation -= deltaTrans * this->playArea.scale;
     }
 
 
 public:
 
-    PencilAction(PlayArea& playArea, size_t toolIndex) :CanvasAction<PencilAction<PlayArea>, PlayArea>(playArea), toolIndex(toolIndex) {}
+    PencilAction(PlayArea& playArea, size_t toolIndex) :CanvasAction<PencilAction>(playArea), toolIndex(toolIndex) {}
 
 
-    ~PencilAction() {
+    ~PencilAction() override {
         // nothing to do to clean up
     }
 
-    template <typename ActionVariant>
-    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent& event, PlayArea& playArea, ActionVariant& output) {
-        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
+    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return MainWindow::tool_tags_t::get(currentToolIndex, [&event, &playArea, &output, &currentToolIndex](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [&event, &playArea, &actionPtr, &currentToolIndex](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
                 if (event.type == SDL_MOUSEBUTTONDOWN) {
                     // create the new action
-                    auto& action = output.emplace<PencilAction<PlayArea>>(playArea, currentToolIndex);
+                    actionPtr = std::make_unique<PencilAction>(playArea, currentToolIndex);
+                    auto& action = static_cast<PencilAction&>(*actionPtr);
 
                     // draw the element at the current location
                     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
@@ -64,11 +67,11 @@ public:
             }
 
             return false;
-        });
+        }, false);
     }
 
     ActionEventResult processCanvasMouseMotionEvent(const extensions::point& canvasOffset, const SDL_MouseMotionEvent& event) {
-        return MainWindow::tool_tags_t::get(toolIndex, [this, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(toolIndex, [this, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -80,19 +83,19 @@ public:
                 // this will never happen
                 return ActionEventResult::UNPROCESSED;
             }
-        });
+        }, ActionEventResult::UNPROCESSED);
     }
 
     ActionEventResult processCanvasMouseButtonEvent(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
-        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
         // If another drawing tool is pressed, exit this action
         if (currentToolIndex != toolIndex) {
             return ActionEventResult::UNPROCESSED;
         }
 
-        MainWindow::tool_tags_t::get(toolIndex, [this, &event](const auto tool_tag) {
+        return tool_tags_t::get(toolIndex, [this, &event](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -110,7 +113,7 @@ public:
                 // this will never happen
                 return ActionEventResult::UNPROCESSED;
             }
-        });
+        }, ActionEventResult::UNPROCESSED);
     }
 
 };

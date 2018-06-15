@@ -2,6 +2,8 @@
 
 #include <SDL.h>
 
+#include "declarations.hpp"
+
 /**
 * ActionEventResult represents the result of all the event handlers in actions.
 * PROCESSED: This action successfully used the event, so PlayArea should not use it.  The action should remain active.
@@ -28,28 +30,30 @@ public:
     BaseAction(const BaseAction&) = delete;
     BaseAction& operator=(const BaseAction&) = delete;
 
+    virtual ~BaseAction() {}
+
 
     // expects the mouse to be in the playarea
-    inline ActionEventResult processMouseMotionEvent(const SDL_MouseMotionEvent&) {
+    virtual inline ActionEventResult processMouseMotionEvent(const SDL_MouseMotionEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
     // expects the mouse to be in the playarea
-    inline ActionEventResult processMouseButtonEvent(const SDL_MouseButtonEvent&) {
+    virtual inline ActionEventResult processMouseButtonEvent(const SDL_MouseButtonEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
     // should we expect the mouse to be in the playarea?
-    inline ActionEventResult processMouseWheelEvent(const SDL_MouseWheelEvent&) {
+    virtual inline ActionEventResult processMouseWheelEvent(const SDL_MouseWheelEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
-    inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent&) {
+    virtual inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
     // expects to be called when the mouse leaves the playarea
-    inline ActionEventResult processMouseLeave() {
+    virtual inline ActionEventResult processMouseLeave() {
         return ActionEventResult::UNPROCESSED;
     }
 
@@ -57,64 +61,24 @@ public:
 
     // static methods to create actions, writes to the ActionVariant& to start it (and destroy the previous action, if any)
     // returns true if an action was started, false otherwise
-    template <typename ActionVariant>
-    static inline bool startWithMouseMotionEvent(const SDL_MouseMotionEvent&, PlayArea&, ActionVariant&) {
+    static inline bool startWithMouseMotionEvent(const SDL_MouseMotionEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    template <typename ActionVariant>
-    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent&, PlayArea&, ActionVariant&) {
+    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    template <typename ActionVariant>
-    static inline bool startWithMouseWheelEvent(const SDL_MouseWheelEvent&, PlayArea&, ActionVariant&) {
+    static inline bool startWithMouseWheelEvent(const SDL_MouseWheelEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    template <typename ActionVariant>
-    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent&, PlayArea&, ActionVariant&) {
+    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    template <typename ActionVariant>
-    static inline bool startWithMouseLeave(PlayArea&, ActionVariant&) {
+    static inline bool startWithMouseLeave(PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
 
 
 
     // rendering function
-    void render(SDL_Renderer*) const {}
-};
-
-
-
-// a helper class that abstracts out converting mouse coordinates to canvas offset
-template <typename T, typename PlayArea>
-class CanvasAction : public BaseAction {
-protected:
-    PlayArea& playArea;
-
-public:
-
-    CanvasAction(PlayArea& playArea) :playArea(playArea) {};
-
-
-    // save to history when this action ends
-    ~CanvasAction() {
-        playArea.stateManager.saveToHistory();
-    }
-
-
-
-    // resolve the canvas offset then forward
-    ActionEventResult processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-        extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-        extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
-        return static_cast<T*>(this)->processCanvasMouseMotionEvent(canvasOffset, event);
-    }
-
-    // resolve the canvas offset then forward
-    ActionEventResult processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
-        extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-        extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
-        return static_cast<T*>(this)->processCanvasMouseButtonEvent(canvasOffset, event);
-    }
+    virtual void render(SDL_Renderer*) const {}
 };

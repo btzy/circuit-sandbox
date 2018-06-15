@@ -10,8 +10,6 @@
 #include "statemanager.hpp"
 #include "point.hpp"
 #include "action.hpp"
-#include "selectionaction.hpp"
-#include "pencilaction.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -42,12 +40,12 @@ private:
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
-    Action<PlayArea, SelectionAction, PencilAction> currentAction;
+    Action currentAction;
 
 
-    template <typename, typename> friend class CanvasAction; // unfortunately, partial specialization of friends doesn't seem to work
-    friend class PencilAction<PlayArea>;
-    friend class SelectionAction<PlayArea>;
+    template <typename> friend class CanvasAction; // unfortunately, partial specialization of friends doesn't seem to work
+    friend class PencilAction;
+    friend class SelectionAction;
 
 
 

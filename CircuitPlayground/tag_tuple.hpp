@@ -20,7 +20,7 @@ namespace extensions {
     struct tag_tuple{
 
     private:
-
+        
         // Note: Verbose multiple functions for invoke is due Visual Studio choking on nested if-constexpr.
         // See https://stackoverflow.com/q/50857307/1021959
         template <size_t I, typename Callback>
@@ -49,21 +49,31 @@ namespace extensions {
 
 
         template <size_t I, typename Callback>
-        inline static auto get_by_index(const size_t index, Callback&& callback) {
+        inline static void get_by_index(const size_t index, Callback&& callback) {
             if constexpr (I == sizeof...(T)) {
-                if constexpr(std::is_void_v<std::invoke_result_t<Callback, tag<std::tuple_element_t<0, std::tuple<T...>>>>>) {
-                    return;
+                return;
+            }
+            else {
+                if (I == index) {
+                    callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{});
                 }
                 else {
-                    return std::invoke_result_t<Callback, tag<std::tuple_element_t<0, std::tuple<T...>>>>();
+                    get_by_index<I + 1>(index, std::forward<Callback>(callback));
                 }
+            }
+        }
+
+        template <size_t I, typename Callback, typename DefaultReturnValue>
+        inline static auto get_by_index(const size_t index, Callback&& callback, DefaultReturnValue&& defaultRet) {
+            if constexpr (I == sizeof...(T)) {
+                return std::forward<DefaultReturnValue>(defaultRet);
             }
             else {
                 if (I == index) {
                     return callback(tag<std::tuple_element_t<I, std::tuple<T...>>>{});
                 }
                 else {
-                    return get_by_index<I + 1>(index, std::forward<Callback>(callback));
+                    return get_by_index<I + 1>(index, std::forward<Callback>(callback), std::forward<DefaultReturnValue>(defaultRet));
                 }
             }
         }
@@ -88,10 +98,15 @@ namespace extensions {
         /**
          * Invokes callback(tag<T>) for the T at the given index.
          * If index is out of bounds, then callback will not be invoked.
+         * The three-parameter version allows returning a value from the callback.  If index is out of bounds, then defaultRet will be returned.
          */
         template <typename Callback>
-        inline static auto get(const size_t index, Callback&& callback) {
-            return get_by_index<0>(index, std::forward<Callback>(callback));
+        inline static void get(const size_t index, Callback&& callback) {
+            get_by_index<0>(index, std::forward<Callback>(callback));
+        }
+        template <typename Callback, typename DefaultReturnValue>
+        inline static auto get(const size_t index, Callback&& callback, DefaultReturnValue&& defaultRet) {
+            return get_by_index<0>(index, std::forward<Callback>(callback), std::forward<DefaultReturnValue>(defaultRet));
         }
 
         /**

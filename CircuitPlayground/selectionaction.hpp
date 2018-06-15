@@ -1,13 +1,16 @@
 #pragma once
 
-#include "baseaction.hpp"
+#include "point.hpp"
+#include "canvasaction.hpp"
+#include "playarea.hpp"
+#include "mainwindow.hpp"
+
 
 /**
  * Action that represents selection.
  */
 
-template <typename PlayArea>
-class SelectionAction : public CanvasAction<SelectionAction<PlayArea>, PlayArea> {
+class SelectionAction : public CanvasAction<SelectionAction> {
 
 private:
     enum class State {
@@ -25,32 +28,32 @@ private:
 
 public:
 
-    SelectionAction(PlayArea& playArea, State state) :CanvasAction<SelectionAction<PlayArea>, PlayArea>(playArea), state(state) {}
+    SelectionAction(PlayArea& playArea, State state) :CanvasAction<SelectionAction>(playArea), state(state) {}
 
 
     // destructor, called to finish the action immediately
-    ~SelectionAction() {
-        extensions::point deltaTrans = playArea.stateManager.commitSelection();
-        playArea.translation -= deltaTrans * playArea.scale;
+    ~SelectionAction() override {
+        extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
+        this->playArea.translation -= deltaTrans * this->playArea.scale;
     }
 
     // TODO: refractor tool resolution out of SelectionAction and PencilAction, because its getting repetitive
     // TODO: refractor calculation of canvasOffset from event somewhere else as well
 
-    // check if we need to start selection action from dragging/clicking the playarea
-    template <typename ActionVariant>
-    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent& event, PlayArea& playArea, ActionVariant& output) {
-        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
+    // check if we need to start selection action from dragging/clicking the playarea=
+    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return MainWindow::tool_tags_t::get(currentToolIndex, [&event, &playArea, &output](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [&event, &playArea, &actionPtr](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Selector, Tool>) {
                 if (event.type == SDL_MOUSEBUTTONDOWN) {
                     // start selection action from dragging/clicking the playarea
-                    auto& action = output.emplace<SelectionAction<PlayArea>>(playArea, State::SELECTING);
+                    actionPtr = std::make_unique<SelectionAction>(playArea, State::SELECTING);
+                    auto& action = static_cast<SelectionAction&>(*actionPtr);
                     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
                     extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                     action.selectionEnd = action.selectionOrigin = canvasOffset;
@@ -59,24 +62,23 @@ public:
             }
 
             return false;
-        });
+        }, false);
     }
 
     // check if we need to start selection action from Ctrl-A or Ctrl-V
-    template <typename ActionVariant>
-    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent& event, PlayArea& playArea, ActionVariant& output) {
+    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
             case SDL_SCANCODE_A:
                 if (modifiers & KMOD_CTRL) {
-                    auto& action = output.emplace<SelectionAction<PlayArea>>(playArea, State::SELECTED);
+                    actionPtr = std::make_unique<SelectionAction>(playArea, State::SELECTED);
                     playArea.stateManager.selectAll();
                     return true;
                 }
             case SDL_SCANCODE_V:
                 if (modifiers & KMOD_CTRL) {
-                    auto& action = output.emplace<SelectionAction<PlayArea>>(playArea, State::SELECTED);
+                    actionPtr = std::make_unique<SelectionAction>(playArea, State::SELECTED);
 
                     extensions::point physicalOffset;
                     SDL_GetMouseState(&physicalOffset.x, &physicalOffset.y);
@@ -91,6 +93,8 @@ public:
 
                     return true;
                 }
+            default:
+                return false;
             }
         }
         return false;
@@ -108,7 +112,7 @@ public:
         case State::MOVING:
             // move the selection if necessary
             if (moveOrigin != canvasOffset) {
-                playArea.stateManager.moveSelection(canvasOffset.x - moveOrigin.x, canvasOffset.y - moveOrigin.y);
+                this->playArea.stateManager.moveSelection(canvasOffset.x - moveOrigin.x, canvasOffset.y - moveOrigin.y);
                 moveOrigin = canvasOffset;
             }
             return ActionEventResult::PROCESSED;
@@ -117,10 +121,10 @@ public:
     }
 
     ActionEventResult processCanvasMouseButtonEvent(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
-        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return MainWindow::tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -128,10 +132,10 @@ public:
                 if (event.type == SDL_MOUSEBUTTONDOWN) {
                     switch (state) {
                     case State::SELECTED:
-                        if (!playArea.stateManager.pointInSelection(canvasOffset)) {
+                        if (!this->playArea.stateManager.pointInSelection(canvasOffset)) {
                             // end selection
-                            extensions::point deltaTrans = playArea.stateManager.commitSelection();
-                            playArea.translation -= deltaTrans * playArea.scale;
+                            extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
+                            this->playArea.translation -= deltaTrans * this->playArea.scale;
                             return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
                         }
                         else {
@@ -153,9 +157,9 @@ public:
                         {
                             SDL_Point position{ event.x, event.y };
                             // TODO: consider using viewports to eliminate these checks
-                            if (SDL_PointInRect(&position, &playArea.renderArea)) {
+                            if (SDL_PointInRect(&position, &this->playArea.renderArea)) {
                                 selectionEnd = canvasOffset;
-                                playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
+                                this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
                             }
                             // TODO: end selection immediately if the selection is empty
                         }
@@ -172,31 +176,33 @@ public:
                 // wrong tool, return UNPROCESSED (maybe PlayArea will destroy this action)
                 return ActionEventResult::UNPROCESSED;
             }
-        });
+        }, ActionEventResult::UNPROCESSED);
     }
 
-    inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent& event) {
+    inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent& event) override {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
             case SDL_SCANCODE_D:
             case SDL_SCANCODE_DELETE:
             {
-                extensions::point deltaTrans = playArea.stateManager.deleteSelection();
-                playArea.translation -= deltaTrans * playArea.scale;
+                extensions::point deltaTrans = this->playArea.stateManager.deleteSelection();
+                this->playArea.translation -= deltaTrans * this->playArea.scale;
                 return ActionEventResult::COMPLETED;
             }
             case SDL_SCANCODE_C:
                 if (modifiers & KMOD_CTRL) {
-                    playArea.stateManager.copySelectionToClipboard();
+                    this->playArea.stateManager.copySelectionToClipboard();
                     return ActionEventResult::PROCESSED;
                 }
             case SDL_SCANCODE_X:
                 if (modifiers & KMOD_CTRL) {
-                    extensions::point deltaTrans = playArea.stateManager.cutSelectionToClipboard();
-                    playArea.translation -= deltaTrans * playArea.scale;
+                    extensions::point deltaTrans = this->playArea.stateManager.cutSelectionToClipboard();
+                    this->playArea.translation -= deltaTrans * this->playArea.scale;
                     return ActionEventResult::COMPLETED;
                 }
+            default:
+                return ActionEventResult::UNPROCESSED;
             }
         }
         return ActionEventResult::UNPROCESSED;
@@ -204,7 +210,7 @@ public:
 
 
     // rendering function, render the selection rectangle if it exists
-    void render(SDL_Renderer* renderer) const {
+    void render(SDL_Renderer* renderer) const override {
         if (state == State::SELECTING) {
             // normalize supplied points
             extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);
@@ -212,10 +218,10 @@ public:
 
 
             SDL_Rect selectionArea{
-                topLeft.x * playArea.scale + playArea.translation.x,
-                topLeft.y * playArea.scale + playArea.translation.y,
-                (bottomRight.x - topLeft.x) * playArea.scale,
-                (bottomRight.y - topLeft.y) * playArea.scale
+                topLeft.x * this->playArea.scale + this->playArea.translation.x,
+                topLeft.y * this->playArea.scale + this->playArea.translation.y,
+                (bottomRight.x - topLeft.x) * this->playArea.scale,
+                (bottomRight.y - topLeft.y) * this->playArea.scale
             };
 
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);

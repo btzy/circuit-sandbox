@@ -1,10 +1,8 @@
 #include <type_traits>
-#include <variant>
 #include <tuple>
 #include <cstdint>
 
 #include <SDL.h>
-#include <variant>
 
 #include "playarea.hpp"
 #include "mainwindow.hpp"
@@ -116,8 +114,8 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
         extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
-        size_t inputHandleIndex = MainWindow::resolveInputHandleIndex(event);
-        MainWindow::tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 

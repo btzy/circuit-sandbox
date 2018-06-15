@@ -12,14 +12,12 @@
 #include "declarations.hpp"
 #include "toolbox.hpp"
 #include "playarea.hpp"
-#include "tag_tuple.hpp"
-#include "elements.hpp"
+
 
 class MainWindow {
 public:
 
-    // compile-time type tag which stores the list of available elements
-    using tool_tags_t = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
@@ -78,36 +76,6 @@ public:
 
 
 
-
-    /**
-     * Resolve the mouse button event to the input handle index (used with 'selectedToolIndices');
-     * Uses fields 'which' and 'button'
-     */
-    static inline size_t resolveInputHandleIndex(const SDL_MouseButtonEvent& event) {
-        if (event.which == SDL_TOUCH_MOUSEID) {
-            return 0;
-        }
-        else {
-            switch (event.button) {
-            case SDL_BUTTON_LEFT:
-                return 1;
-            case SDL_BUTTON_MIDDLE:
-                return 2;
-            case SDL_BUTTON_RIGHT:
-                return 3;
-            case SDL_BUTTON_X1:
-                return 4;
-            case SDL_BUTTON_X2:
-                return 5;
-            default:
-#if defined(__GNUC__)
-                __builtin_unreachable();
-#elif defined(_MSC_VER)
-                __assume(0);
-#endif
-            }
-        }
-    }
 
     /**
      * Stores the element that is selected by the toolbox.
