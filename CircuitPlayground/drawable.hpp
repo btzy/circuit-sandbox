@@ -4,16 +4,12 @@
  * Base class for drawable objects
  */
 
-#include <tuple>
-
 #include <SDL.h>
 
-#include "elements.hpp"
-
-#include "tag_tuple.hpp"
+#include "eventreceiver.hpp"
 
 
-class Drawable {
+class Drawable : public EventReceiver {
 public:
     SDL_Rect renderArea; // this is a physical size
 };

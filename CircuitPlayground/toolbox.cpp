@@ -103,7 +103,7 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 }
 
 
-void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
+void Toolbox::processMouseHover(const SDL_MouseMotionEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
@@ -126,7 +126,7 @@ void Toolbox::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 }
 
 
-void Toolbox::processMouseButtonDownEvent(const SDL_MouseButtonEvent& event) {
+void Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;

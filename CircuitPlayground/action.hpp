@@ -69,23 +69,13 @@ public:
 
 
 
-    // returns true if the event was consumed, false otherwise
-    bool processMouseMotionEvent(const SDL_MouseMotionEvent& event);
+    // requirements here follow those in BaseAction.
+    bool processMouseButtonDown(const SDL_MouseButtonEvent&);
+    bool processMouseDrag(const SDL_MouseMotionEvent&);
+    bool processMouseButtonUp(const SDL_MouseButtonEvent&);
 
-    // expects the mouse to be in the playarea, unless it is a mouseup
-    // returns true if the event was consumed, false otherwise
-    bool processMouseButtonEvent(const SDL_MouseButtonEvent& event);
-
-    // should we expect the mouse to be in the playarea?
-    // returns true if the event was consumed, false otherwise
-    bool processMouseWheelEvent(const SDL_MouseWheelEvent& event);
-
-    // returns true if the event was consumed, false otherwise
-    bool processKeyboardEvent(const SDL_KeyboardEvent& event);
-
-    // expects to be called when the mouse leaves the playarea
-    // returns true if the event was consumed, false otherwise
-    bool processMouseLeave();
+    bool processMouseWheel(const SDL_MouseWheelEvent&);
+    bool processKeyboard(const SDL_KeyboardEvent&);
 
     // renderer
     void render(SDL_Renderer* renderer) const {

@@ -32,48 +32,46 @@ public:
 
     virtual ~BaseAction() {}
 
+    // expects the mouse to be in the playarea
+    virtual inline ActionEventResult processMouseButtonDown(const SDL_MouseButtonEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }
+    // might be outside the playarea if the mouse was dragged out
+    virtual inline ActionEventResult processMouseDrag(const SDL_MouseMotionEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }// might be outside the playarea if the mouse was dragged out
+    virtual inline ActionEventResult processMouseButtonUp(const SDL_MouseButtonEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }
 
     // expects the mouse to be in the playarea
-    virtual inline ActionEventResult processMouseMotionEvent(const SDL_MouseMotionEvent&) {
+    virtual inline ActionEventResult processMouseWheel(const SDL_MouseWheelEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
-    // expects the mouse to be in the playarea
-    virtual inline ActionEventResult processMouseButtonEvent(const SDL_MouseButtonEvent&) {
+    // mouse might be anywhere, so shortcut keys are not dependent on the mouse position
+    virtual inline ActionEventResult processKeyboard(const SDL_KeyboardEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
 
-    // should we expect the mouse to be in the playarea?
-    virtual inline ActionEventResult processMouseWheelEvent(const SDL_MouseWheelEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-
-    virtual inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-
-    // expects to be called when the mouse leaves the playarea
-    virtual inline ActionEventResult processMouseLeave() {
-        return ActionEventResult::UNPROCESSED;
-    }
 
 
 
     // static methods to create actions, writes to the ActionVariant& to start it (and destroy the previous action, if any)
     // returns true if an action was started, false otherwise
-    static inline bool startWithMouseMotionEvent(const SDL_MouseMotionEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    static inline bool startWithMouseWheelEvent(const SDL_MouseWheelEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
-    static inline bool startWithMouseLeave(PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
         return false;
     }
 

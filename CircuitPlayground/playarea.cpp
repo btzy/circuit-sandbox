@@ -85,48 +85,34 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 }
 
 
-void PlayArea::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
+void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
     
     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
-    
-    if (!currentAction.processMouseMotionEvent(event)) {
-        // at this point, no actions are able to handle this event, so we do the default for playarea
-
-        // update translation if panning
-        if (panning && mouseoverPoint) {
-            translation += physicalOffset - *mouseoverPoint;
-        }
-    }
-
-    
     // store the new mouseover point
     mouseoverPoint = physicalOffset;
 }
 
+void PlayArea::processMouseLeave() {
+    mouseoverPoint = std::nullopt;
+}
 
-void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
-    
-    if (!currentAction.processMouseButtonEvent(event)) {
+void PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
+
+    if (!currentAction.processMouseButtonDown(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
-
 
         // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
         extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, event, physicalOffset, inputHandleIndex](const auto tool_tag) {
+        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, &event, &physicalOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Panner, Tool>) {
                 // it is a Panner.
-                if (event.type == SDL_MOUSEBUTTONDOWN) {
-                    panning = true;
-                }
-                else {
-                    panning = false;
-                }
+                panOrigin = physicalOffset;
             }
         });
 
@@ -134,9 +120,45 @@ void PlayArea::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 
 }
 
-void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
+void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
+
+    if (!currentAction.processMouseDrag(event)) {
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+        // update translation if panning
+        if (panOrigin) {
+            extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{ renderArea.x, renderArea.y };
+            translation += physicalOffset - *panOrigin;
+            panOrigin = physicalOffset;
+        }
+    }
+
+}
+
+
+void PlayArea::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
     
-    if (!currentAction.processMouseWheelEvent(event)) {
+    if (!currentAction.processMouseButtonUp(event)) {
+        // at this point, no actions are able to handle this event, so we do the default for playarea
+
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, &event](const auto tool_tag) {
+            // 'Tool' is the type of tool (e.g. Selector)
+            using Tool = typename decltype(tool_tag)::type;
+
+            if constexpr (std::is_base_of_v<Panner, Tool>) {
+                // it is a Panner.
+                panOrigin = std::nullopt;
+            }
+        });
+
+    }
+
+}
+
+void PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
+    
+    if (!currentAction.processMouseWheel(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         if (mouseoverPoint) {
@@ -158,28 +180,12 @@ void PlayArea::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
         }
 
     }
-
     
 }
 
-void PlayArea::processMouseLeave() {
+void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
     
-    if (!currentAction.processMouseLeave()) {
-        // at this point, no actions are able to handle this event, so we do the default for playarea
-
-        // no default mouseleave event
-
-    }
-
-    
-
-    
-    mouseoverPoint = std::nullopt;
-}
-
-void PlayArea::processKeyboardEvent(const SDL_KeyboardEvent& event) {
-    
-    if (!currentAction.processKeyboardEvent(event)) {
+    if (!currentAction.processKeyboard(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
         
         // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)

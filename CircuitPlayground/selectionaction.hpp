@@ -41,7 +41,7 @@ public:
     // TODO: refractor calculation of canvasOffset from event somewhere else as well
 
     // check if we need to start selection action from dragging/clicking the playarea=
-    static inline bool startWithMouseButtonEvent(const SDL_MouseButtonEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
+    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
@@ -50,15 +50,13 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Selector, Tool>) {
-                if (event.type == SDL_MOUSEBUTTONDOWN) {
-                    // start selection action from dragging/clicking the playarea
-                    actionPtr = std::make_unique<SelectionAction>(playArea, State::SELECTING);
-                    auto& action = static_cast<SelectionAction&>(*actionPtr);
-                    extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-                    extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
-                    action.selectionEnd = action.selectionOrigin = canvasOffset;
-                    return true;
-                }
+                // start selection action from dragging/clicking the playarea
+                actionPtr = std::make_unique<SelectionAction>(playArea, State::SELECTING);
+                auto& action = static_cast<SelectionAction&>(*actionPtr);
+                extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
+                extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+                action.selectionEnd = action.selectionOrigin = canvasOffset;
+                return true;
             }
 
             return false;
@@ -100,15 +98,16 @@ public:
         return false;
     }
 
-    ActionEventResult processCanvasMouseMotionEvent(const extensions::point& canvasOffset, const SDL_MouseMotionEvent& event) {
+    ActionEventResult processCanvasMouseDrag(const extensions::point& canvasOffset, const SDL_MouseMotionEvent&) {
         switch (state) {
         case State::SELECTING:
             // save the new ending location
             selectionEnd = canvasOffset;
             return ActionEventResult::PROCESSED;
         case State::SELECTED:
-            // do nothing, but claim that we have already used the event so no one else gets to process it
-            return ActionEventResult::PROCESSED;
+            // something's wrong -- if the mouse is being held down, we shouldn't be in SELECTED state
+            // hopefully PlayArea can resolve this
+            return ActionEventResult::UNPROCESSED;
         case State::MOVING:
             // move the selection if necessary
             if (moveOrigin != canvasOffset) {
@@ -120,56 +119,33 @@ public:
         return ActionEventResult::UNPROCESSED;
     }
 
-    ActionEventResult processCanvasMouseButtonEvent(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
+    ActionEventResult processCanvasMouseButtonDown(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Selector, Tool>) {
-                if (event.type == SDL_MOUSEBUTTONDOWN) {
-                    switch (state) {
-                    case State::SELECTED:
-                        if (!this->playArea.stateManager.pointInSelection(canvasOffset)) {
-                            // end selection
-                            extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
-                            this->playArea.translation -= deltaTrans * this->playArea.scale;
-                            return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
-                        }
-                        else {
-                            // enter moving state
-                            state = State::MOVING;
-                            moveOrigin = canvasOffset;
-                            return ActionEventResult::PROCESSED;
-                        }
-                    default:
-                        // this is not possible! some bug happened?
-                        // let playarea decide what to do (possibly destroy this action and start a new one)
-                        return ActionEventResult::UNPROCESSED;
+                switch (state) {
+                case State::SELECTED:
+                    if (!this->playArea.stateManager.pointInSelection(canvasOffset)) {
+                        // end selection
+                        extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
+                        this->playArea.translation -= deltaTrans * this->playArea.scale;
+                        return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
                     }
-                }
-                else {
-                    switch (state) {
-                    case State::SELECTING:
-                        state = State::SELECTED;
-                        {
-                            SDL_Point position{ event.x, event.y };
-                            // TODO: consider using viewports to eliminate these checks
-                            if (SDL_PointInRect(&position, &this->playArea.renderArea)) {
-                                selectionEnd = canvasOffset;
-                                this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
-                            }
-                            // TODO: end selection immediately if the selection is empty
-                        }
+                    else {
+                        // enter moving state
+                        state = State::MOVING;
+                        moveOrigin = canvasOffset;
                         return ActionEventResult::PROCESSED;
-                    case State::MOVING:
-                        state = State::SELECTED;
-                        return ActionEventResult::PROCESSED;
-                    default:
-                        return ActionEventResult::UNPROCESSED;
                     }
+                default:
+                    // this is not possible! some bug happened?
+                    // let playarea decide what to do (possibly destroy this action and start a new one)
+                    return ActionEventResult::UNPROCESSED;
                 }
             }
             else {
@@ -179,7 +155,43 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    inline ActionEventResult processKeyboardEvent(const SDL_KeyboardEvent& event) override {
+    ActionEventResult processCanvasMouseButtonUp(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+
+        return tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
+            // 'Tool' is the type of tool (e.g. Selector)
+            using Tool = typename decltype(tool_tag)::type;
+
+            if constexpr (std::is_base_of_v<Selector, Tool>) {
+                switch (state) {
+                case State::SELECTING:
+                    state = State::SELECTED;
+                    {
+                        SDL_Point position{ event.x, event.y };
+                        // TODO: consider using viewports to eliminate these checks
+                        if (SDL_PointInRect(&position, &this->playArea.renderArea)) {
+                            selectionEnd = canvasOffset;
+                            this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
+                        }
+                        // TODO: end selection immediately if the selection is empty
+                    }
+                    return ActionEventResult::PROCESSED;
+                case State::MOVING:
+                    state = State::SELECTED;
+                    return ActionEventResult::PROCESSED;
+                default:
+                    return ActionEventResult::UNPROCESSED;
+                }
+            }
+            else {
+                // wrong tool, return UNPROCESSED (maybe PlayArea will destroy this action)
+                return ActionEventResult::UNPROCESSED;
+            }
+        }, ActionEventResult::UNPROCESSED);
+    }
+
+    inline ActionEventResult processKeyboard(const SDL_KeyboardEvent& event) override {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {

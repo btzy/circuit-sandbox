@@ -31,7 +31,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 
 
 
-MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this) {
+MainWindow::MainWindow() : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -210,30 +210,74 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
         layoutComponents();
         break;
     case SDL_WINDOWEVENT_LEAVE:
-        playArea.processMouseLeave();
-        toolbox.processMouseLeave();
+        if (currentLocationTarget != nullptr) {
+            currentLocationTarget->processMouseLeave();
+            currentLocationTarget = nullptr;
+        }
         break;
     }
 }
 
 
 void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-    playArea.processMouseMotionEvent(event);
-    toolbox.processMouseMotionEvent(event);
+    
+    // for processMouseDrag()
+    if (currentEventTarget != nullptr) {
+        currentEventTarget->processMouseDrag(event);
+    }
+
+    // for processMouseHover()
+    SDL_Point position{ event.x, event.y };
+    if (currentLocationTarget != nullptr && !SDL_PointInRect(&position, &currentLocationTarget->renderArea)) {
+        currentLocationTarget->processMouseLeave();
+        currentLocationTarget = nullptr;
+    }
+    if (currentEventTarget == nullptr) {
+        if (currentLocationTarget == nullptr) {
+            for (Drawable* drawable : drawables) {
+                if (SDL_PointInRect(&position, &drawable->renderArea)) {
+                    currentLocationTarget = drawable;
+                    break; // we assume renderAreas never intersect, so 'break' here is valid
+                }
+            }
+        }
+        if (currentLocationTarget != nullptr) {
+            currentLocationTarget->processMouseHover(event);
+        }
+    }
+    else {
+        if (SDL_PointInRect(&position, &currentEventTarget->renderArea)) {
+            currentEventTarget->processMouseHover(event);
+        }
+    }
+
 }
 
 
 void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
+    
     SDL_Point position{event.x, event.y};
-    if (SDL_PointInRect(&position, &playArea.renderArea)) {
-        playArea.processMouseButtonEvent(event);
+
+    if (event.type == SDL_MOUSEBUTTONDOWN) {
+        if (currentEventTarget != nullptr) { // this shouldn't happen, but we check it anyway
+            currentEventTarget->processMouseButtonUp(event);
+            SDL_CaptureMouse(SDL_FALSE);
+            currentEventTarget = nullptr;
+        }
+        for (Drawable* drawable : drawables) {
+            if (SDL_PointInRect(&position, &drawable->renderArea)) {
+                currentEventTarget = drawable;
+                SDL_CaptureMouse(SDL_TRUE);
+                currentEventTarget->processMouseButtonDown(event);
+                break;
+            }
+        }
     }
-    else if (SDL_PointInRect(&position, &toolbox.renderArea)) {
-        if (event.type == SDL_MOUSEBUTTONDOWN) {
-            toolbox.processMouseButtonDownEvent(event);
-        } else {
-            // forward mouseup event to playArea
-            playArea.processMouseButtonEvent(event);
+    else {
+        if (currentEventTarget != nullptr) {
+            currentEventTarget->processMouseButtonUp(event);
+            SDL_CaptureMouse(SDL_FALSE);
+            currentEventTarget = nullptr;
         }
     }
 }
@@ -243,13 +287,14 @@ void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     // poll the mouse position since it's not reflected in the event
     SDL_GetMouseState(&position.x, &position.y);
     if (SDL_PointInRect(&position, &playArea.renderArea)) {
-        playArea.processMouseWheelEvent(event);
+        playArea.processMouseWheel(event);
     }
 }
 
 
 void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
-    playArea.processKeyboardEvent(event);
+    // TODO: currently all keyboard events are forwarded to playarea, is this the right thing to do?
+    playArea.processKeyboard(event);
 }
 
 

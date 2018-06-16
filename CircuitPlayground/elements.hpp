@@ -158,7 +158,7 @@ struct ConductiveWire : public Element {
     ConductiveWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
+    ElementState processStep(const AdjacentEnvironment&) const {
         return ElementState::CONDUCTIVE_WIRE;
     }
 };
@@ -171,7 +171,7 @@ struct InsulatedWire : public Element {
     InsulatedWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
+    ElementState processStep(const AdjacentEnvironment&) const {
         return ElementState::INSULATED_WIRE;
     }
 };
@@ -184,7 +184,7 @@ struct Signal : public Element {
     Signal(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
+    ElementState processStep(const AdjacentEnvironment&) const {
         return ElementState::CONDUCTIVE_WIRE;
     }
 
@@ -201,7 +201,7 @@ struct Source : public SignalReceivingElement {
     Source(bool logicLevel = true, bool defaultLogicLevel = true) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 
     // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
+    ElementState processStep(const AdjacentEnvironment&) const {
         return ElementState::SOURCE;
     }
 };

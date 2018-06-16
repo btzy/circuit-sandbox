@@ -2,65 +2,61 @@
 #include "selectionaction.hpp"
 #include "pencilaction.hpp"
 
-// returns true if the event was consumed, false otherwise
-bool Action::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
+bool Action::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     return forwardEvent([&, this]() {
-        return data->processMouseMotionEvent(event);
+        return data->processMouseButtonDown(event);
     }, [&, this]() {
         return action_tags_t::for_each([&, this](auto action_tag, auto) {
             using action_t = typename decltype(action_tag)::type;
-            return action_t::startWithMouseMotionEvent(event, playArea, data);
+            return action_t::startWithMouseButtonDown(event, playArea, data);
         });
     });
 }
 
-// expects the mouse to be in the playarea, unless it is a mouseup
-// returns true if the event was consumed, false otherwise
-bool Action::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
+bool Action::processMouseDrag(const SDL_MouseMotionEvent& event) {
     return forwardEvent([&, this]() {
-        return data->processMouseButtonEvent(event);
+        return data->processMouseDrag(event);
     }, [&, this]() {
         return action_tags_t::for_each([&, this](auto action_tag, auto) {
             using action_t = typename decltype(action_tag)::type;
-            return action_t::startWithMouseButtonEvent(event, playArea, data);
+            return action_t::startWithMouseDrag(event, playArea, data);
+        });
+    });
+}
+
+bool Action::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
+    return forwardEvent([&, this]() {
+        return data->processMouseButtonUp(event);
+    }, [&, this]() {
+        return action_tags_t::for_each([&, this](auto action_tag, auto) {
+            using action_t = typename decltype(action_tag)::type;
+            return action_t::startWithMouseButtonUp(event, playArea, data);
         });
     });
 }
 
 // should we expect the mouse to be in the playarea?
 // returns true if the event was consumed, false otherwise
-bool Action::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
+bool Action::processMouseWheel(const SDL_MouseWheelEvent& event) {
     return forwardEvent([&, this]() {
-        return data->processMouseWheelEvent(event);
+        return data->processMouseWheel(event);
     }, [&, this]() {
         return action_tags_t::for_each([&, this](auto action_tag, auto) {
             using action_t = typename decltype(action_tag)::type;
-            return action_t::startWithMouseWheelEvent(event, playArea, data);
+            return action_t::startWithMouseWheel(event, playArea, data);
         });
     });
 }
 
 // returns true if the event was consumed, false otherwise
-bool Action::processKeyboardEvent(const SDL_KeyboardEvent& event) {
+bool Action::processKeyboard(const SDL_KeyboardEvent& event) {
     return forwardEvent([&, this]() {
-        return data->processKeyboardEvent(event);
+        return data->processKeyboard(event);
     }, [&, this]() {
         return action_tags_t::for_each([&, this](auto action_tag, auto) {
             using action_t = typename decltype(action_tag)::type;
-            return action_t::startWithKeyboardEvent(event, playArea, data);
+            return action_t::startWithKeyboard(event, playArea, data);
         });
     });
 }
 
-// expects to be called when the mouse leaves the playarea
-// returns true if the event was consumed, false otherwise
-bool Action::processMouseLeave() {
-    return forwardEvent([this]() {
-        return data->processMouseLeave();
-    }, [this]() {
-        return action_tags_t::for_each([this](auto action_tag, auto) {
-            using action_t = typename decltype(action_tag)::type;
-            return action_t::startWithMouseLeave(playArea, data);
-        });
-    });
-}

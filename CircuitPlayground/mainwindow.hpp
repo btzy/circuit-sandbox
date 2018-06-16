@@ -6,12 +6,14 @@
 
 #include <variant>
 #include <optional>
+#include <array>
 
 #include <SDL.h>
 
 #include "declarations.hpp"
 #include "toolbox.hpp"
 #include "playarea.hpp"
+#include "drawable.hpp"
 
 
 class MainWindow {
@@ -31,6 +33,10 @@ private:
     // Render-able components in the window:
     Toolbox toolbox;
     PlayArea playArea;
+
+    const std::array<Drawable*, 2> drawables{ &toolbox, &playArea };
+    Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
+    Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
 
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels

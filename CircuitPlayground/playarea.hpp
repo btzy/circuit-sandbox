@@ -17,7 +17,7 @@
  * This class owns the StateManager object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
  */
 
-class PlayArea : public Drawable {
+class PlayArea final : public Drawable {
 private:
     // owner window
     MainWindow& mainWindow;
@@ -35,7 +35,7 @@ private:
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<extensions::point> mouseoverPoint;
 
-    bool panning = false; // whether panning is active
+    std::optional<extensions::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
 
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
@@ -67,20 +67,15 @@ public:
     /**
      * Processing of events.
      */
-    void processMouseMotionEvent(const SDL_MouseMotionEvent&);
-    void processMouseButtonEvent(const SDL_MouseButtonEvent&);
-    void processMouseWheelEvent(const SDL_MouseWheelEvent&);
-    void processKeyboardEvent(const SDL_KeyboardEvent&);
+    void processMouseHover(const SDL_MouseMotionEvent&) override; // fires when mouse is inside the renderArea
+    void processMouseLeave() override; // fires once when mouse goes out of the renderArea
 
-    /**
-     * This is called to reset all the hovering of stuff, because mousemove events are only triggered when the mouse is still on the canvas
-     */
-    void processMouseLeave();
+    void processMouseButtonDown(const SDL_MouseButtonEvent&) override; // fires when the mouse is pressed down, must be inside the renderArea
+    void processMouseDrag(const SDL_MouseMotionEvent&) override; // fires when mouse is moved, and was previously pressed down
+    void processMouseButtonUp(const SDL_MouseButtonEvent&) override; // fires when the mouse is lifted up, might be outside the renderArea
 
-    /**
-     * Finish the current action and write to the undo stack.
-     */
-    void finishAction();
+    virtual void processMouseWheel(const SDL_MouseWheelEvent&) override;
+    virtual void processKeyboard(const SDL_KeyboardEvent&) override;
 
 
 

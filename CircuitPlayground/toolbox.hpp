@@ -12,7 +12,7 @@
 
 
 
-class Toolbox : public Drawable {
+class Toolbox final : public Drawable {
 private:
     // owner window
     MainWindow& mainWindow;
@@ -65,8 +65,8 @@ public:
     /**
      * Processing of events.
      */
-    void processMouseMotionEvent(const SDL_MouseMotionEvent&);
-    void processMouseButtonDownEvent(const SDL_MouseButtonEvent&);
+    void processMouseHover(const SDL_MouseMotionEvent&) override;
+    void processMouseButtonDown(const SDL_MouseButtonEvent&) override;
 
 
     /**
