@@ -27,6 +27,7 @@ namespace extensions {
             if (dataMatrix.empty()) {
                 // special case for empty matrix
                 dataMatrix = matrix_t(1, 1);
+                dataMatrix[{0, 0}] = false;
                 return -pt;
             }
 
