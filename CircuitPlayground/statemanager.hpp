@@ -127,9 +127,9 @@ public:
     void writeSave();
 
     /**
-     * Copy elements within selectionRect from defaultState to selection.
+     * Copy elements within selectionRect from defaultState to selection. Returns true if the selection is not empty.
      */
-    void selectRect(const extensions::point& pt1, const extensions::point& pt2);
+    bool selectRect(const extensions::point& pt1, const extensions::point& pt2);
 
     /**
      * Copy all elements in defaultState to selection.

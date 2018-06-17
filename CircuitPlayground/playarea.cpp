@@ -66,7 +66,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
     // ask current action to render itself
     currentAction.render(renderer);
-    
+
 
     // draw a square at the top left to denote default view (TODO: make it a border or something nicer)
     if (defaultView) {
@@ -86,7 +86,7 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
 
 void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
-    
+
     extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ renderArea.x, renderArea.y };
 
     // store the new mouseover point
@@ -137,7 +137,7 @@ void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
 
 
 void PlayArea::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
-    
+
     if (!currentAction.processMouseButtonUp(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
@@ -157,7 +157,7 @@ void PlayArea::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
 }
 
 void PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
-    
+
     if (!currentAction.processMouseWheel(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
@@ -180,14 +180,14 @@ void PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
         }
 
     }
-    
+
 }
 
 void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
-    
+
     if (!currentAction.processKeyboard(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
-        
+
         // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
@@ -232,6 +232,5 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
         }
 
     }
-    
-    
+
 }

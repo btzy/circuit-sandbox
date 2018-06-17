@@ -248,7 +248,7 @@ void StateManager::writeSave() {
     }
 }
 
-void StateManager::selectRect(const extensions::point& pt1, const extensions::point& pt2) {
+bool StateManager::selectRect(const extensions::point& pt1, const extensions::point& pt2) {
     // make a copy of defaultState
     base = defaultState;
 
@@ -266,7 +266,7 @@ void StateManager::selectRect(const extensions::point& pt1, const extensions::po
     int32_t sheight = sy_max - sy_min;
 
     // no elements in the selection rect
-    if (swidth <= 0 || sheight <= 0) return;
+    if (swidth <= 0 || sheight <= 0) return false;
 
     // splice out the selection from the base
     selection = base.splice(sx_min, sy_min, swidth, sheight);
@@ -275,13 +275,15 @@ void StateManager::selectRect(const extensions::point& pt1, const extensions::po
     extensions::point selectionShrinkTrans = selection.shrinkDataMatrix();
 
     // no elements in the selection rect
-    if (selection.empty()) return;
+    if (selection.empty()) return false;
 
     hasSelection = true;
 
     selectionTrans = extensions::point{ sx_min, sy_min } - selectionShrinkTrans;
 
     baseTrans = -base.shrinkDataMatrix();
+
+    return true;
 }
 
 void StateManager::selectAll() {

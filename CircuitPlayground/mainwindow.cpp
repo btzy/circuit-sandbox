@@ -220,27 +220,31 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
 
 
 void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
-    
+
     // for processMouseDrag()
     if (currentEventTarget != nullptr) {
         currentEventTarget->processMouseDrag(event);
     }
 
-    // for processMouseHover()
+    // check if the cursor left currentLocationTarget
     SDL_Point position{ event.x, event.y };
     if (currentLocationTarget != nullptr && !SDL_PointInRect(&position, &currentLocationTarget->renderArea)) {
         currentLocationTarget->processMouseLeave();
         currentLocationTarget = nullptr;
     }
-    if (currentEventTarget == nullptr) {
-        if (currentLocationTarget == nullptr) {
-            for (Drawable* drawable : drawables) {
-                if (SDL_PointInRect(&position, &drawable->renderArea)) {
-                    currentLocationTarget = drawable;
-                    break; // we assume renderAreas never intersect, so 'break' here is valid
-                }
+
+    // determine new currentLocationTarget
+    if (currentLocationTarget == nullptr) {
+        for (Drawable* drawable : drawables) {
+            if (SDL_PointInRect(&position, &drawable->renderArea)) {
+                currentLocationTarget = drawable;
+                break; // we assume renderAreas never intersect, so 'break' here is valid
             }
         }
+    }
+
+    // for processMouseHover()
+    if (currentEventTarget == nullptr) {
         if (currentLocationTarget != nullptr) {
             currentLocationTarget->processMouseHover(event);
         }
@@ -255,7 +259,7 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
 
 void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
-    
+
     SDL_Point position{event.x, event.y};
 
     if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -300,7 +304,6 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 
 // TODO: needs some way to use the old data when resizing, for consistency?
 void MainWindow::render() {
-
 
     // Clear the window with a black background
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);

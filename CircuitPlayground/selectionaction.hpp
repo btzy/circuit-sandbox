@@ -64,7 +64,7 @@ public:
     }
 
     // check if we need to start selection action from Ctrl-A or Ctrl-V
-    static inline bool startWithKeyboardEvent(const SDL_KeyboardEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
+    static inline bool startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
@@ -167,16 +167,12 @@ public:
                 switch (state) {
                 case State::SELECTING:
                     state = State::SELECTED;
-                    {
-                        SDL_Point position{ event.x, event.y };
-                        // TODO: consider using viewports to eliminate these checks
-                        if (SDL_PointInRect(&position, &this->playArea.renderArea)) {
-                            selectionEnd = canvasOffset;
-                            this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd);
-                        }
-                        // TODO: end selection immediately if the selection is empty
+                    selectionEnd = canvasOffset;
+                    if (this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd)) {
+                        return ActionEventResult::PROCESSED;
+                    } else {
+                        return ActionEventResult::COMPLETED;
                     }
-                    return ActionEventResult::PROCESSED;
                 case State::MOVING:
                     state = State::SELECTED;
                     return ActionEventResult::PROCESSED;
