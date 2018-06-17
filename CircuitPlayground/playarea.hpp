@@ -77,8 +77,6 @@ public:
     virtual void processMouseWheel(const SDL_MouseWheelEvent&) override;
     virtual void processKeyboard(const SDL_KeyboardEvent&) override;
 
-
-
     extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
 
         // translation:

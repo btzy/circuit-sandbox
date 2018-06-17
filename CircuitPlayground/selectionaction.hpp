@@ -33,8 +33,8 @@ public:
 
     // destructor, called to finish the action immediately
     ~SelectionAction() override {
-        extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
-        this->playArea.translation -= deltaTrans * this->playArea.scale;
+        extensions::point deltaTrans = playArea.stateManager.commitSelection();
+        playArea.translation -= deltaTrans * playArea.scale;
     }
 
     // TODO: refractor tool resolution out of SelectionAction and PencilAction, because its getting repetitive
@@ -98,7 +98,13 @@ public:
         return false;
     }
 
-    ActionEventResult processCanvasMouseDrag(const extensions::point& canvasOffset, const SDL_MouseMotionEvent&) {
+    ActionEventResult processCanvasMouseDrag(const extensions::point&, const SDL_MouseMotionEvent& event) {
+        // compute the canvasOffset here and restrict it to the visible area
+        extensions::point canvasOffset;
+        canvasOffset.x = std::clamp(event.x, playArea.renderArea.x, playArea.renderArea.x + playArea.renderArea.w);
+        canvasOffset.y = std::clamp(event.y, playArea.renderArea.y, playArea.renderArea.y + playArea.renderArea.h);
+        canvasOffset = playArea.computeCanvasCoords(canvasOffset);
+
         switch (state) {
         case State::SELECTING:
             // save the new ending location
@@ -111,7 +117,7 @@ public:
         case State::MOVING:
             // move the selection if necessary
             if (moveOrigin != canvasOffset) {
-                this->playArea.stateManager.moveSelection(canvasOffset.x - moveOrigin.x, canvasOffset.y - moveOrigin.y);
+                playArea.stateManager.moveSelection(canvasOffset.x - moveOrigin.x, canvasOffset.y - moveOrigin.y);
                 moveOrigin = canvasOffset;
             }
             return ActionEventResult::PROCESSED;
@@ -121,7 +127,7 @@ public:
 
     ActionEventResult processCanvasMouseButtonDown(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
         return tool_tags_t::get(currentToolIndex, [this, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
@@ -130,10 +136,10 @@ public:
             if constexpr (std::is_base_of_v<Selector, Tool>) {
                 switch (state) {
                 case State::SELECTED:
-                    if (!this->playArea.stateManager.pointInSelection(canvasOffset)) {
+                    if (!playArea.stateManager.pointInSelection(canvasOffset)) {
                         // end selection
-                        extensions::point deltaTrans = this->playArea.stateManager.commitSelection();
-                        this->playArea.translation -= deltaTrans * this->playArea.scale;
+                        extensions::point deltaTrans = playArea.stateManager.commitSelection();
+                        playArea.translation -= deltaTrans * playArea.scale;
                         return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
                     }
                     else {
@@ -155,11 +161,11 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processCanvasMouseButtonUp(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
+    ActionEventResult processCanvasMouseButtonUp(const extensions::point&, const SDL_MouseButtonEvent& event) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this, &event](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -167,8 +173,7 @@ public:
                 switch (state) {
                 case State::SELECTING:
                     state = State::SELECTED;
-                    selectionEnd = canvasOffset;
-                    if (this->playArea.stateManager.selectRect(selectionOrigin, selectionEnd)) {
+                    if (playArea.stateManager.selectRect(selectionOrigin, selectionEnd)) {
                         return ActionEventResult::PROCESSED;
                     } else {
                         return ActionEventResult::COMPLETED;
@@ -194,19 +199,19 @@ public:
             case SDL_SCANCODE_D:
             case SDL_SCANCODE_DELETE:
             {
-                extensions::point deltaTrans = this->playArea.stateManager.deleteSelection();
-                this->playArea.translation -= deltaTrans * this->playArea.scale;
+                extensions::point deltaTrans = playArea.stateManager.deleteSelection();
+                playArea.translation -= deltaTrans * playArea.scale;
                 return ActionEventResult::COMPLETED;
             }
             case SDL_SCANCODE_C:
                 if (modifiers & KMOD_CTRL) {
-                    this->playArea.stateManager.copySelectionToClipboard();
+                    playArea.stateManager.copySelectionToClipboard();
                     return ActionEventResult::PROCESSED;
                 }
             case SDL_SCANCODE_X:
                 if (modifiers & KMOD_CTRL) {
-                    extensions::point deltaTrans = this->playArea.stateManager.cutSelectionToClipboard();
-                    this->playArea.translation -= deltaTrans * this->playArea.scale;
+                    extensions::point deltaTrans = playArea.stateManager.cutSelectionToClipboard();
+                    playArea.translation -= deltaTrans * playArea.scale;
                     return ActionEventResult::COMPLETED;
                 }
             default:
@@ -226,10 +231,10 @@ public:
 
 
             SDL_Rect selectionArea{
-                topLeft.x * this->playArea.scale + this->playArea.translation.x,
-                topLeft.y * this->playArea.scale + this->playArea.translation.y,
-                (bottomRight.x - topLeft.x) * this->playArea.scale,
-                (bottomRight.y - topLeft.y) * this->playArea.scale
+                topLeft.x * playArea.scale + playArea.translation.x,
+                topLeft.y * playArea.scale + playArea.translation.y,
+                (bottomRight.x - topLeft.x) * playArea.scale,
+                (bottomRight.y - topLeft.y) * playArea.scale
             };
 
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);

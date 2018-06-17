@@ -26,7 +26,7 @@ private:
     PlayArea& playArea;
 
     std::unique_ptr<BaseAction> data;
-    
+
     /**
      * returns true if event is consumed, false otherwise
      */
@@ -56,18 +56,14 @@ private:
 
 public:
     // disable all the copy and move constructors and assignment operators, because this class is intended to be a 'policy' type class
-    
 
     Action(PlayArea& playArea) : playArea(playArea), data(std::make_unique<BaseAction>()) {}
 
     ~Action() {}
 
-
     void reset() {
         data = std::make_unique<BaseAction>();
     }
-
-
 
     // requirements here follow those in BaseAction.
     bool processMouseButtonDown(const SDL_MouseButtonEvent&);

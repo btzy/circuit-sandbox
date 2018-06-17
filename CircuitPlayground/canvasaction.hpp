@@ -30,7 +30,6 @@ public:
     ActionEventResult processCanvasMouseButtonUp(const extensions::point&, const SDL_MouseButtonEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
-    
 
     // resolve the canvas offset then forward
     ActionEventResult processMouseButtonDown(const SDL_MouseButtonEvent& event) override {

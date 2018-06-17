@@ -25,13 +25,13 @@ private:
 
         // if it is a Pencil, forward the drawing to the gamestate
         if constexpr (std::is_base_of_v<Eraser, Tool>) {
-            deltaTrans = this->playArea.stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
+            deltaTrans = playArea.stateManager.changePixelState<std::monostate>(pt.x, pt.y); // special handling for the eraser
         }
         else {
-            deltaTrans = this->playArea.stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
+            deltaTrans = playArea.stateManager.changePixelState<Tool>(pt.x, pt.y); // forwarding for the normal elements
         }
 
-        this->playArea.translation -= deltaTrans * this->playArea.scale;
+        playArea.translation -= deltaTrans * playArea.scale;
     }
 
 
@@ -92,7 +92,7 @@ public:
 
     ActionEventResult processMouseButtonUp(const SDL_MouseButtonEvent& event) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = this->playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
         // If another drawing tool is pressed, exit this action
         if (currentToolIndex != toolIndex) {

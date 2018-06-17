@@ -19,8 +19,6 @@
 class MainWindow {
 public:
 
-    
-
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
 

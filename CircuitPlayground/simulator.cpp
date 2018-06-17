@@ -46,7 +46,7 @@ void Simulator::start() {
 
     // Spawn the simulator thread
     simThread = std::thread([this]() {
-        this->run();
+        run();
     });
 }
 
