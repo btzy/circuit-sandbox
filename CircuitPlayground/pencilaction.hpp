@@ -67,7 +67,7 @@ private:
     /**
      * Use a drawing tool on (x, y) (in defaultState coordinates)
      */
-    void changePixelState(extensions::point pt, bool newValue) {
+    void changePixelState(const extensions::point& pt, bool newValue) {
         actionTrans -= actionState.changePixelState(pt - actionTrans, newValue).second;
     }
 
@@ -83,7 +83,7 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             CanvasState& outputState = canvas();
-            extensions::point deltaTrans = outputState.extend(extensions::min({ 0, 0 }, actionTrans), extensions::max(outputState.size(), actionTrans + actionState.size()));
+            deltaTrans = outputState.extend(extensions::min({ 0, 0 }, actionTrans), extensions::max(outputState.size(), actionTrans + actionState.size()));
             
             for (int32_t y = 0; y < actionState.height(); ++y) {
                 for (int32_t x = 0; x < actionState.width(); ++x) {
@@ -100,7 +100,6 @@ public:
             }
 
             deltaTrans += outputState.shrinkDataMatrix();
-            playArea.translation -= deltaTrans * playArea.scale;
         });
     }
 

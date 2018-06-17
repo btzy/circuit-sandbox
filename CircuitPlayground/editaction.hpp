@@ -10,12 +10,13 @@
 class EditAction : public BaseAction {
     
 protected:
+    extensions::point deltaTrans;
     PlayArea& playArea;
     bool const simulatorRunning;
     
 public:
 
-    EditAction(PlayArea& playArea) :playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
+    EditAction(PlayArea& playArea) :deltaTrans({ 0, 0 }), playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
         // stop the simulator if running
         if (simulatorRunning) playArea.stateManager.simulator.stop();
         canvas() = playArea.stateManager.simulator.takeSnapshot();
@@ -26,6 +27,9 @@ public:
     }
 
     ~EditAction() override {
+        // amend the translation for playArea and stateManager
+        playArea.stateManager.deltaTrans += deltaTrans;
+        playArea.translation -= deltaTrans * playArea.scale;
         // save to history when this action ends
         playArea.stateManager.saveToHistory();
         // recompile the simulator

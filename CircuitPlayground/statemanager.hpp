@@ -17,11 +17,9 @@
 
 class StateManager {
 
-public:
+private:
     CanvasState defaultState; // stores the 'default' states, which is the state that can be saved to disk
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
-
-private:
     
     // fields for undo/redo stack
     std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
@@ -50,7 +48,7 @@ private:
      */
     void reloadSimulator();
 
-
+    friend class EditAction;
 
 public:
 
