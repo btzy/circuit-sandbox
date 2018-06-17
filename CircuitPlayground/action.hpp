@@ -74,7 +74,6 @@ public:
     bool processKeyboard(const SDL_KeyboardEvent&);
 
     // renderer
-    void render(SDL_Renderer* renderer) const {
-        data->render(renderer);
-    }
+    void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const;
+    void renderDirect(SDL_Renderer* renderer) const;
 };

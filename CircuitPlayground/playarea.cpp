@@ -31,6 +31,8 @@ void PlayArea::render(SDL_Renderer* renderer) const {
     // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
     stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    // ask current action to render pixels to the surface if necessary
+    currentAction.renderSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // set clip rect to clip off parts of the surface outside renderArea
@@ -64,9 +66,8 @@ void PlayArea::render(SDL_Renderer* renderer) const {
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     }
 
-    // ask current action to render itself
-    currentAction.render(renderer);
-
+    // ask current action to render itself directly if necessary
+    currentAction.renderDirect(renderer);
 
     // draw a square at the top left to denote default view (TODO: make it a border or something nicer)
     if (defaultView) {

@@ -60,3 +60,9 @@ bool Action::processKeyboard(const SDL_KeyboardEvent& event) {
     });
 }
 
+void Action::renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {
+    data->renderSurface(pixelBuffer, renderRect);
+}
+void Action::renderDirect(SDL_Renderer* renderer) const {
+    data->renderDirect(renderer);
+}

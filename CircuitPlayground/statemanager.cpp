@@ -112,8 +112,8 @@ void StateManager::saveToHistory() {
 
     // note: we save the inverse translation
     undoStack.emplace(std::move(currentHistoryState), -deltaTrans);
-    // save a snapshot of the simulator
-    currentHistoryState = simulator.takeSnapshot();
+    // save a snapshot of the defaultState (which should be in sync with the simulator)
+    currentHistoryState = defaultState;
     deltaTrans = { 0, 0 };
 
     changed = false;
@@ -159,7 +159,7 @@ void StateManager::startSimulator() {
 }
 
 void StateManager::startOrStopSimulator() {
-    if (simulator.holdsSimulation()) {
+    if (simulator.holdsSimulation()) { // TODO: remove this, because now simulator will never be empty
         bool simulatorRunning = simulator.running();
         if (simulatorRunning) {
             simulator.stop();
@@ -320,9 +320,6 @@ extensions::point StateManager::mergeSelection() {
 
     changed = boost::indeterminate; // is there's a possibility that the merge does nothing?
 
-    // update the simulator after merging
-    reloadSimulator();
-
     return translation;
 }
 
@@ -341,9 +338,6 @@ extensions::point StateManager::deleteSelection() {
     deltaTrans += translation;
 
     finishSelection();
-
-    // update the simulator after deleting
-    reloadSimulator();
 
     return translation;
 }

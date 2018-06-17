@@ -43,7 +43,7 @@ private:
     Action currentAction;
 
 
-    template <typename> friend class CanvasAction; // unfortunately, partial specialization of friends doesn't seem to work
+    friend class EditAction;
     friend class PencilAction;
     friend class SelectionAction;
 

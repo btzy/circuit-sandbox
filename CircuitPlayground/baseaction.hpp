@@ -77,6 +77,7 @@ public:
 
 
 
-    // rendering function
-    virtual void render(SDL_Renderer*) const {}
+    // rendering functions
+    virtual void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {}
+    virtual void renderDirect(SDL_Renderer*) const {}
 };

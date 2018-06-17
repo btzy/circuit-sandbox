@@ -6,6 +6,7 @@
 
 #include <boost/logic/tribool.hpp>
 
+#include "declarations.hpp"
 #include "canvasstate.hpp"
 #include "simulator.hpp"
 
@@ -16,10 +17,12 @@
 
 class StateManager {
 
-private:
+public:
     CanvasState defaultState; // stores the 'default' states, which is the state that can be saved to disk
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
 
+private:
+    
     // fields for undo/redo stack
     std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
     std::stack<std::pair<CanvasState, extensions::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
@@ -47,37 +50,12 @@ private:
      */
     void reloadSimulator();
 
+
+
 public:
 
     StateManager();
     ~StateManager();
-
-    /**
-     * Change the state of a pixel.
-     * Currently forwards the invocation to defaultState.
-     */
-    template <typename Element>
-    extensions::point changePixelState(int32_t x, int32_t y) {
-        auto [canvasChanged, translation] = defaultState.changePixelState<Element>(x, y);
-
-        if (canvasChanged) {
-            changed = true;
-            // only update the simulation if the canvas changed
-            if (simulator.holdsSimulation()) {
-                // If the simulator current holds a simulation, then we need to update it too.
-                bool simulatorRunning = simulator.running();
-                if (simulatorRunning) simulator.stop();
-                CanvasState simState = simulator.takeSnapshot();
-                simState.changePixelState<Element>(x, y);
-                simulator.compile(simState, false);
-                if (simulatorRunning) simulator.start();
-            }
-        }
-
-        deltaTrans += translation;
-
-        return translation;
-    }
 
     /**
      * Draw a rectangle of elements onto a pixel buffer supplied by PlayArea.

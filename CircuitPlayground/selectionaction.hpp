@@ -223,7 +223,7 @@ public:
 
 
     // rendering function, render the selection rectangle if it exists
-    void render(SDL_Renderer* renderer) const override {
+    void renderDirect(SDL_Renderer* renderer) const override {
         if (state == State::SELECTING) {
             // normalize supplied points
             extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);

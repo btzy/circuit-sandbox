@@ -81,6 +81,8 @@ namespace extensions {
             }
         }
 
+        heap_matrix(const extensions::point& size) : heap_matrix(size.x, size.y) {}
+
         /**
          * returns true if the matrix is empty (i.e. has no width and height)
          */
@@ -100,6 +102,27 @@ namespace extensions {
          */
         int32_t height() const noexcept {
             return _height;
+        }
+
+        /**
+         * fills all elements in the matrix with the same value
+         */
+        void fill(const T& value) noexcept {
+            std::fill_n(buffer, _width * _height, value);
+        }
+
+        /**
+         * returns the size of the matrix
+         */
+        extensions::point size() const noexcept {
+            return { _width, _height };
+        }
+
+        /**
+         * returns true if the point is within the bounds of the matrix
+         */
+        bool contains(const extensions::point& pt) const noexcept {
+            return 0 <= pt.x&& pt.x < _width && 0 <= pt.y && pt.y < _height;
         }
 
         /**

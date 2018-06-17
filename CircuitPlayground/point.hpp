@@ -82,9 +82,11 @@ namespace extensions {
         return { extensions::div_ceil(pt.x, scale), extensions::div_ceil(pt.y, scale) };
     }
 
+    // top-left bound of two points
     inline point min(const point& pt1, const point& pt2) noexcept {
         return { std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y) };
     }
+    // bottom-right bound of two points
     inline point max(const point& pt1, const point& pt2) noexcept {
         return { std::max(pt1.x, pt2.x), std::max(pt1.y, pt2.y) };
     }

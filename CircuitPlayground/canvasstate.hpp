@@ -38,33 +38,28 @@ private:
      * Modifies the dataMatrix so that the x and y will be within the matrix.
      * Returns the translation that should be applied on {x,y}.
      */
-    extensions::point prepareDataMatrixForAddition(int32_t x, int32_t y) {
+    extensions::point prepareDataMatrixForAddition(const extensions::point& pt) {
         if (dataMatrix.empty()) {
             // special case for empty matrix
             dataMatrix = matrix_t(1, 1);
-            return { -x, -y };
+            return -pt;
         }
 
-        if (0 <= x && x < dataMatrix.width() && 0 <= y && y < dataMatrix.height()) { // check if inside the matrix
+        if (dataMatrix.contains(pt)) { // check if inside the matrix
             return { 0, 0 }; // no preparation or translation needed
         }
 
-        int32_t x_min = std::min(x, 0);
-        int32_t x_max = std::max(x + 1, dataMatrix.width());
-        int32_t x_translation = -x_min;
-        int32_t new_width = x_max + x_translation;
+        extensions::point min_pt = extensions::min(pt, { 0, 0 });
+        extensions::point max_pt = extensions::min(pt + extensions::point{ 1, 1 }, dataMatrix.size());
+        extensions::point translation = -min_pt;
+        extensions::point new_size = max_pt + translation;
 
-        int32_t y_min = std::min(y, 0);
-        int32_t y_max = std::max(y + 1, dataMatrix.height());
-        int32_t y_translation = -y_min;
-        int32_t new_height = y_max + y_translation;
-
-        matrix_t new_matrix(new_width, new_height);
-        extensions::move_range(dataMatrix, new_matrix, 0, 0, x_translation, y_translation, dataMatrix.width(), dataMatrix.height());
+        matrix_t new_matrix(new_size);
+        extensions::move_range(dataMatrix, new_matrix, 0, 0, translation.x, translation.y, dataMatrix.width(), dataMatrix.height());
 
         dataMatrix = std::move(new_matrix);
 
-        return { x_translation, y_translation };
+        return translation;
     }
 
     /**
@@ -72,14 +67,16 @@ private:
      * As an optimization, will only shrink if {x,y} is along a border.
      * Returns the translation that should be applied on {x,y}.
      */
-    extensions::point shrinkDataMatrix(int32_t x, int32_t y) {
+    extensions::point shrinkDataMatrix(const extensions::point& pt) {
 
-        if (x > 0 && x + 1 < dataMatrix.width() && y > 0 && y + 1 < dataMatrix.height()) { // check if not on the border
+        if (pt.x > 0 && pt.x + 1 < dataMatrix.width() && pt.y > 0 && pt.y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
         }
 
         return shrinkDataMatrix();
     }
+
+public:
 
     /**
      * Shrink with no optimization.
@@ -129,25 +126,22 @@ private:
         return { -x_min, -y_min };
     }
 
-public:
-
     /**
      * Change the state of a pixel.
      * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
      * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
      */
     template <typename Element>
-    std::pair<bool, extensions::point> changePixelState(int32_t x, int32_t y) {
+    std::pair<bool, extensions::point> changePixelState(extensions::point pt) {
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
         if constexpr (std::is_same_v<std::monostate, Element>) {
-            if (x >= 0 && x < dataMatrix.width() && y >= 0 && y < dataMatrix.height()
-                    && !std::holds_alternative<Element>(dataMatrix[{x, y}])) {
-                dataMatrix[{x, y}] = Element{};
+            if (dataMatrix.contains(pt) && !std::holds_alternative<Element>(dataMatrix[pt])) {
+                dataMatrix[pt] = Element{};
 
                 // Element is std::monostate, so we have to see if we can shrink the matrix size
                 // Inform the caller that the canvas was changed, and the translation required
-                return { true, shrinkDataMatrix(x, y) };
+                return { true, shrinkDataMatrix(pt) };
 
             }
             else {
@@ -156,21 +150,75 @@ public:
         }
         else {
             // Element is not std::monostate, so we might need to expand the matrix size first
-            extensions::point translation = prepareDataMatrixForAddition(x, y);
-            x += translation.x;
-            y += translation.y;
+            extensions::point translation = prepareDataMatrixForAddition(pt);
+            pt += translation;
 
-            if (!std::holds_alternative<Element>(dataMatrix[{x, y}])) {
-                dataMatrix[{x, y}] = Element{};
+            if (!std::holds_alternative<Element>(dataMatrix[pt])) {
+                dataMatrix[pt] = Element{};
                 return { true, translation };
             }
             else {
-
                 // note: if we reach here, `translation` is guaranteed to be {0,0} as well
-
                 return { false, { 0, 0 } };
             }
         }
+    }
+
+    /**
+     * indices is a pair of {x,y}
+     * @pre indices must be within the bounds of width and height
+     * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
+     */
+    element_variant_t& operator[](const extensions::point& indices) noexcept {
+        return dataMatrix[indices];
+    }
+
+    /**
+     * indices is a pair of {x,y}
+     * @pre indices must be within the bounds of width and height
+     * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
+     */
+    const element_variant_t& operator[](const extensions::point& indices) const noexcept {
+        return dataMatrix[indices];
+    }
+
+
+    /**
+    * returns true if the matrix is empty (i.e. has no width and height)
+    */
+    bool empty() const noexcept {
+        return dataMatrix.empty();
+    }
+
+    /**
+    * returns the width of the matrix
+    */
+    int32_t width() const noexcept {
+        return dataMatrix.width();
+    }
+
+    /**
+    * returns the height of the matrix
+    */
+    int32_t height() const noexcept {
+        return dataMatrix.height();
+    }
+
+    /**
+     * returns the size of the matrix
+     */
+    extensions::point size() const noexcept {
+        return dataMatrix.size();
+    }
+
+    /**
+     * grow the underlying matrix to a larger size
+     */
+    extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
+        matrix_t newMatrix(bottomRight - topLeft);
+        extensions::move_range(dataMatrix, newMatrix, 0, 0, -topLeft.x, -topLeft.y, width(), height());
+        dataMatrix = std::move(newMatrix);
+        return -topLeft;
     }
 
 
@@ -218,27 +266,5 @@ public:
         }
 
         return { std::move(newState), {-new_xmin, -new_ymin} };
-    }
-
-
-    /**
-     * returns true if the matrix is empty (i.e. has no width and height)
-     */
-    bool empty() const noexcept {
-        return dataMatrix.empty();
-    }
-
-    /**
-     * returns the width of the matrix
-     */
-    int32_t width() const noexcept {
-        return dataMatrix.width();
-    }
-
-    /**
-     * returns the height of the matrix
-     */
-    int32_t height() const noexcept {
-        return dataMatrix.height();
     }
 };
