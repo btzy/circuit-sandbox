@@ -46,12 +46,22 @@ private:
             reset();
             [[fallthrough]];
         case ActionEventResult::UNPROCESSED:
+            break;
+        }
 
-            // have to ask all the actions if they would like to start
-            if (std::forward<StartWithCallback>(startWith)()) {
-                return true;
-            }
-
+        // have to ask all the actions if they would like to start
+        ActionEventResult startResult = std::forward<StartWithCallback>(startWith)();
+        switch (startResult) {
+        case ActionEventResult::COMPLETED:
+            reset();
+            [[fallthrough]];
+        case ActionEventResult::PROCESSED:
+            return true;
+        case ActionEventResult::CANCELLED:
+            reset();
+            [[fallthrough]];
+        case ActionEventResult::UNPROCESSED:
+            break;
         }
 
         return false;

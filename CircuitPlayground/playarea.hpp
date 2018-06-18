@@ -37,7 +37,6 @@ private:
 
     std::optional<extensions::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
 
-
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
     Action currentAction;
@@ -46,8 +45,7 @@ private:
     friend class EditAction;
     template <typename T> friend class PencilAction;
     friend class SelectionAction;
-
-
+    friend class HistoryAction;
 
 public:
     PlayArea(MainWindow&);

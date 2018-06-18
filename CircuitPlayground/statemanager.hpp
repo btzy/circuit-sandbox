@@ -2,13 +2,13 @@
 
 #include <cstdint> // for int32_t and uint32_t
 #include <string>
-#include <stack>
 
 #include <boost/logic/tribool.hpp>
 
 #include "declarations.hpp"
 #include "canvasstate.hpp"
 #include "simulator.hpp"
+#include "historymanager.hpp"
 
 
 /**
@@ -20,14 +20,12 @@ private:
     CanvasState defaultState; // stores a cache of the simulator state.  this is guaranteed to be updated if the simulator is not running.
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
 
-    // fields for undo/redo stack
-    std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
-    std::stack<std::pair<CanvasState, extensions::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
-    CanvasState currentHistoryState; // the canvas state treated as 'current' by the history manager; this is either the state when saveToHistory() was last called, or the state after an undo/redo operation.
     boost::tribool changed = false; // whether canvasstate changed since the last write to the undo stack
     extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
 
     bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting defaultState)
+
+    HistoryManager historyManager; // stores the undo/redo stack
 
     /**
      * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.
@@ -41,6 +39,7 @@ private:
     void reloadSimulator();
 
     friend class EditAction;
+    friend class HistoryAction;
 
 public:
 
@@ -55,16 +54,10 @@ public:
     void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height);
 
     /**
-     * Take a snapshot of the gamestate and save it in the history
+     * Take a snapshot of the gamestate and save it in the history.
+     * Will check if the state is actually changed, before attempting to save.
      */
     void saveToHistory();
-
-    /**
-     * Undo/redo. Returns the translation to apply to center viewport.
-     * The gamestate will not change if it is already the oldest/newest state.
-     */
-    extensions::point undo();
-    extensions::point redo();
 
     /**
      * Starts the simulator

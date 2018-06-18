@@ -12,7 +12,7 @@
  * Action that represents selection.
  */
 
-class SelectionAction : public CanvasAction<SelectionAction> {
+class SelectionAction final : public CanvasAction<SelectionAction> {
 
 private:
     enum class State {
@@ -87,7 +87,7 @@ public:
     // TODO: refractor calculation of canvasOffset from event somewhere else as well
 
     // check if we need to start selection action from dragging/clicking the playarea
-    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
+    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
@@ -101,15 +101,15 @@ public:
                 extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
                 extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                 action.selectionEnd = action.selectionOrigin = canvasOffset;
-                return true;
+                return ActionEventResult::PROCESSED;
             }
 
-            return false;
-        }, false);
+            return ActionEventResult::UNPROCESSED;
+        }, ActionEventResult::UNPROCESSED);
     }
 
     // check if we need to start selection action from Ctrl-A or Ctrl-V
-    static inline bool startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
+    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
@@ -118,7 +118,7 @@ public:
                     auto& action = starter.start<SelectionAction>(playArea, State::SELECTED);
                     action.selection = std::move(action.canvas());
                     action.canvas() = CanvasState(); // clear defaltState
-                    return true;
+                    return ActionEventResult::PROCESSED;
                 }
             case SDL_SCANCODE_V:
                 if (modifiers & KMOD_CTRL) {
@@ -134,13 +134,13 @@ public:
                     }
                     action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
                     action.selectionTrans = canvasOffset; // set the selection offset as the current offset
-                    return true;
+                    return ActionEventResult::PROCESSED;
                 }
             default:
-                return false;
+                return ActionEventResult::UNPROCESSED;
             }
         }
-        return false;
+        return ActionEventResult::UNPROCESSED;
     }
 
     ActionEventResult processCanvasMouseDrag(const extensions::point&, const SDL_MouseMotionEvent& event) {

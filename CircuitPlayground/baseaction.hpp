@@ -9,7 +9,8 @@
 class BaseAction;
 template <typename> class PencilAction;
 class SelectionAction;
-using action_tags_t = extensions::tag_tuple<BaseAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, SelectionAction>;
+class HistoryAction;
+using action_tags_t = extensions::tag_tuple<BaseAction, SelectionAction, HistoryAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
 
 /**
  * ActionEventResult represents the result of all the event handlers in actions.
@@ -76,20 +77,20 @@ public:
 
     // static methods to create actions, writes to the ActionVariant& to start it (and destroy the previous action, if any)
     // returns true if an action was started, false otherwise
-    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
-        return false;
+    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
+        return ActionEventResult::UNPROCESSED;
     }
-    static inline bool startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, const ActionStarter&) {
-        return false;
+    static inline ActionEventResult startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, const ActionStarter&) {
+        return ActionEventResult::UNPROCESSED;
     }
-    static inline bool startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
-        return false;
+    static inline ActionEventResult startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
+        return ActionEventResult::UNPROCESSED;
     }
-    static inline bool startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, const ActionStarter&) {
-        return false;
+    static inline ActionEventResult startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, const ActionStarter&) {
+        return ActionEventResult::UNPROCESSED;
     }
-    static inline bool startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, const ActionStarter&) {
-        return false;
+    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, const ActionStarter&) {
+        return ActionEventResult::UNPROCESSED;
     }
 
 

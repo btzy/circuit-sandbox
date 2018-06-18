@@ -49,15 +49,16 @@ bool StateManager::evaluateChangedState() {
         return changed;
     }
 
-    if (defaultState.width() != currentHistoryState.width() ||
-        defaultState.height() != currentHistoryState.height()) {
+    const CanvasState& currentState = historyManager.currentState();
+    if (defaultState.width() != currentState.width() ||
+        defaultState.height() != currentState.height()) {
 
         changed = true;
         return true;
     }
     for (int32_t y = 0; y < defaultState.height(); ++y) {
         for (int32_t x = 0; x < defaultState.width(); ++x) {
-            if (defaultState.dataMatrix[{x, y}].index() != currentHistoryState.dataMatrix[{x, y}].index()) {
+            if (defaultState[{x, y}].index() != currentState[{x, y}].index()) {
                 changed = true;
                 return true;
             }
@@ -83,48 +84,10 @@ void StateManager::saveToHistory() {
     // don't write to the undo stack if defaultState did not change
     if (!changed) return;
 
-    // note: we save the inverse translation
-    undoStack.emplace(std::move(currentHistoryState), -deltaTrans);
-    // save a snapshot of the defaultState (which should be in sync with the simulator)
-    currentHistoryState = defaultState;
-    deltaTrans = { 0, 0 };
+    historyManager.saveToHistory(defaultState, deltaTrans);
 
     changed = false;
-
-    // flush the redoStack
-    while (!redoStack.empty()) redoStack.pop();
-}
-
-extensions::point StateManager::undo() {
-    if (undoStack.empty()) return { 0, 0 };
-
-    auto [canvasState, tmpDeltaTrans] = std::move(undoStack.top());
-    undoStack.pop();
-
-    // note: we save the inverse of the undo translation into the redo stack
-    redoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
-    defaultState = currentHistoryState = std::move(canvasState);
     deltaTrans = { 0, 0 };
-
-    reloadSimulator();
-
-    return tmpDeltaTrans;
-}
-
-extensions::point StateManager::redo() {
-    if (redoStack.empty()) return { 0, 0 };
-
-    auto[canvasState, tmpDeltaTrans] = std::move(redoStack.top());
-    redoStack.pop();
-
-    // note: we save the inverse of the redo translation into the undo stack
-    undoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
-    defaultState = currentHistoryState = std::move(canvasState);
-    deltaTrans = { 0, 0 };
-
-    reloadSimulator();
-
-    return tmpDeltaTrans;
 }
 
 void StateManager::startSimulator() {
@@ -132,14 +95,12 @@ void StateManager::startSimulator() {
 }
 
 void StateManager::startOrStopSimulator() {
-    if (simulator.holdsSimulation()) { // TODO: remove this, because now simulator will never be empty
-        bool simulatorRunning = simulator.running();
-        if (simulatorRunning) {
-            simulator.stop();
-        }
-        else {
-            simulator.start();
-        }
+    bool simulatorRunning = simulator.running();
+    if (simulatorRunning) {
+        simulator.stop();
+    }
+    else {
+        simulator.start();
     }
 }
 

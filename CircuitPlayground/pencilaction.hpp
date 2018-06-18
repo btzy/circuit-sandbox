@@ -54,7 +54,7 @@ namespace {
 }
 
 template <typename PencilType>
-class PencilAction : public CanvasAction<PencilAction<PencilType>> {
+class PencilAction final : public CanvasAction<PencilAction<PencilType>> {
 
 private:
 
@@ -102,7 +102,7 @@ public:
         }
     }
 
-    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
+    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
@@ -119,11 +119,11 @@ public:
                 extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                 action.changePixelState(canvasOffset, true);
                 action.mousePos = canvasOffset; // TODO: processDrawingTool changes the saved offset; should translations only be changed at the end of an action?
-                return true;
+                return ActionEventResult::PROCESSED;
             }
 
-            return false;
-        }, false);
+            return ActionEventResult::UNPROCESSED;
+        }, ActionEventResult::UNPROCESSED);
     }
 
     ActionEventResult processCanvasMouseDrag(const extensions::point& canvasOffset, const SDL_MouseMotionEvent& event) {
