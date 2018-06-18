@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL.h>
 #include "point.hpp"
 #include "canvasaction.hpp"
 #include "playarea.hpp"
@@ -83,8 +84,7 @@ public:
                     extensions::point canvasOffset = physicalOffset - playArea.translation;
                     canvasOffset = extensions::div_floor(canvasOffset, playArea.scale);
 
-                    SDL_Point position{ physicalOffset.x, physicalOffset.y };
-                    if (!SDL_PointInRect(&position, &playArea.renderArea)) {
+                    if (!point_in_rect(physicalOffset, playArea.renderArea)) {
                         canvasOffset = { 0, 0 }; // TODO: shouldn't we paste at (0,0) in playarea window coordinates, rather than canvas coordinates?
                     }
                     playArea.stateManager.pasteSelectionFromClipboard(canvasOffset.x, canvasOffset.y);

@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include <SDL.h>
 #include "point.hpp"
 #include "canvasaction.hpp"
 #include "statemanager.hpp"
@@ -135,10 +136,9 @@ public:
 
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
                 // note: probably can be optimized to don't keep doing expansion/contraction checking when interpolating, but this is probably not going to be noticeably slow
-                SDL_Point position{ event.x, event.y };
                 // interpolate by drawing a straight line from the previous point to the current point
                 interpolate(mousePos, canvasOffset, [&](const extensions::point& pt) {
-                    if (SDL_PointInRect(&position, &playArea.renderArea)) {
+                    if (extensions::point_in_rect(event, playArea.renderArea)) {
                         // the if-statement here ensures that the pencil does not draw outside the visible part of the canvas
                         changePixelState(pt, true);
                     }
@@ -178,8 +178,7 @@ public:
                 for (int32_t x = 0; x != actionState.width(); ++x) {
                     extensions::point actionPt{ x, y };
                     extensions::point canvasPt = actionPt + actionTrans;
-                    SDL_Point pt{ canvasPt.x, canvasPt.y };
-                    if (actionState[actionPt] && SDL_PointInRect(&pt, &renderRect)) {
+                    if (actionState[actionPt] && point_in_rect(canvasPt, renderRect)) {
                         constexpr SDL_Color color = Tool::displayColor;
                         pixelBuffer[(canvasPt.y - renderRect.y) * renderRect.w + (canvasPt.x - renderRect.x)] = color.r | (color.g << 8) | (color.b << 16);
                     }

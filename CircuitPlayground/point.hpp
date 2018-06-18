@@ -12,6 +12,13 @@ namespace extensions {
     struct point {
         int32_t x, y;
 
+        point() = default;
+        point(const point&) = default;
+        point(point&&) = default;
+        point& operator=(const point&) = default;
+        point& operator=(point&&) = default;
+        point(int32_t x, int32_t y) :x(x), y(y) {}
+
         // + and - compound assignment operators
         point& operator+=(const point& other) noexcept {
             x += other.x;
@@ -72,6 +79,12 @@ namespace extensions {
             return !(*this == other);
         }
 
+#ifdef SDL_h_ // additional convenience conversion functions if we are using SDL
+        point(const SDL_Point& pt) noexcept : x(pt.x), y(pt.y) {}
+        point(const SDL_MouseButtonEvent& ev) noexcept : x(ev.x), y(ev.y) {}
+        point(const SDL_MouseMotionEvent& ev) noexcept : x(ev.x), y(ev.y) {}
+#endif // SDL_h_
+
     };
 
     // integral division functions
@@ -90,4 +103,10 @@ namespace extensions {
     inline point max(const point& pt1, const point& pt2) noexcept {
         return { std::max(pt1.x, pt2.x), std::max(pt1.y, pt2.y) };
     }
+
+#ifdef SDL_h_ // additional convenience conversion functions if we are using SDL
+    inline bool point_in_rect(const point& pt, const SDL_Rect& rect) noexcept {
+        return pt.x >= rect.x && pt.x < rect.x + rect.w && pt.y >= rect.y && pt.y < rect.y + rect.h;
+    }
+#endif // SDL_h_
 }
