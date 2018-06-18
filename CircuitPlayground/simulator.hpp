@@ -85,8 +85,9 @@ public:
     }
 
     /**
-     * Take a "snapshot" of the current simulation state and return it.
+     * Take a "snapshot" of the current simulation state and writes it to the argument supplied.
      * This works regardless whether the simulation is running or stopped.
+     * @pre the supplied canvas state has the correct element positions as the canvas state that was compiled.
      */
-    CanvasState takeSnapshot() const;
+    void takeSnapshot(CanvasState&) const;
 };

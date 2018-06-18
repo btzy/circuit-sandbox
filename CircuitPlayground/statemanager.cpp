@@ -18,39 +18,29 @@ StateManager::~StateManager() {
     writeSave();
 }
 
-void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) const {
+void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) {
+    if (simulator.running()) {
+        simulator.takeSnapshot(defaultState);
+    }
+    for (int32_t y = top; y != top + height; ++y) {
+        for (int32_t x = left; x != left + width; ++x) {
+            uint32_t color = 0;
+            const extensions::point canvasPt{ x, y };
 
-    // This is kinda yucky, but I can't think of a better way such that:
-    // 1) If useDefaultView is false, we don't make a *copy* of defaultState
-    // 2) If useDefaultView is true, we take a snapshot from the simulator and use it
-    auto lambda = [this, &pixelBuffer, left, top, width, height, useDefaultView](const CanvasState& renderGameState) {
-        for (int32_t y = top; y != top + height; ++y) {
-            for (int32_t x = left; x != left + width; ++x) {
-                uint32_t color = 0;
-                const extensions::point canvasPt{ x, y };
-
-                // check if the requested pixel is inside the buffer
-                if (renderGameState.contains(canvasPt)) {
-                    SDL_Color computedColor{ 0, 0, 0, 0 };
-                    std::visit(visitor{
-                        [](std::monostate) {},
-                        [&computedColor, useDefaultView](const auto& element) {
-                            computedColor = computeDisplayColor(element, useDefaultView);
-                        },
-                    }, renderGameState.dataMatrix[{x, y}]);
-                    color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
-                }
-                *pixelBuffer++ = color;
+            // check if the requested pixel is inside the buffer
+            if (defaultState.contains(canvasPt)) {
+                SDL_Color computedColor{ 0, 0, 0, 0 };
+                std::visit(visitor{
+                    [](std::monostate) {},
+                    [&computedColor, useDefaultView](const auto& element) {
+                        computedColor = computeDisplayColor(element, useDefaultView);
+                    },
+                }, defaultState.dataMatrix[{x, y}]);
+                color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
             }
+            *pixelBuffer++ = color;
         }
-    };
-    if (useDefaultView || !simulator.running()) {
-        lambda(defaultState);
     }
-    else {
-        lambda(simulator.takeSnapshot());
-    }
-
 }
 
 bool StateManager::evaluateChangedState() {
@@ -201,7 +191,8 @@ void StateManager::writeSave() {
     std::ofstream saveFile(savePath, std::ios::binary);
     if (!saveFile.is_open()) return;
 
-    CanvasState snapshot = simulator.takeSnapshot();
+    simulator.takeSnapshot(defaultState);
+    CanvasState& snapshot = defaultState;
     int32_t matrixWidth = snapshot.width();
     int32_t matrixHeight = snapshot.height();
     saveFile.write(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);

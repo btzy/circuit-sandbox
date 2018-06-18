@@ -20,7 +20,7 @@ void PlayArea::updateDpi() {
 }
 
 
-void PlayArea::render(SDL_Renderer* renderer) const {
+void PlayArea::render(SDL_Renderer* renderer) {
     // calculate the rectangle (in gamestate coordinates) that we will be drawing:
     SDL_Rect surfaceRect;
     surfaceRect.x = extensions::div_floor(-translation.x, scale);

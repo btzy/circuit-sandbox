@@ -69,17 +69,14 @@ void Simulator::stop() {
 
 
 
-CanvasState Simulator::takeSnapshot() const {
+void Simulator::takeSnapshot(CanvasState& returnState) const {
     // Note (TODO): will be replaced with the proper compiled graph representation
-    CanvasState returnState;
     const std::shared_ptr<CanvasState> gameState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
-    returnState.dataMatrix = typename CanvasState::matrix_t(gameState->dataMatrix.width(), gameState->dataMatrix.height());
     for (int32_t y = 0; y != gameState->dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != gameState->dataMatrix.width(); ++x) {
-            returnState.dataMatrix[{x, y}] = gameState->dataMatrix[{x, y}];
+            returnState[{x, y}] = gameState->dataMatrix[{x, y}];
         }
     }
-    return returnState;
 }
 
 

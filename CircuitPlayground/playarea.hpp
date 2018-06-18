@@ -60,9 +60,10 @@ public:
     /**
      * Renders this play area on the given area of the renderer.
      * This method is called by MainWindow
+     * This method is non-const because the cached state might be updated from the simulator when rendering.
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer) const;
+    void render(SDL_Renderer* renderer);
 
     /**
      * Check if default view is being used

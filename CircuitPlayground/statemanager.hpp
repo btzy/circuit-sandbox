@@ -17,7 +17,7 @@
 
 class StateManager {
 private:
-    CanvasState defaultState; // stores the 'default' states, which is the state that can be saved to disk
+    CanvasState defaultState; // stores a cache of the simulator state.  this is guaranteed to be updated if the simulator is not running.
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
 
     // fields for undo/redo stack
@@ -52,7 +52,7 @@ public:
      * Pixel format: pixel = R | (G << 8) | (B << 16)
      * useDefaultView: whether we want to render the default view (instead of live view)
      */
-    void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height) const;
+    void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height);
 
     /**
      * Take a snapshot of the gamestate and save it in the history

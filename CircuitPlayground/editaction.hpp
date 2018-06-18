@@ -19,7 +19,7 @@ public:
     EditAction(PlayArea& playArea) :deltaTrans({ 0, 0 }), playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
         // stop the simulator if running
         if (simulatorRunning) playArea.stateManager.simulator.stop();
-        canvas() = playArea.stateManager.simulator.takeSnapshot();
+        playArea.stateManager.simulator.takeSnapshot(canvas());
     };
 
     CanvasState& canvas() const {
