@@ -78,9 +78,11 @@ public:
 
     // destructor, called to finish the action immediately
     ~SelectionAction() override {
-        auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), baseTrans, std::move(selection), selectionTrans);
-        canvas() = std::move(tmpDefaultState);
-        deltaTrans = std::move(translation);
+        if (state != State::SELECTING) {
+            auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), baseTrans, std::move(selection), selectionTrans);
+            canvas() = std::move(tmpDefaultState);
+            deltaTrans = std::move(translation);
+        }
     }
 
     // TODO: refractor tool resolution out of SelectionAction and PencilAction, because its getting repetitive
@@ -117,7 +119,8 @@ public:
                 if (modifiers & KMOD_CTRL) {
                     auto& action = starter.start<SelectionAction>(playArea, State::SELECTED);
                     action.selection = std::move(action.canvas());
-                    action.canvas() = CanvasState(); // clear defaltState
+                    action.selectionTrans = action.baseTrans = { 0, 0 };
+                    action.canvas() = CanvasState(); // clear defaultState
                     return ActionEventResult::PROCESSED;
                 }
             case SDL_SCANCODE_V:
@@ -134,6 +137,7 @@ public:
                     }
                     action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
                     action.selectionTrans = canvasOffset; // set the selection offset as the current offset
+                    action.baseTrans = { 0, 0 };
                     return ActionEventResult::PROCESSED;
                 }
             default:

@@ -222,7 +222,8 @@ public:
      * grow the underlying matrix to a larger size
      */
     extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
-        matrix_t newMatrix(bottomRight - topLeft);
+        extensions::point newSize = empty() ? (bottomRight - topLeft) : (max(bottomRight, size()) - min(topLeft, { 0, 0 }));
+        matrix_t newMatrix(newSize);
         extensions::move_range(dataMatrix, newMatrix, 0, 0, -topLeft.x, -topLeft.y, width(), height());
         dataMatrix = std::move(newMatrix);
         return -topLeft;

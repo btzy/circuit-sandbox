@@ -80,7 +80,7 @@ public:
     ~PencilAction() override {
         // commit the state
         CanvasState& outputState = this->canvas();
-        this->deltaTrans = outputState.extend(extensions::min({ 0, 0 }, actionTrans), extensions::max(outputState.size(), actionTrans + actionState.size()));
+        this->deltaTrans = outputState.extend(actionTrans, actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
         
         // note: eraser can be optimized to not extend the canvas first
         for (int32_t y = 0; y < actionState.height(); ++y) {

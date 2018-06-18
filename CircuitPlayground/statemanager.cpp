@@ -123,6 +123,8 @@ void StateManager::readSave() {
     saveFile.read(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
     saveFile.read(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
 
+    // TODO: make this 'safe', meaning that it checks matrixWidth and matrixHeight to be sound values
+
     defaultState.dataMatrix = typename CanvasState::matrix_t(matrixWidth, matrixHeight);
 
     for (int32_t y = 0; y != defaultState.height(); ++y) {
