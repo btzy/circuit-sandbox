@@ -212,6 +212,13 @@ public:
     }
 
     /**
+    * returns true if the point is within the bounds of the matrix
+    */
+    bool contains(const extensions::point& pt) const noexcept {
+        return dataMatrix.contains(pt);
+    }
+
+    /**
      * grow the underlying matrix to a larger size
      */
     extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
@@ -243,6 +250,10 @@ public:
      * @pre Assumes that the parameters are within the bounds of this canvas state
      */
     static std::pair<CanvasState, extensions::point> merge(CanvasState&& first, const extensions::point& firstTrans, CanvasState&& second, const extensions::point& secondTrans) {
+        // special cases if we are merging with something empty
+        if (first.empty()) return { std::move(second), -secondTrans };
+        if (second.empty()) return { std::move(first), -firstTrans };
+        
         int32_t new_xmin = std::min(secondTrans.x, firstTrans.x);
         int32_t new_ymin = std::min(secondTrans.y, firstTrans.y);
         int32_t new_xmax = std::max(secondTrans.x + second.width(), firstTrans.x + first.width());

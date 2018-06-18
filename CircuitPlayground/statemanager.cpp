@@ -26,42 +26,25 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32
     auto lambda = [this, &pixelBuffer, left, top, width, height, useDefaultView](const CanvasState& renderGameState) {
         for (int32_t y = top; y != top + height; ++y) {
             for (int32_t x = left; x != left + width; ++x) {
-                SDL_Color computedColor{ 0, 0, 0, 0 };
+                uint32_t color = 0;
+                const extensions::point canvasPt{ x, y };
 
-                // check if the requested pixel inside the buffer
-                if (x >= 0 && x < renderGameState.width() && y >= 0 && y < renderGameState.height()) {
-                    if (!hasSelection || (x >= baseTrans.x && x < baseTrans.x + base.width() &&
-                                          y >= baseTrans.y && y < baseTrans.y + base.height() &&
-                                          !std::holds_alternative<std::monostate>(base.dataMatrix[{x - baseTrans.x, y - baseTrans.y}]))) {
-                        std::visit(visitor{
-                            [](std::monostate) {},
-                            [&computedColor, useDefaultView](const auto& element) {
-                                computedColor = computeDisplayColor(element, useDefaultView);
-                            },
-                        }, renderGameState.dataMatrix[{x, y}]);
-                    }
+                // check if the requested pixel is inside the buffer
+                if (renderGameState.contains(canvasPt)) {
+                    SDL_Color computedColor{ 0, 0, 0, 0 };
+                    std::visit(visitor{
+                        [](std::monostate) {},
+                        [&computedColor, useDefaultView](const auto& element) {
+                            computedColor = computeDisplayColor(element, useDefaultView);
+                        },
+                    }, renderGameState.dataMatrix[{x, y}]);
+                    color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
                 }
-
-                if (hasSelection) {
-                    int32_t select_x = x - selectionTrans.x;
-                    int32_t select_y = y - selectionTrans.y;
-                    if (select_x >= 0 && select_x < selection.width() && select_y >= 0 && select_y < selection.height()) {
-                        std::visit(visitor{
-                            [](std::monostate) {},
-                            [&computedColor](const auto& element) {
-                                computedColor = std::decay_t<decltype(element)>::displayColor;
-                                computedColor.b = 0xFF;
-                            },
-                        }, selection.dataMatrix[{select_x, select_y}]);
-                    }
-                }
-                uint32_t color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
                 *pixelBuffer++ = color;
             }
         }
     };
-
-    if (useDefaultView) {
+    if (useDefaultView || !simulator.running()) {
         lambda(defaultState);
     }
     else {
@@ -246,116 +229,4 @@ void StateManager::writeSave() {
             });
         }
     }
-}
-
-bool StateManager::selectRect(const extensions::point& pt1, const extensions::point& pt2) {
-    // make a copy of defaultState
-    base = defaultState;
-
-    // normalize supplied points
-    extensions::point topLeft = extensions::min(pt1, pt2);
-    extensions::point bottomRight = extensions::max(pt1, pt2) + extensions::point{1, 1};
-
-    // TODO: proper rectangle clamping functions
-    // restrict selectionRect to the area within base
-    int32_t sx_min = std::max(topLeft.x, 0);
-    int32_t sy_min = std::max(topLeft.y, 0);
-    int32_t sx_max = std::min(bottomRight.x, base.width());
-    int32_t sy_max = std::min(bottomRight.y, base.height());
-    int32_t swidth = sx_max - sx_min;
-    int32_t sheight = sy_max - sy_min;
-
-    // no elements in the selection rect
-    if (swidth <= 0 || sheight <= 0) return false;
-
-    // splice out the selection from the base
-    selection = base.splice(sx_min, sy_min, swidth, sheight);
-
-    // shrink the selection
-    extensions::point selectionShrinkTrans = selection.shrinkDataMatrix();
-
-    // no elements in the selection rect
-    if (selection.empty()) return false;
-
-    hasSelection = true;
-
-    selectionTrans = extensions::point{ sx_min, sy_min } - selectionShrinkTrans;
-
-    baseTrans = -base.shrinkDataMatrix();
-
-    return true;
-}
-
-void StateManager::selectAll() {
-    finishSelection();
-    selection = defaultState;
-    hasSelection = true;
-}
-
-bool StateManager::pointInSelection(extensions::point pt) const {
-    pt -= selectionTrans;
-    return pt.x >= 0 && pt.x < selection.width() && pt.y >= 0 && pt.y < selection.height();
-}
-
-void StateManager::finishSelection() {
-    selection = CanvasState();
-    selectionTrans = { 0, 0 };
-    base = CanvasState();
-    baseTrans = { 0, 0 };
-    hasSelection = false;
-}
-
-extensions::point StateManager::commitSelection() {
-    extensions::point ans = mergeSelection();
-    finishSelection();
-    return ans;
-}
-
-extensions::point StateManager::mergeSelection() {
-    if (!hasSelection) return { 0, 0 };
-
-    auto [tmpDefaultState, translation] = CanvasState::merge(std::move(base), baseTrans, std::move(selection), selectionTrans);
-    defaultState = std::move(tmpDefaultState);
-    deltaTrans += translation;
-
-    changed = boost::indeterminate; // is there's a possibility that the merge does nothing?
-
-    return translation;
-}
-
-void StateManager::moveSelection(int32_t dx, int32_t dy) {
-    selectionTrans.x += dx;
-    selectionTrans.y += dy;
-}
-
-extensions::point StateManager::deleteSelection() {
-    defaultState = std::move(base);
-
-    changed = true; // since the selection can never be empty
-
-    extensions::point translation = -baseTrans;
-
-    deltaTrans += translation;
-
-    finishSelection();
-
-    return translation;
-}
-
-void StateManager::copySelectionToClipboard() {
-    clipboard = selection;
-}
-
-extensions::point StateManager::cutSelectionToClipboard() {
-    clipboard = std::move(selection);
-    extensions::point translation = deleteSelection();
-
-    return translation;
-}
-
-void StateManager::pasteSelectionFromClipboard(int32_t x, int32_t y) {
-    base = defaultState;
-    selection = clipboard;
-    selectionTrans = { x, y };
-    hasSelection = true;
 }

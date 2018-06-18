@@ -5,12 +5,12 @@
 #include "declarations.hpp"
 
 /**
-* ActionEventResult represents the result of all the event handlers in actions.
-* PROCESSED: This action successfully used the event, so PlayArea should not use it.  The action should remain active.
-* UNPROCESSED: This action did not use the event, so PlayArea should use it accordingly, possibly exiting (destroying) this action.
-* COMPLETED: This action successfully used the event, so PlayArea should not use it.  PlayArea should exit (destroy) this action immediately, and must not call any other methods on this action.
-* CANCELLED: This action did not use the event, so PlayArea should use it accordingly.  PlayArea should exit (destroy) this action immediately, and must not call any other methods on this action.
-*/
+ * ActionEventResult represents the result of all the event handlers in actions.
+ * PROCESSED: This action successfully used the event, so PlayArea should not use it.  The action should remain active.
+ * UNPROCESSED: This action did not use the event, so PlayArea should use it accordingly, possibly exiting (destroying) this action.
+ * COMPLETED: This action successfully used the event, so PlayArea should not use it.  PlayArea should exit (destroy) this action immediately, and must not call any other methods on this action.
+ * CANCELLED: This action did not use the event, so PlayArea should use it accordingly.  PlayArea should exit (destroy) this action immediately, and must not call any other methods on this action.
+ */
 enum class ActionEventResult {
     PROCESSED,
     UNPROCESSED,
@@ -18,11 +18,20 @@ enum class ActionEventResult {
     CANCELLED
 };
 
+class ActionStarter;
+
+
+/**
+ * This is the base class for all actions.
+ * All derived classes may assume that mouse button/drag actions happen in this order:
+ * * MouseButtonDown --> MouseDrag (any number of times, possibly zero) --> MouseUp
+ * All derived classes may assume that rendering happens in this order:
+ * * disableDefaultRender --> (default rendering, if not disabled) --> renderSurface --> renderDirect
+ * For MouseButtonDown and MouseWheel, it is guaranteed that the mouse is inside the playarea.
+ */
 class BaseAction {
 
-
 public:
-
     // prevent copy/move
     BaseAction() = default;
     BaseAction(BaseAction&&) = delete;
@@ -59,25 +68,54 @@ public:
 
     // static methods to create actions, writes to the ActionVariant& to start it (and destroy the previous action, if any)
     // returns true if an action was started, false otherwise
-    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
         return false;
     }
-    static inline bool startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, const ActionStarter&) {
         return false;
     }
-    static inline bool startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
         return false;
     }
-    static inline bool startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, const ActionStarter&) {
         return false;
     }
-    static inline bool startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, std::unique_ptr<BaseAction>&) {
+    static inline bool startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, const ActionStarter&) {
         return false;
     }
 
 
 
     // rendering functions
+    /**
+     * Disable the default rendering function, which draws everything from StateManager::defaultState.
+     * Use this if you have modified StateManager::defaultState and don't want to show the modifications, 
+     * or you want to draw something that covers the whole playarea.
+     */
+    virtual bool disableDefaultRender() const {
+        return false;
+    }
+    /**
+     * Render on a surface (in canvas units) using its pixel buffer.
+     * `renderRect` is the part of the canvas that should be drawn onto this surface.
+     */
     virtual void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {}
+    /**
+     * Render directly using the SDL_Renderer (it is in playarea coordinates).
+     */
     virtual void renderDirect(SDL_Renderer*) const {}
+};
+
+class ActionStarter {
+private:
+    std::unique_ptr<BaseAction>& data;
+    explicit ActionStarter(std::unique_ptr<BaseAction>& data) :data(data) {}
+    friend class Action;
+public:
+    template <typename T, typename... Args>
+    T& start(Args&&... args) const {
+        data = nullptr; // destroy the old action
+        data = std::make_unique<T>(std::forward<Args>(args)...); // construct the new action
+        return static_cast<T&>(*data);
+    }
 };

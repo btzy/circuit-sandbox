@@ -16,7 +16,10 @@
  * This class encapsulates an 'action', which is the fundamental unit of change that the user can make on the canvas state.
  * When an action is started, the simulator will stop.
  * Actions span an arbitrary amount of time.
- * The action object should not be destroyed until the game is quitting.
+ * The Action object should not be destroyed until the game is quitting.
+ * An action may modify defaultState and deltaTrans arbitrarily during the action,
+ * but it should take care that rendering is done properly, because by default rendering uses defaultState.
+ * It is guaranteed that defaultState and deltaTrans will not be used by any other code (apart from rendering) when an action is in progress.
  */
 
 class Action {
@@ -74,6 +77,7 @@ public:
     bool processKeyboard(const SDL_KeyboardEvent&);
 
     // renderer
+    bool disableDefaultRender() const;
     void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const;
     void renderDirect(SDL_Renderer* renderer) const;
 };

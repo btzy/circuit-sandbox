@@ -104,7 +104,7 @@ public:
         });
     }
 
-    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, std::unique_ptr<BaseAction>& actionPtr) {
+    static inline bool startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
@@ -114,8 +114,7 @@ public:
 
             if constexpr (std::is_base_of_v<Pencil, Tool>) {
                 // create the new action
-                actionPtr = std::make_unique<PencilAction>(playArea, currentToolIndex);
-                auto& action = static_cast<PencilAction&>(*actionPtr);
+                auto& action = starter.start<PencilAction>(playArea, currentToolIndex);
 
                 // draw the element at the current location
                 extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };

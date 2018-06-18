@@ -30,7 +30,9 @@ void PlayArea::render(SDL_Renderer* renderer) const {
 
     // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
-    stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    if (!currentAction.disableDefaultRender()) {
+        stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+    }
     // ask current action to render pixels to the surface if necessary
     currentAction.renderSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);

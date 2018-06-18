@@ -65,6 +65,13 @@ public:
     void render(SDL_Renderer* renderer) const;
 
     /**
+     * Check if default view is being used
+     */
+    inline bool isDefaultView() const noexcept {
+        return defaultView;
+    }
+
+    /**
      * Processing of events.
      */
     void processMouseHover(const SDL_MouseMotionEvent&) override; // fires when mouse is inside the renderArea
