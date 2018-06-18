@@ -44,7 +44,7 @@ private:
 
 
     friend class EditAction;
-    friend class PencilAction;
+    template <typename T> friend class PencilAction;
     friend class SelectionAction;
 
 

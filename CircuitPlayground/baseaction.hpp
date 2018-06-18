@@ -3,6 +3,13 @@
 #include <SDL.h>
 
 #include "declarations.hpp"
+#include "elements.hpp"
+
+// compile-time type tag which stores the list of available actions
+class BaseAction;
+template <typename> class PencilAction;
+class SelectionAction;
+using action_tags_t = extensions::tag_tuple<BaseAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, SelectionAction>;
 
 /**
  * ActionEventResult represents the result of all the event handlers in actions.
@@ -25,6 +32,7 @@ class ActionStarter;
  * This is the base class for all actions.
  * All derived classes may assume that mouse button/drag actions happen in this order:
  * * MouseButtonDown --> MouseDrag (any number of times, possibly zero) --> MouseUp
+ * Furthermore, two different mouse buttons cannot be pressed at the same time
  * All derived classes may assume that rendering happens in this order:
  * * disableDefaultRender --> (default rendering, if not disabled) --> renderSurface --> renderDirect
  * For MouseButtonDown and MouseWheel, it is guaranteed that the mouse is inside the playarea.

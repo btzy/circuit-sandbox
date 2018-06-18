@@ -12,16 +12,11 @@
 class MainWindow;
 class Toolbox;
 class PlayArea;
-class BaseAction;
-class PencilAction;
-class SelectionAction;
 
 
 // compile-time type tag which stores the list of available elements
 using tool_tags_t = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
 
-// compile-time type tag which stores the list of available actions
-using action_tags_t = extensions::tag_tuple<BaseAction, PencilAction, SelectionAction>;
 
 
 /**
