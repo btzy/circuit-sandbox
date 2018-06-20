@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "mainwindow.hpp"
+#include "fileutils.hpp"
 
 
 using namespace std::literals::string_literals; // gives the 's' suffix for strings
@@ -40,7 +41,7 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
     updateDpiFields(false);
 
     // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
-    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
@@ -130,6 +131,17 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
     // return true if the fields changed
     return fields_changed;
+}
+
+
+
+void MainWindow::updateTitleBar() {
+    std::string title = ((unsaved) ? "* " : "") + (fileName.empty() ? "" : fileName + " ");
+    if (title.empty()) title = "Circuit Playground";
+    else {
+        title += u8"\u2013 Circuit Playground";
+    }
+    SDL_SetWindowTitle(window, title.c_str());
 }
 
 
@@ -315,4 +327,26 @@ void MainWindow::render() {
 
     // Then display to the user
     SDL_RenderPresent(renderer);
+}
+
+
+void MainWindow::setUnsaved(bool unsaved) {
+    if (this->unsaved != unsaved) {
+        this->unsaved = unsaved;
+        updateTitleBar();
+    }
+}
+
+
+void MainWindow::setFilePath(const char* filePath) {
+    const char* fileName = getFileName(filePath);
+    if (this->fileName != fileName) {
+        this->fileName = fileName;
+        updateTitleBar();
+    }
+}
+
+
+bool MainWindow::hasFilePath() const {
+    return !fileName.empty();
 }

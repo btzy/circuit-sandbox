@@ -88,6 +88,8 @@ public:
             WriteResult result = writeSave(playArea.stateManager.defaultState, filePath);
             switch (result) {
             case WriteResult::OK:
+                playArea.mainWindow.setUnsaved(false);
+                playArea.mainWindow.setFilePath(filePath);
                 break;
             case WriteResult::IO_ERROR:
                 SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Save File", "This file cannot be written to.", playArea.mainWindow.window);

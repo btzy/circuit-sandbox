@@ -11,22 +11,7 @@
 class FileNewAction final : public BaseAction {
 public:
     FileNewAction(PlayArea& playArea) {
-        if (playArea.stateManager.historyManager.empty()) {
-            // stop the simulator if running
-            if (playArea.stateManager.simulator.running()) playArea.stateManager.simulator.stop();
-            playArea.stateManager.defaultState = CanvasState();
-            // reset the translations
-            playArea.stateManager.deltaTrans = { 0, 0 };
-            // TODO: some intelligent translation/scale depending on dimensions of canvasstate
-            playArea.translation = { 0, 0 };
-            playArea.scale = 20;
-            // imbue the history
-            playArea.stateManager.historyManager.imbue(playArea.stateManager.defaultState);
-        }
-        else {
-            // launch a new instance
-            boost::process::spawn(playArea.mainWindow.processName);
-        }
+        boost::process::spawn(playArea.mainWindow.processName);
     };
 
     // check if we need to start action from Ctrl-N

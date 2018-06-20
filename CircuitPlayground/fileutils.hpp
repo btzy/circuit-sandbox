@@ -35,3 +35,18 @@ inline const char* addExtensionIfNecessary(const char* given, char* buffer) {
         return buffer;
     }
 }
+
+/**
+ * Returns a pointer to the first character after the last '/' or '\\'
+ */
+inline const char* getFileName(const char* given) {
+    const char* givenEnd = given;
+    while (*givenEnd != '\0') {
+        ++givenEnd;
+    }
+    const char* simpleNameStart = givenEnd;
+    while (simpleNameStart != given && *(simpleNameStart - 1) != '/' && *(simpleNameStart - 1) != '\\') {
+        --simpleNameStart;
+    }
+    return simpleNameStart;
+}

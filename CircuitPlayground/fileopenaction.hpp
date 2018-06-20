@@ -95,13 +95,11 @@ public:
         }
 
         if (filePath != nullptr) { // means that the user wants to open filePath
-            if (playArea.stateManager.historyManager.empty()) {
+            if (playArea.stateManager.historyManager.empty() && !playArea.mainWindow.hasFilePath()) {
                 // read from filePath
                 ReadResult result = readSave(playArea.stateManager.defaultState, filePath);
                 switch (result) {
                 case ReadResult::OK:
-                    playArea.stateManager.simulator.compile(playArea.stateManager.defaultState, false);
-                    simulatorRunning = false; // don't restart the simulator
                     // reset the translations
                     playArea.stateManager.deltaTrans = { 0, 0 };
                     // TODO: some intelligent translation/scale depending on dimensions of canvasstate
@@ -109,6 +107,11 @@ public:
                     playArea.scale = 20;
                     // imbue the history
                     playArea.stateManager.historyManager.imbue(playArea.stateManager.defaultState);
+                    playArea.mainWindow.setUnsaved(false);
+                    playArea.mainWindow.setFilePath(filePath);
+                    // recompile the simulator
+                    playArea.stateManager.simulator.compile(playArea.stateManager.defaultState, false);
+                    simulatorRunning = false; // don't restart the simulator
                     break;
                 case ReadResult::OUTDATED:
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Playground, and cannot be opened here.  Please update Circuit Playground and try again.", playArea.mainWindow.window);

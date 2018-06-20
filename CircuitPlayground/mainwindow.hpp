@@ -35,11 +35,14 @@ private:
     const std::array<Drawable*, 2> drawables{ &toolbox, &playArea };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
     Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
-
+    
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels
     int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels
     // (physical size) = (logical size) * physicalMultiplier / logicalMultiplier
+
+    std::string fileName; // empty string for untitled
+    bool unsaved = false; // whether there are unsaved changes
 
     /**
      * Process the event that has occurred (called by start())
@@ -68,9 +71,14 @@ private:
 
 
     /**
-    * Update the dpi fields.  Returns true if the dpi got changed
-    */
+     * Update the dpi fields.  Returns true if the dpi got changed
+     */
     bool updateDpiFields(bool useWindow = true);
+
+    /**
+     * Update the title bar (uses the unsaved flag and the file name)
+     */
+    void updateTitleBar();
 
 public:
 
@@ -115,6 +123,21 @@ public:
     void loadFile(const char* filePath) {
         playArea.loadFile(filePath);
     }
+
+    /**
+     * Set the asterisk in the title bar
+     */
+    void setUnsaved(bool unsaved);
+
+    /**
+     * Set the file path
+     */
+    void setFilePath(const char* filePath);
+
+    /**
+    * Check whether file path has been set
+    */
+    bool hasFilePath() const;
 
     /**
      * DPI conversion functions

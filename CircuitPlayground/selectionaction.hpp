@@ -213,7 +213,7 @@ public:
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return tool_tags_t::get(currentToolIndex, [this, &event](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 

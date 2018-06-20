@@ -86,12 +86,4 @@ public:
      * Update defaultState with a new snapshot from the simulator.
      */
     void updateDefaultState();
-
-    /**
-     * Read/write the save file. The path is hardcoded for now.
-     * Save format: [4 bytes "CCPG"] [int32_t version (0)] [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth * matrixHeight) x [high 6-bit index, 1-bit logicLevel, 1-bit defaultLogicLevel]
-     */
-    std::string savePath = "circuitplayground.sav";
-    void readSave();
-    void writeSave();
 };
