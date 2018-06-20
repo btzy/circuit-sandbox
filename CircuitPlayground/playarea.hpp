@@ -46,6 +46,9 @@ private:
     template <typename T> friend class PencilAction;
     friend class SelectionAction;
     friend class HistoryAction;
+    friend class FileOpenAction;
+    friend class FileSaveAction;
+    friend class FileNewAction;
 
 public:
     PlayArea(MainWindow&);
@@ -91,6 +94,12 @@ public:
         // scaling:
         return extensions::div_floor(offset, scale);
     }
+
+    /**
+     * Overwrite the current canvas state with the given file.
+     * This will reset the history system.
+     */
+    void loadFile(const char* filePath);
 };
 
 

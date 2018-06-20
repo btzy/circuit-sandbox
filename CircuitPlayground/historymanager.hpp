@@ -56,6 +56,16 @@ public:
         return !redoStack.empty();
     }
 
+    // adjust the current state without adding to the undo stack
+    void imbue(const CanvasState& state) {
+        currentHistoryState = state;
+    }
+
+    // returns true if saveToHistory() has never been called.
+    bool empty() const {
+        return redoStack.empty() && undoStack.empty();
+    }
+
     const CanvasState& currentState() const {
         return currentHistoryState;
     }

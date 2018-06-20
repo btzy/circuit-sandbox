@@ -75,7 +75,14 @@ public:
     ~Action() {}
 
     void reset() {
-        data = std::make_unique<BaseAction>();
+        start<BaseAction>();
+    }
+
+    template <typename T, typename... Args>
+    T& start(Args&&... args) {
+        data = nullptr; // destroy the old action
+        data = std::make_unique<T>(std::forward<Args>(args)...); // construct the new action
+        return static_cast<T&>(*data);
     }
 
     // requirements here follow those in BaseAction.

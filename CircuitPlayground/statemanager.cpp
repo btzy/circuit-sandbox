@@ -20,7 +20,7 @@ StateManager::~StateManager() {
 
 void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t left, int32_t top, int32_t width, int32_t height) {
     if (simulator.running()) {
-        simulator.takeSnapshot(defaultState);
+        updateDefaultState();
     }
     for (int32_t y = top; y != top + height; ++y) {
         for (int32_t x = left; x != left + width; ++x) {
@@ -113,6 +113,10 @@ void StateManager::resetSimulator() {
     if (simulatorRunning) simulator.stop();
     simulator.compile(defaultState, true);
     if (simulatorRunning) simulator.start();
+}
+
+void StateManager::updateDefaultState() {
+    simulator.takeSnapshot(defaultState);
 }
 
 void StateManager::readSave() {

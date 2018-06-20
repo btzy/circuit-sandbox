@@ -31,7 +31,12 @@ struct InitGuard {
 int main(int argc, char* argv[]) {
     try {
         InitGuard init_guard; // this ensures that all the program-wide init and de-init works even if exceptions are thrown
-        MainWindow main_window;
+        MainWindow main_window(argv[0]);
+        if (argc >= 2) {
+            // argv[1] is the file name (if it exists)]
+            char* givenFilePath = argv[1];
+            main_window.loadFile(givenFilePath);
+        }
         main_window.start(); // this method will block until the window closes (or some exception is thrown)
     }
     catch (const std::exception& err) {

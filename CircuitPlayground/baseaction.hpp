@@ -5,13 +5,6 @@
 #include "declarations.hpp"
 #include "elements.hpp"
 
-// compile-time type tag which stores the list of available actions
-class BaseAction;
-template <typename> class PencilAction;
-class SelectionAction;
-class HistoryAction;
-using action_tags_t = extensions::tag_tuple<BaseAction, SelectionAction, HistoryAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
-
 /**
  * ActionEventResult represents the result of all the event handlers in actions.
  * PROCESSED: This action successfully used the event, so PlayArea should not use it.  The action should remain active.

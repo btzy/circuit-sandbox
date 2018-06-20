@@ -40,6 +40,9 @@ private:
 
     friend class EditAction;
     friend class HistoryAction;
+    friend class FileOpenAction;
+    friend class FileSaveAction;
+    friend class FileNewAction;
 
 public:
 
@@ -80,8 +83,13 @@ public:
     void resetSimulator();
 
     /**
+     * Update defaultState with a new snapshot from the simulator.
+     */
+    void updateDefaultState();
+
+    /**
      * Read/write the save file. The path is hardcoded for now.
-     * Save format: [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth*matrixHeight)x [size_t index, bool logicLevel, bool defaultLogicLevel]
+     * Save format: [4 bytes "CCPG"] [int32_t version (0)] [int32_t matrixWidth] [int32_t matrixHeight] (matrixWidth * matrixHeight) x [high 6-bit index, 1-bit logicLevel, 1-bit defaultLogicLevel]
      */
     std::string savePath = "circuitplayground.sav";
     void readSave();

@@ -121,8 +121,9 @@ public:
                 action.mousePos = canvasOffset; // TODO: processDrawingTool changes the saved offset; should translations only be changed at the end of an action?
                 return ActionEventResult::PROCESSED;
             }
-
-            return ActionEventResult::UNPROCESSED;
+            else {
+                return ActionEventResult::UNPROCESSED;
+            }
         }, ActionEventResult::UNPROCESSED);
     }
 

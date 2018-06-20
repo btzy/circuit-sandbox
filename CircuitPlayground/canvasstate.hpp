@@ -33,6 +33,8 @@ private:
 
     friend class StateManager;
     friend class Simulator;
+    friend class FileOpenAction;
+    friend class FileSaveAction;
 
     /**
      * Modifies the dataMatrix so that the x and y will be within the matrix.
@@ -222,11 +224,13 @@ public:
      * grow the underlying matrix to a larger size
      */
     extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
-        extensions::point newSize = empty() ? (bottomRight - topLeft) : (max(bottomRight, size()) - min(topLeft, { 0, 0 }));
+        extensions::point newTopLeft = empty() ? topLeft : min(topLeft, { 0, 0 });
+        extensions::point newBottomRight = empty() ? bottomRight : max(bottomRight, size());
+        extensions::point newSize = newBottomRight - newTopLeft;
         matrix_t newMatrix(newSize);
-        extensions::move_range(dataMatrix, newMatrix, 0, 0, -topLeft.x, -topLeft.y, width(), height());
+        if(!empty()) extensions::move_range(dataMatrix, newMatrix, 0, 0, -newTopLeft.x, -newTopLeft.y, width(), height());
         dataMatrix = std::move(newMatrix);
-        return -topLeft;
+        return -newTopLeft;
     }
 
 

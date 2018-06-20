@@ -15,7 +15,7 @@ public:
     HistoryAction(PlayArea& playArea) :deltaTrans({ 0, 0 }), playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
         // stop the simulator if running
         if (simulatorRunning) playArea.stateManager.simulator.stop();
-        playArea.stateManager.simulator.takeSnapshot(canvas());
+        playArea.stateManager.updateDefaultState();
     };
 
     CanvasState& canvas() const {

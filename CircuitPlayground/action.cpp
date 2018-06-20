@@ -2,6 +2,9 @@
 #include "selectionaction.hpp"
 #include "historyaction.hpp"
 #include "pencilaction.hpp"
+#include "filenewaction.hpp"
+#include "fileopenaction.hpp"
+#include "filesaveaction.hpp"
 
 
 bool Action::processMouseButtonDown(const SDL_MouseButtonEvent& event) {

@@ -90,10 +90,12 @@ public:
 
     constexpr static SDL_Color backgroundColor{0, 0, 0, 0xFF}; // black background
 
+    const char* const processName; // the name used to start this process (used for spawning duplicate processes)
+
     /**
      * Initializes SDL and the window (it will be hidden)
      */
-    MainWindow();
+    MainWindow(const char* const processName);
 
     /**
      * Destroys the window and quits SDL
@@ -105,6 +107,14 @@ public:
      * This function will block until the window is closed.
      */
     void start();
+
+    /**
+     * Overwrite the current canvas state with the given file.
+     * This will reset the history system.
+     */
+    void loadFile(const char* filePath) {
+        playArea.loadFile(filePath);
+    }
 
     /**
      * DPI conversion functions

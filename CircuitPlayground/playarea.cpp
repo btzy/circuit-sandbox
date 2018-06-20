@@ -9,6 +9,7 @@
 #include "elements.hpp"
 #include "integral_division.hpp"
 #include "point.hpp"
+#include "fileopenaction.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {
     stateManager.saveToHistory(); // so that the loaded savefile will be in the history
@@ -222,4 +223,9 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
 
     }
 
+}
+
+void PlayArea::loadFile(const char* filePath) {
+    currentAction.start<FileOpenAction>(*this, filePath);
+    currentAction.reset();
 }

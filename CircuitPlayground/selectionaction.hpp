@@ -105,8 +105,9 @@ public:
                 action.selectionEnd = action.selectionOrigin = canvasOffset;
                 return ActionEventResult::PROCESSED;
             }
-
-            return ActionEventResult::UNPROCESSED;
+            else {
+                return ActionEventResult::UNPROCESSED;
+            }
         }, ActionEventResult::UNPROCESSED);
     }
 
