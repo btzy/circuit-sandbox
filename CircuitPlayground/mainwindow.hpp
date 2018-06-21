@@ -35,7 +35,7 @@ private:
     const std::array<Drawable*, 2> drawables{ &toolbox, &playArea };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
     Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
-    
+
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels
     int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels
@@ -43,6 +43,8 @@ private:
 
     std::string fileName; // empty string for untitled
     bool unsaved = false; // whether there are unsaved changes
+
+    std::optional<size_t> activeInputHandleIndex;
 
     /**
      * Process the event that has occurred (called by start())

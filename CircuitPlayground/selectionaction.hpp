@@ -209,36 +209,22 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processCanvasMouseButtonUp(const extensions::point&, const SDL_MouseButtonEvent& event) {
-        size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
-
-        return tool_tags_t::get(currentToolIndex, [this](const auto tool_tag) {
-            // 'Tool' is the type of tool (e.g. Selector)
-            using Tool = typename decltype(tool_tag)::type;
-
-            if constexpr (std::is_base_of_v<Selector, Tool>) {
-                switch (state) {
-                case State::SELECTING:
-                    state = State::SELECTED;
-                    if (selectRect()) {
-                        return ActionEventResult::PROCESSED;
-                    } else {
-                        selectionTrans = baseTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
-                        return ActionEventResult::COMPLETED;
-                    }
-                case State::MOVING:
-                    state = State::SELECTED;
+    ActionEventResult processCanvasMouseButtonUp() {
+        switch (state) {
+            case State::SELECTING:
+                state = State::SELECTED;
+                if (selectRect()) {
                     return ActionEventResult::PROCESSED;
-                default:
-                    return ActionEventResult::UNPROCESSED;
+                } else {
+                    selectionTrans = baseTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
+                    return ActionEventResult::COMPLETED;
                 }
-            }
-            else {
-                // wrong tool, return UNPROCESSED (maybe PlayArea will destroy this action)
+            case State::MOVING:
+                state = State::SELECTED;
+                return ActionEventResult::PROCESSED;
+            default:
                 return ActionEventResult::UNPROCESSED;
-            }
-        }, ActionEventResult::UNPROCESSED);
+        }
     }
 
     inline ActionEventResult processKeyboard(const SDL_KeyboardEvent& event) override {

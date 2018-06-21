@@ -51,7 +51,7 @@ public:
     virtual inline ActionEventResult processMouseDrag(const SDL_MouseMotionEvent&) {
         return ActionEventResult::UNPROCESSED;
     }// might be outside the playarea if the mouse was dragged out
-    virtual inline ActionEventResult processMouseButtonUp(const SDL_MouseButtonEvent&) {
+    virtual inline ActionEventResult processMouseButtonUp() {
         return ActionEventResult::UNPROCESSED;
     }
 
@@ -76,7 +76,7 @@ public:
     static inline ActionEventResult startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, const ActionStarter&) {
         return ActionEventResult::UNPROCESSED;
     }
-    static inline ActionEventResult startWithMouseButtonUp(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
+    static inline ActionEventResult startWithMouseButtonUp(PlayArea&, const ActionStarter&) {
         return ActionEventResult::UNPROCESSED;
     }
     static inline ActionEventResult startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, const ActionStarter&) {

@@ -110,6 +110,7 @@ void StateManager::resetSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) simulator.stop();
     simulator.compile(defaultState, true);
+    simulator.takeSnapshot(defaultState);
     if (simulatorRunning) simulator.start();
 }
 

@@ -273,13 +273,16 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 
     SDL_Point position{event.x, event.y};
+    size_t inputHandleIndex = resolveInputHandleIndex(event);
 
     if (event.type == SDL_MOUSEBUTTONDOWN) {
-        if (currentEventTarget != nullptr) { // this shouldn't happen, but we check it anyway
+        // ensure only one input handle can be down at any moment
+        if (activeInputHandleIndex) {
             currentEventTarget->processMouseButtonUp(event);
             SDL_CaptureMouse(SDL_FALSE);
             currentEventTarget = nullptr;
         }
+        activeInputHandleIndex = inputHandleIndex;
         for (Drawable* drawable : drawables) {
             if (SDL_PointInRect(&position, &drawable->renderArea)) {
                 currentEventTarget = drawable;
@@ -290,10 +293,11 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         }
     }
     else {
-        if (currentEventTarget != nullptr) {
+        if (activeInputHandleIndex && *activeInputHandleIndex == inputHandleIndex) {
             currentEventTarget->processMouseButtonUp(event);
             SDL_CaptureMouse(SDL_FALSE);
             currentEventTarget = nullptr;
+            activeInputHandleIndex = std::nullopt;
         }
     }
 }

@@ -35,14 +35,14 @@ bool Action::processMouseDrag(const SDL_MouseMotionEvent& event) {
     });
 }
 
-bool Action::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
+bool Action::processMouseButtonUp() {
     return forwardEvent([&, this]() {
-        return data->processMouseButtonUp(event);
+        return data->processMouseButtonUp();
     }, [&, this]() {
         ActionEventResult res;
         action_tags_t::for_each([&, this](auto action_tag, auto) {
             using action_t = typename decltype(action_tag)::type;
-            res = action_t::startWithMouseButtonUp(event, playArea, ActionStarter(data));
+            res = action_t::startWithMouseButtonUp(playArea, ActionStarter(data));
             return res == ActionEventResult::PROCESSED || res == ActionEventResult::COMPLETED;
         });
         return res;

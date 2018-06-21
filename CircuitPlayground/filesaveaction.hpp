@@ -109,7 +109,7 @@ public:
         }
     };
 
-    // check if we need to start action from Ctrl-O
+    // check if we need to start action from Ctrl-S
     static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();

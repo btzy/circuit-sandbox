@@ -88,7 +88,7 @@ public:
     // requirements here follow those in BaseAction.
     bool processMouseButtonDown(const SDL_MouseButtonEvent&);
     bool processMouseDrag(const SDL_MouseMotionEvent&);
-    bool processMouseButtonUp(const SDL_MouseButtonEvent&);
+    bool processMouseButtonUp();
 
     bool processMouseWheel(const SDL_MouseWheelEvent&);
     bool processKeyboard(const SDL_KeyboardEvent&);

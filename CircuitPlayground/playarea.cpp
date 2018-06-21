@@ -142,7 +142,7 @@ void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
 
 void PlayArea::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
 
-    if (!currentAction.processMouseButtonUp(event)) {
+    if (!currentAction.processMouseButtonUp()) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         size_t inputHandleIndex = resolveInputHandleIndex(event);

@@ -80,8 +80,8 @@ public:
     ~PencilAction() override {
         // commit the state
         CanvasState& outputState = this->canvas();
-        this->deltaTrans = outputState.extend(actionTrans, actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
-        
+        this->deltaTrans = outputState.extend(actionTrans,  actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
+
         // note: eraser can be optimized to not extend the canvas first
         for (int32_t y = 0; y < actionState.height(); ++y) {
             for (int32_t x = 0; x < actionState.width(); ++x) {
@@ -142,7 +142,7 @@ public:
         return ActionEventResult::PROCESSED;
     }
 
-    ActionEventResult processMouseButtonUp(const SDL_MouseButtonEvent& event) {
+    ActionEventResult processMouseButtonUp() {
         // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
         return ActionEventResult::COMPLETED;
     }
