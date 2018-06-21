@@ -58,7 +58,7 @@ private:
                     },
                 }, element);
 
-                int8_t elementData = (element_index << 2) + (logicLevel << 1) + defaultLogicLevel;
+                uint8_t elementData = static_cast<uint8_t>((element_index << 2) + (logicLevel << 1) + defaultLogicLevel);
                 saveFile.write(reinterpret_cast<char*>(&elementData), 1);
             }
         }

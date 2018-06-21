@@ -1,3 +1,11 @@
+#if defined(_WIN32) && defined(_MSC_VER)
+// this enables the visual styles for the popup dialog boxes
+// see https://msdn.microsoft.com/en-us/library/windows/desktop/bb773175.aspx
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
 #include <exception>
 #include <stdexcept>
 #include <iostream>

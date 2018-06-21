@@ -12,6 +12,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <chrono>
 
 #include "canvasstate.hpp"
 #include "heap_matrix.hpp"
@@ -30,6 +31,10 @@ private:
     std::mutex simSleepMutex;
     std::condition_variable simSleepCV;
 
+    // minimum time between successive simulation steps (zero = as fast as possible)
+    std::atomic<std::chrono::steady_clock::duration::rep> period_rep; // it is stored using the underlying integer type so that we can use atomics
+    std::chrono::steady_clock::time_point nextStepTime; // next time the simulator will be stepped
+
     /**
      * Method that actually runs the simulator.
      * Must be invoked from the simulator thread only!
@@ -37,6 +42,14 @@ private:
      * @pre simulation has been compiled.
      */
     void run();
+
+    /**
+    * Method that calculates a single step of the simulation.
+    * May be invoked in the simulator thread (by run()) or from the main thread (by step()).
+    * This method is static, and hence is safe be called concurrently from multiple threads.
+    * @pre simulation has been compiled.
+    */
+    static void calculate(const CanvasState& oldState, CanvasState& newState);
 
 public:
 
@@ -60,6 +73,14 @@ public:
      * @pre simulation is currently running.
      */
     void stop();
+
+    /**
+    * Runs a single step of the simulation, then stops the simulation.
+    * This method will block until the step is completed and the simulation is stopped.
+    * @pre simulation is currently stopped.
+    * @post simulation is stopped.
+    */
+    void step();
 
     /**
      * Returns true if the simulation is currently running, false otherwise.
@@ -90,4 +111,20 @@ public:
      * @pre the supplied canvas state has the correct element positions as the canvas state that was compiled.
      */
     void takeSnapshot(CanvasState&) const;
+
+    /**
+     * Gets this period of the simulation step.
+     * This works regardless whether the simulation is running or stopped.
+     */
+    std::chrono::steady_clock::duration getPeriod() const {
+        return std::chrono::steady_clock::duration(period_rep.load(std::memory_order_acquire));
+    }
+
+    /**
+    * Gets this period of the simulation step.
+    * This works regardless whether the simulation is running or stopped.
+    */
+    void setPeriod(const std::chrono::steady_clock::duration& period) {
+        period_rep.store(period.count(), std::memory_order_release);
+    }
 };

@@ -1,7 +1,7 @@
-#include <cassert>
 #include <variant>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #include "statemanager.hpp"
 #include "visitor.hpp"
@@ -9,7 +9,8 @@
 StateManager::StateManager() {
     // compile the empty stateManager, so that simulator won't be empty
     simulator.compile(defaultState, false);
-    
+    using namespace std::chrono_literals;
+    simulator.setPeriod(200ms);
 }
 
 StateManager::~StateManager() {

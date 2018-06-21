@@ -53,7 +53,7 @@ private:
 
         for (int32_t y = 0; y != canvasData.height(); ++y) {
             for (int32_t x = 0; x != canvasData.width(); ++x) {
-                int8_t elementData;
+                uint8_t elementData;
                 saveFile.read(reinterpret_cast<char*>(&elementData), 1);
                 size_t element_index = elementData >> 2;
                 bool logicLevel = elementData & 0b10;

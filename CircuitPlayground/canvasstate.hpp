@@ -24,6 +24,7 @@ private:
     // the possible elements that a pixel can represent
     // std::monostate is a 'default' state, which represents an empty pixel
     using element_tags_t = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    static_assert(element_tags_t::size <= (static_cast<size_t>(1) << (std::numeric_limits<uint8_t>::digits - 2)), "Number of elements cannot exceed number of available bits in file format.");
 
     using element_variant_t = element_tags_t::instantiate<std::variant>;
 
