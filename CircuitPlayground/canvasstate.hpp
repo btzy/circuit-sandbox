@@ -249,6 +249,38 @@ public:
     }
 
 
+    void flipHorizontal() {
+        for (int x = 0; x < dataMatrix.width()/2; ++x) {
+            extensions::swap_range(dataMatrix, dataMatrix, x, 0, dataMatrix.width()-x-1, 0, 1, dataMatrix.height());
+        }
+    }
+
+    void flipVertical() {
+        for (int y = 0; y < dataMatrix.height()/2; ++y) {
+            extensions::swap_range(dataMatrix, dataMatrix, 0, y, 0, dataMatrix.height()-y-1, dataMatrix.width(), 1);
+        }
+    }
+
+    void rotateClockwise() {
+        matrix_t newDataMatrix = matrix_t(dataMatrix.height(), dataMatrix.width());
+        for (int32_t x = 0; x != dataMatrix.width(); ++x) {
+            for (int32_t y = 0; y != dataMatrix.height(); ++y) {
+                newDataMatrix[{dataMatrix.height()-y-1, x}] = dataMatrix[{x, y}];
+            }
+        }
+        dataMatrix = newDataMatrix;
+    }
+
+    void rotateCounterClockwise() {
+        matrix_t newDataMatrix = matrix_t(dataMatrix.height(), dataMatrix.width());
+        for (int32_t x = 0; x != dataMatrix.width(); ++x) {
+            for (int32_t y = 0; y != dataMatrix.height(); ++y) {
+                newDataMatrix[{y, dataMatrix.width()-x-1}] = dataMatrix[{x, y}];
+            }
+        }
+        dataMatrix = newDataMatrix;
+    }
+
     /**
      * Merges a CanvasState with another, potentially modifying both of them.
      * Elements from the second CanvasState will be written over those from the first in the output.
@@ -259,7 +291,7 @@ public:
         // special cases if we are merging with something empty
         if (first.empty()) return { std::move(second), -secondTrans };
         if (second.empty()) return { std::move(first), -firstTrans };
-        
+
         int32_t new_xmin = std::min(secondTrans.x, firstTrans.x);
         int32_t new_ymin = std::min(secondTrans.y, firstTrans.y);
         int32_t new_xmax = std::max(secondTrans.x + second.width(), firstTrans.x + first.width());

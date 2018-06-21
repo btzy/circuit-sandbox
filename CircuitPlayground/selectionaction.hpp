@@ -231,7 +231,23 @@ public:
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
+            case SDL_SCANCODE_H:
+                selection.flipHorizontal();
+                return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_V:
+                if (!(modifiers & KMOD_CTRL)) {
+                    selection.flipVertical();
+                    return ActionEventResult::PROCESSED;
+                }
+                return ActionEventResult::UNPROCESSED;
+            case SDL_SCANCODE_LEFTBRACKET: // [
+                selection.rotateCounterClockwise();
+                return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_RIGHTBRACKET: // ]
+                selection.rotateClockwise();
+                return ActionEventResult::PROCESSED;
             case SDL_SCANCODE_D:
+                [[fallthrough]];
             case SDL_SCANCODE_DELETE:
             {
                 selection = CanvasState(); // clear the selection
