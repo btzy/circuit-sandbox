@@ -63,18 +63,23 @@ private:
 // storage for the things drawn by the current action, and the transformation relative to defaultState
     extensions::expandable_bool_matrix actionState;
     extensions::point actionTrans;
+    bool hasChanges;
 
     /**
      * Use a drawing tool on (x, y) (in defaultState coordinates)
      */
     void changePixelState(const extensions::point& pt, bool newValue) {
-        actionTrans -= actionState.changePixelState(pt - actionTrans, newValue).second;
+        auto [canvasChanged, translation] = actionState.changePixelState(pt - actionTrans, newValue);
+        actionTrans -= translation;
+        hasChanges = hasChanges || canvasChanged;
     }
 
 
 public:
 
-    PencilAction(PlayArea& playArea) :CanvasAction<PencilAction>(playArea), actionTrans({ 0, 0 }) {}
+    PencilAction(PlayArea& playArea) :CanvasAction<PencilAction>(playArea), actionTrans({ 0, 0 }) {
+        hasChanges = false;
+    }
 
 
     ~PencilAction() override {
@@ -100,6 +105,9 @@ public:
         if (std::is_same_v<PencilType, Eraser>) {
             this->deltaTrans += outputState.shrinkDataMatrix();
         }
+
+        // set changed flag
+        this->changed() = hasChanges;
     }
 
     static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
@@ -118,7 +126,7 @@ public:
                 extensions::point physicalOffset = extensions::point(event) - extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
                 extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                 action.changePixelState(canvasOffset, true);
-                action.mousePos = canvasOffset; // TODO: processDrawingTool changes the saved offset; should translations only be changed at the end of an action?
+                action.mousePos = canvasOffset;
                 return ActionEventResult::PROCESSED;
             }
             else {

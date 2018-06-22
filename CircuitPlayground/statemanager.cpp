@@ -43,7 +43,7 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32
 
 bool StateManager::evaluateChangedState() {
     // return immediately if it isn't indeterminate
-    if (changed != boost::indeterminate) {
+    if (!boost::indeterminate(changed)) {
         return changed;
     }
 

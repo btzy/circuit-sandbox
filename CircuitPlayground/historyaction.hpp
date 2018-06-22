@@ -7,7 +7,9 @@ class HistoryAction final : public EditAction {
 
 public:
 
-    HistoryAction(PlayArea& playArea) : EditAction(playArea) {};
+    HistoryAction(PlayArea& playArea) : EditAction(playArea) {
+        changed() = false; // so that HistoryManager::saveToHistory() will not be called
+    };
 
     ~HistoryAction() override {
         // reset the translation for playArea and stateManager

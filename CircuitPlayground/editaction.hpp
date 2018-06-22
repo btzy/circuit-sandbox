@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/logic/tribool.hpp>
 #include "baseaction.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
@@ -21,10 +22,24 @@ public:
         // stop the simulator if running
         if (simulatorRunning) playArea.stateManager.simulator.stop();
         playArea.stateManager.updateDefaultState();
+        changed() = boost::indeterminate;
     };
 
+    /**
+     * Gets the canvas for this action to make edits on.
+     * All actions may modify this safely at any time during the action, but modifications will be rendered to screen immediately.
+     */
     CanvasState& canvas() const {
         return playArea.stateManager.defaultState;
+    }
+
+    /**
+     * Gets the tribool flag for whether the canvas was changed.  This is used for the saveToHistory() call in the destructor of EditAction.
+     * All EditActions may modify this safely at any time during the action.  Only the latest set state will be used.
+     * By default this is boost::indeterminate, so changing this flag is only an optimization.
+     */
+    boost::tribool& changed() const {
+        return playArea.stateManager.changed;
     }
 
     ~EditAction() override {
