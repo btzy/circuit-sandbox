@@ -1,13 +1,13 @@
 #pragma once
 
-#include "editaction.hpp"
+#include "saveableaction.hpp"
 #include "playarea.hpp"
 
 // a helper class that abstracts out converting mouse coordinates to canvas offset
 template <typename T>
-class CanvasAction : public EditAction {
+class CanvasAction : public SaveableAction {
 public:
-    CanvasAction(PlayArea& playArea) :EditAction(playArea) {};
+    CanvasAction(PlayArea& playArea) :SaveableAction(playArea) {};
 
     // dummy stubs, so derived classes do not need to define these functions if they don't use them
     ActionEventResult processCanvasMouseButtonDown(const extensions::point&, const SDL_MouseButtonEvent&) {

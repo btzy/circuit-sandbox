@@ -39,6 +39,7 @@ private:
     void reloadSimulator();
 
     friend class EditAction;
+    friend class SaveableAction;
     friend class HistoryAction;
     friend class FileOpenAction;
     friend class FileSaveAction;

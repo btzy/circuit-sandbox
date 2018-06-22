@@ -87,7 +87,7 @@ private:
      * Use a drawing tool on (x, y) (in defaultState coordinates)
      */
     void changePixelState(const extensions::point& pt, bool newValue) {
-        auto [canvasChanged, translation] = actionState.changePixelState(pt - actionTrans, newValue);
+        extensions::point translation = actionState.changePixelState(pt - actionTrans, newValue).second;
         actionTrans -= translation;
     }
 
