@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cmath>
+#include <type_traits>
+#include <variant>
 
 #include <SDL.h>
 #include "point.hpp"
@@ -9,6 +11,7 @@
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
+#include "elements.hpp"
 #include "expandable_matrix.hpp"
 
 
@@ -51,6 +54,22 @@ namespace {
             }
         }
     }
+
+    template <typename T, typename = void>
+    struct CanvasStateVariantElement;
+
+    template <typename T>
+    struct CanvasStateVariantElement<T, std::enable_if_t<std::is_base_of_v<Element, T>>>{
+        using type = T;
+    };
+
+    template <typename T>
+    struct CanvasStateVariantElement<T, std::enable_if_t<std::is_same_v<Eraser, T>>> {
+        using type = std::monostate;
+    };
+
+    template <typename T>
+    using CanvasStateVariantElement_t = typename CanvasStateVariantElement<T>::type;
 }
 
 template <typename PencilType>
@@ -63,7 +82,6 @@ private:
 // storage for the things drawn by the current action, and the transformation relative to defaultState
     extensions::expandable_bool_matrix actionState;
     extensions::point actionTrans;
-    bool hasChanges;
 
     /**
      * Use a drawing tool on (x, y) (in defaultState coordinates)
@@ -71,15 +89,12 @@ private:
     void changePixelState(const extensions::point& pt, bool newValue) {
         auto [canvasChanged, translation] = actionState.changePixelState(pt - actionTrans, newValue);
         actionTrans -= translation;
-        hasChanges = hasChanges || canvasChanged;
     }
 
 
 public:
 
-    PencilAction(PlayArea& playArea) :CanvasAction<PencilAction>(playArea), actionTrans({ 0, 0 }) {
-        hasChanges = false;
-    }
+    PencilAction(PlayArea& playArea) :CanvasAction<PencilAction>(playArea), actionTrans({ 0, 0 }) {}
 
 
     ~PencilAction() override {
@@ -87,17 +102,17 @@ public:
         CanvasState& outputState = this->canvas();
         this->deltaTrans = outputState.extend(actionTrans,  actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
 
+        // whether we actually changed anything
+        bool hasChanges = false;
+
         // note: eraser can be optimized to not extend the canvas first
         for (int32_t y = 0; y < actionState.height(); ++y) {
             for (int32_t x = 0; x < actionState.width(); ++x) {
                 extensions::point pt{ x, y };
-                if (actionState[pt]) {
-                    if constexpr(std::is_same_v<PencilType, Eraser>) {
-                        outputState[actionTrans + this->deltaTrans + pt] = std::monostate{};
-                    }
-                    else if constexpr(std::is_base_of_v<Element, PencilType>) {
-                        outputState[actionTrans + this->deltaTrans + pt] = PencilType{};
-                    }
+                auto& element = outputState[actionTrans + this->deltaTrans + pt];
+                if (actionState[pt] && !std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
+                    element = CanvasStateVariantElement_t<PencilType>{};
+                    hasChanges = true;
                 }
             }
         }
