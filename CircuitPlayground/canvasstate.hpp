@@ -227,11 +227,17 @@ public:
     extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
         extensions::point newTopLeft = empty() ? topLeft : min(topLeft, { 0, 0 });
         extensions::point newBottomRight = empty() ? bottomRight : max(bottomRight, size());
-        extensions::point newSize = newBottomRight - newTopLeft;
-        matrix_t newMatrix(newSize);
-        if(!empty()) extensions::move_range(dataMatrix, newMatrix, 0, 0, -newTopLeft.x, -newTopLeft.y, width(), height());
-        dataMatrix = std::move(newMatrix);
-        return -newTopLeft;
+        if (newTopLeft == extensions::point{ 0, 0 } && newBottomRight == size()) {
+            // optimization if we don't actually need to expand the current matrix
+            return { 0, 0 };
+        }
+        else {
+            extensions::point newSize = newBottomRight - newTopLeft;
+            matrix_t newMatrix(newSize);
+            if (!empty()) extensions::move_range(dataMatrix, newMatrix, 0, 0, -newTopLeft.x, -newTopLeft.y, width(), height());
+            dataMatrix = std::move(newMatrix);
+            return -newTopLeft;
+        }
     }
 
 
@@ -288,28 +294,30 @@ public:
         if (first.empty()) return { std::move(second), -secondTrans };
         if (second.empty()) return { std::move(first), -firstTrans };
 
-        int32_t new_xmin = std::min(secondTrans.x, firstTrans.x);
-        int32_t new_ymin = std::min(secondTrans.y, firstTrans.y);
-        int32_t new_xmax = std::max(secondTrans.x + second.width(), firstTrans.x + first.width());
-        int32_t new_ymax = std::max(secondTrans.y + second.height(), firstTrans.y + first.height());
-
-        // TODO: can optimize if the base totally contains the selection.  Then don't need to construct a new matrix.
-
+        extensions::point newMin = min(secondTrans, firstTrans);
+        extensions::point newMax = max(secondTrans + second.size(), firstTrans + first.size());
+        
         CanvasState newState;
-        newState.dataMatrix = matrix_t(new_xmax - new_xmin, new_ymax - new_ymin);
-
-        // move first to newstate
-        extensions::move_range(first.dataMatrix, newState.dataMatrix, 0, 0, firstTrans.x - new_xmin, firstTrans.y - new_ymin, first.width(), first.height());
-
+        if (firstTrans == newMin && firstTrans + first.size() == newMax) {
+            // optimization when `first` totally contains `second`; we can use the old matrix
+            newState.dataMatrix = std::move(first.dataMatrix);
+        }
+        else {
+            // create a new matrix
+            newState.dataMatrix = matrix_t(newMax - newMin);
+            // move first to newstate
+            extensions::move_range(first.dataMatrix, newState.dataMatrix, 0, 0, firstTrans.x - newMin.x, firstTrans.y - newMin.y, first.width(), first.height());
+        }
         // move non-monostate elements from second to newstate
         for (int32_t y = 0; y < second.height(); ++y) {
             for (int32_t x = 0; x < second.width(); ++x) {
                 if (!std::holds_alternative<std::monostate>(second.dataMatrix[{x, y}])) {
-                    newState.dataMatrix[{x + secondTrans.x - new_xmin, y + secondTrans.y - new_ymin}] = std::move(second.dataMatrix[{x, y}]);
+                    extensions::point pt{ x, y };
+                    newState[pt + secondTrans - newMin] = std::move(second[pt]);
                 }
             }
         }
 
-        return { std::move(newState), {-new_xmin, -new_ymin} };
+        return { std::move(newState), -newMin };
     }
 };

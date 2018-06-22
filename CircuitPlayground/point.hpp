@@ -17,65 +17,65 @@ namespace extensions {
         point(point&&) = default;
         point& operator=(const point&) = default;
         point& operator=(point&&) = default;
-        point(int32_t x, int32_t y) :x(x), y(y) {}
+        constexpr point(int32_t x, int32_t y) :x(x), y(y) {}
 
         // + and - compound assignment operators
-        point& operator+=(const point& other) noexcept {
+        constexpr point& operator+=(const point& other) noexcept {
             x += other.x;
             y += other.y;
             return *this;
         }
-        point& operator-=(const point& other) noexcept {
+        constexpr point& operator-=(const point& other) noexcept {
             x -= other.x;
             y -= other.y;
             return *this;
         }
-        point& operator*=(const int32_t& scale) noexcept {
+        constexpr point& operator*=(const int32_t& scale) noexcept {
             x *= scale;
             y *= scale;
             return *this;
         }
-        point& operator/=(const int32_t& scale) noexcept {
+        constexpr point& operator/=(const int32_t& scale) noexcept {
             x /= scale;
             y /= scale;
             return *this;
         }
 
         // arithmetic operators
-        point operator+(const point& other) const noexcept {
+        constexpr point operator+(const point& other) const noexcept {
             point ret = *this;
             ret += other;
             return ret;
         }
-        point operator-(const point& other) const noexcept {
+        constexpr point operator-(const point& other) const noexcept {
             point ret = *this;
             ret -= other;
             return ret;
         }
-        point operator*(const int32_t& scale) const noexcept {
+        constexpr point operator*(const int32_t& scale) const noexcept {
             point ret = *this;
             ret *= scale;
             return ret;
         }
-        point operator/(const int32_t& scale) const noexcept {
+        constexpr point operator/(const int32_t& scale) const noexcept {
             point ret = *this;
-            ret *= scale;
+            ret /= scale;
             return ret;
         }
 
         // unary operators
-        point operator+() const noexcept {
+        constexpr point operator+() const noexcept {
             return *this;
         }
-        point operator-() const noexcept {
+        constexpr point operator-() const noexcept {
             return { -x, -y };
         }
 
         // equality operators
-        bool operator==(const point& other) const noexcept {
+        constexpr bool operator==(const point& other) const noexcept {
             return x == other.x && y == other.y;
         }
-        bool operator!=(const point& other) const noexcept {
+        constexpr bool operator!=(const point& other) const noexcept {
             return !(*this == other);
         }
 
@@ -96,11 +96,11 @@ namespace extensions {
     }
 
     // top-left bound of two points
-    inline point min(const point& pt1, const point& pt2) noexcept {
+    constexpr inline point min(const point& pt1, const point& pt2) noexcept {
         return { std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y) };
     }
     // bottom-right bound of two points
-    inline point max(const point& pt1, const point& pt2) noexcept {
+    constexpr inline point max(const point& pt1, const point& pt2) noexcept {
         return { std::max(pt1.x, pt2.x), std::max(pt1.y, pt2.y) };
     }
 

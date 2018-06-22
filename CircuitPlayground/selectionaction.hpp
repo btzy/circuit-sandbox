@@ -134,10 +134,11 @@ public:
                     canvasOffset = extensions::div_floor(canvasOffset, playArea.scale);
 
                     if (!point_in_rect(physicalOffset, playArea.renderArea)) {
-                        canvasOffset = { 0, 0 }; // TODO: shouldn't we paste at (0,0) in playarea window coordinates, rather than canvas coordinates?
+                        // since the mouse is not in the play area, we paste in the middle of the play area
+                        canvasOffset = extensions::div_floor(extensions::point{ playArea.renderArea.w, playArea.renderArea.h } - playArea.translation, playArea.scale);
                     }
                     action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
-                    action.selectionTrans = canvasOffset; // set the selection offset as the current offset
+                    action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
                     action.baseTrans = { 0, 0 };
                     return ActionEventResult::PROCESSED;
                 }
