@@ -72,7 +72,6 @@ void PlayArea::render(SDL_Renderer* renderer) {
     // ask current action to render itself directly if necessary
     currentAction.renderDirect(renderer);
 
-    // draw a square at the top left to denote default view (TODO: make it a border or something nicer)
     if (defaultView) {
         SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
         SDL_Rect squareBox {
@@ -192,7 +191,6 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
     if (!currentAction.processKeyboard(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
-        // TODO: have a proper UI for toggling views and for live view interactions (start/stop, press button, etc.)
         if (event.type == SDL_KEYDOWN) {
             //SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard

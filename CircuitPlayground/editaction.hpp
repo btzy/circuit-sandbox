@@ -47,7 +47,8 @@ public:
         playArea.translation -= deltaTrans * playArea.scale;
         // save to history when this action ends
         playArea.stateManager.saveToHistory();
-        playArea.mainWindow.setUnsaved(true);
+        // update window title
+        playArea.mainWindow.setUnsaved(playArea.stateManager.historyManager.changedSinceLastSave());
         // recompile the simulator
         playArea.stateManager.simulator.compile(canvas(), false);
         // start the simulator if its supposed to be running

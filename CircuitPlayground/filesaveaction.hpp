@@ -100,6 +100,8 @@ public:
         // start the simulator if necessary
         if (simulatorRunning) playArea.stateManager.simulator.start();
 
+        playArea.stateManager.historyManager.setSaved();
+
         // free the memory
         if (outPath != nullptr) {
             free(outPath); // note: freeing memory that was acquired by NFD library
