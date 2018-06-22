@@ -1,7 +1,7 @@
 #pragma once
 
 #include <utility>
-#include <algorithm> // for std::copy and std::move
+#include <algorithm> // for std::copy, std::move, std::reverse, std::swap_ranges
 
 #include "point.hpp"
 
@@ -107,7 +107,7 @@ namespace extensions {
         /**
          * fills all elements in the matrix with the same value
          */
-        void fill(const T& value) noexcept {
+        void fill(const T& value) {
             std::fill_n(buffer, _width * _height, value);
         }
 
@@ -139,6 +139,27 @@ namespace extensions {
          */
         const T& operator[](const point& indices) const noexcept {
             return buffer[indices.y * _width + indices.x];
+        }
+
+        /**
+         * Flip about a vertical line in the middle of the matrix
+         */
+        void flipHorizontal() {
+            const T* const end = buffer + _width * _height;
+            for (T* start = buffer; start != end; start += _width) {
+                std::reverse(start, start + _width);
+            }
+        }
+
+        /**
+         * Flip about a horizontal line in the middle of the matrix
+         */
+        void flipVertical() {
+            const T* const end = buffer + _width * (_height - 1);
+            const T* const mid = buffer + _width * (_height / 2);
+            for (T* start = buffer; start != mid; start+=_width) {
+                std::swap_ranges(start, start + _width, end - start + buffer);
+            }
         }
 
         template <typename TSrc, typename TDest>

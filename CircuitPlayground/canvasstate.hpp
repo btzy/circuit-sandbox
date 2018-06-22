@@ -250,15 +250,11 @@ public:
 
 
     void flipHorizontal() {
-        for (int x = 0; x < dataMatrix.width()/2; ++x) {
-            extensions::swap_range(dataMatrix, dataMatrix, x, 0, dataMatrix.width()-x-1, 0, 1, dataMatrix.height());
-        }
+        dataMatrix.flipHorizontal();
     }
 
     void flipVertical() {
-        for (int y = 0; y < dataMatrix.height()/2; ++y) {
-            extensions::swap_range(dataMatrix, dataMatrix, 0, y, 0, dataMatrix.height()-y-1, dataMatrix.width(), 1);
-        }
+        dataMatrix.flipVertical();
     }
 
     void rotateClockwise() {
@@ -268,7 +264,7 @@ public:
                 newDataMatrix[{dataMatrix.height()-y-1, x}] = dataMatrix[{x, y}];
             }
         }
-        dataMatrix = newDataMatrix;
+        dataMatrix = std::move(newDataMatrix);
     }
 
     void rotateCounterClockwise() {
@@ -278,7 +274,7 @@ public:
                 newDataMatrix[{y, dataMatrix.width()-x-1}] = dataMatrix[{x, y}];
             }
         }
-        dataMatrix = newDataMatrix;
+        dataMatrix = std::move(newDataMatrix);
     }
 
     /**

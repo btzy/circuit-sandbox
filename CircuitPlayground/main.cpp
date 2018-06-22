@@ -13,7 +13,9 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #include <SDL.h>
 #include <SDL_ttf.h>
+#if defined(__linux__)
 #include <gtk/gtk.h>
+#endif
 
 #include "mainwindow.hpp"
 
