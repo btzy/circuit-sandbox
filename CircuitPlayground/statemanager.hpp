@@ -63,7 +63,8 @@ public:
     void saveToHistory();
 
     /**
-     * Starts the simulator
+     * Starts the simulator.
+     * @pre simulator is stopped
      */
     void startSimulator();
 
@@ -73,9 +74,21 @@ public:
     void startOrStopSimulator();
 
     /**
-     * Stops the simulator
+     * Stops the simulator.
+     * @pre simulator is running
      */
     void stopSimulator();
+
+    /**
+     * Steps the simulator.
+     * @pre simulator is stopped
+     */
+    void stepSimulator();
+
+    /**
+     * Steps the simulator if it is currently stopped.
+     */
+    void stepSimulatorIfPossible();
 
     /**
      * Reset all elements in the simulation to their default state.

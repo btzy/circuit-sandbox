@@ -20,8 +20,7 @@ public:
 
     EditAction(PlayArea& playArea) :deltaTrans({ 0, 0 }), playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
         // stop the simulator if running
-        if (simulatorRunning) playArea.stateManager.simulator.stop();
-        playArea.stateManager.updateDefaultState();
+        if (simulatorRunning) playArea.stateManager.stopSimulator();
         changed() = boost::indeterminate;
     };
 
@@ -52,6 +51,6 @@ public:
         // recompile the simulator
         playArea.stateManager.simulator.compile(canvas(), false);
         // start the simulator if its supposed to be running
-        if (simulatorRunning) playArea.stateManager.simulator.start();
+        if (simulatorRunning) playArea.stateManager.startSimulator();
     }
 };

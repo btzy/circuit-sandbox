@@ -206,6 +206,9 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
             case SDL_SCANCODE_SPACE:
                 stateManager.startOrStopSimulator();
                 break;
+            case SDL_SCANCODE_S:
+                stateManager.stepSimulatorIfPossible();
+                break;
             default:
                 break;
             }

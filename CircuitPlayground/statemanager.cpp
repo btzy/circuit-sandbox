@@ -95,15 +95,27 @@ void StateManager::startSimulator() {
 void StateManager::startOrStopSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) {
-        simulator.stop();
+        stopSimulator();
     }
     else {
-        simulator.start();
+        startSimulator();
     }
 }
 
 void StateManager::stopSimulator() {
     simulator.stop();
+    updateDefaultState();
+}
+
+void StateManager::stepSimulator() {
+    simulator.step();
+    updateDefaultState();
+}
+
+void StateManager::stepSimulatorIfPossible() {
+    if (!simulator.running()) {
+        stepSimulator();
+    }
 }
 
 void StateManager::resetSimulator() {
