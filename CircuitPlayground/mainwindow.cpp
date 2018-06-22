@@ -40,7 +40,6 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);
 
-    // TODO: allow high DPI with SDL_WINDOW_ALLOW_HIGHDPI flag and test whether it changes anything:
     window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
