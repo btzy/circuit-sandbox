@@ -90,6 +90,7 @@ public:
             case WriteResult::OK:
                 playArea.mainWindow.setUnsaved(false);
                 playArea.mainWindow.setFilePath(filePath);
+                playArea.stateManager.historyManager.setSaved();
                 break;
             case WriteResult::IO_ERROR:
                 SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Save File", "This file cannot be written to.", playArea.mainWindow.window);
@@ -99,8 +100,6 @@ public:
 
         // start the simulator if necessary
         if (simulatorRunning) playArea.stateManager.simulator.start();
-
-        playArea.stateManager.historyManager.setSaved();
 
         // free the memory
         if (outPath != nullptr) {
@@ -118,8 +117,15 @@ public:
             switch (event.keysym.scancode) {
             case SDL_SCANCODE_S:
                 if (modifiers & KMOD_CTRL) {
-                    starter.start<FileSaveAction>(playArea, nullptr);
-                    return ActionEventResult::COMPLETED;
+                    if (modifiers & KMOD_SHIFT) {
+                        // force "Save As" dialog
+                        starter.start<FileSaveAction>(playArea, nullptr);
+                        return ActionEventResult::COMPLETED;
+                    }
+                    else if(playArea.stateManager.historyManager.changedSinceLastSave()) {
+                        starter.start<FileSaveAction>(playArea, playArea.mainWindow.getFilePath());
+                        return ActionEventResult::COMPLETED;
+                    }
                 }
                 break;
             default:

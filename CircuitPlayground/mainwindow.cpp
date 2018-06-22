@@ -136,7 +136,7 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
 
 void MainWindow::updateTitleBar() {
-    std::string title = ((unsaved) ? "* " : "") + (fileName.empty() ? "" : fileName + " ");
+    std::string title = ((unsaved) ? "* " : "") + (filePath.empty() ? "" : getFileName(filePath.c_str()) + " "s);
     if (title.empty()) title = "Circuit Playground";
     else {
         title += u8"\u2013 Circuit Playground";
@@ -343,14 +343,18 @@ void MainWindow::setUnsaved(bool unsaved) {
 
 
 void MainWindow::setFilePath(const char* filePath) {
-    const char* fileName = getFileName(filePath);
-    if (this->fileName != fileName) {
-        this->fileName = fileName;
+    if (this->filePath != filePath) {
+        this->filePath = filePath;
         updateTitleBar();
     }
 }
 
 
+const char* MainWindow::getFilePath() const {
+    return filePath.empty() ? nullptr : filePath.c_str();
+}
+
+
 bool MainWindow::hasFilePath() const {
-    return !fileName.empty();
+    return !filePath.empty();
 }

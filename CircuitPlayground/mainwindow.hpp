@@ -41,7 +41,7 @@ private:
     int logicalMultiplier = 1; // logical size = size in device-independent virtual pixels
     // (physical size) = (logical size) * physicalMultiplier / logicalMultiplier
 
-    std::string fileName; // empty string for untitled
+    std::string filePath; // empty string for untitled
     bool unsaved = false; // whether there are unsaved changes
 
     std::optional<size_t> activeInputHandleIndex;
@@ -135,6 +135,11 @@ public:
      * Set the file path
      */
     void setFilePath(const char* filePath);
+
+    /**
+     * Get the file path
+     */
+    const char* getFilePath() const;
 
     /**
     * Check whether file path has been set
