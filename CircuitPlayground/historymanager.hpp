@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <optional>
+#include <utility>
 #include "canvasstate.hpp"
 #include "point.hpp"
 
@@ -15,7 +16,7 @@ private:
     // distance of currentHistoryState from the last saved state in history
     // 0 if currentHistoryState is the same as the last saved state
     // std::nullopt if it's not possible to reach the last saved state using undo/redo
-    std::optional<int32_t> saveDistance = 0;
+    std::optional<size_t> saveDistance = 0;
 
 public:
     void saveToHistory(const CanvasState& state, const extensions::point& deltaTrans) {
@@ -28,8 +29,9 @@ public:
             if (*saveDistance < 0) {
                 // it's impossible to reach the original state
                 saveDistance = std::nullopt;
-            } else {
-                saveDistance = *saveDistance + 1;
+            }
+            else {
+                ++*saveDistance;
             }
         }
 
@@ -49,7 +51,7 @@ public:
         redoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
         state = currentHistoryState = std::move(canvasState);
 
-        if (saveDistance) saveDistance = *saveDistance - 1;
+        if (saveDistance) --*saveDistance;
 
         return tmpDeltaTrans;
     }
@@ -62,7 +64,7 @@ public:
         undoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
         state = currentHistoryState = std::move(canvasState);
 
-        if (saveDistance) saveDistance = *saveDistance + 1;
+        if (saveDistance) ++*saveDistance;
 
         return tmpDeltaTrans;
     }
@@ -97,7 +99,7 @@ public:
      * returns whether currentHistoryState has changed since the game was last saved
      */
     bool changedSinceLastSave() const {
-        return !(saveDistance && saveDistance == 0);
+        return saveDistance != 0;
     }
 
     /**
