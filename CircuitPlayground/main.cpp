@@ -13,6 +13,7 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <gtk/gtk.h>
 
 #include "mainwindow.hpp"
 
@@ -29,6 +30,10 @@ struct InitGuard {
         if (TTF_Init() != 0) {
             throw std::runtime_error("TTF_Init() failed:  "s + TTF_GetError());
         }
+
+        #if defined(__linux__)
+        gtk_init_check(nullptr, nullptr); // TODO: modify NFD to have a NFD_Init() and NFD_Quit() like SDL
+        #endif
     }
     ~InitGuard() {
         TTF_Quit();
