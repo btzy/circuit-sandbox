@@ -120,12 +120,11 @@ public:
                     if (modifiers & KMOD_SHIFT) {
                         // force "Save As" dialog
                         starter.start<FileSaveAction>(playArea, nullptr);
-                        return ActionEventResult::COMPLETED;
                     }
                     else if(playArea.stateManager.historyManager.changedSinceLastSave()) {
                         starter.start<FileSaveAction>(playArea, playArea.mainWindow.getFilePath());
-                        return ActionEventResult::COMPLETED;
                     }
+                    return ActionEventResult::COMPLETED;
                 }
                 break;
             default:
