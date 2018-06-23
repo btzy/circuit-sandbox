@@ -1,15 +1,20 @@
 #pragma once
 
 #include <boost/logic/tribool.hpp>
-#include "baseaction.hpp"
+#include "action.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 
 /**
- * Represents an action that needs to stop the simulator, make edits, then restart the simulator
+ * Represents an action that needs to stop the simulator, make edits, then restart the simulator.
+ * An edit action is the fundamental unit of change that the user can make on the canvas state.
+ * When an edit action is started, the simulator will stop.
+ * An edit action may modify defaultState and deltaTrans arbitrarily during the action,
+ * but it should take care that rendering is done properly, because by default rendering uses defaultState.
+ * It is guaranteed that defaultState and deltaTrans will not be used by any other code (apart from rendering) when an action is in progress.
  */
 
-class EditAction : public BaseAction {
+class EditAction : public Action {
 
 protected:
     extensions::point deltaTrans;

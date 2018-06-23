@@ -1,6 +1,6 @@
 #pragma once
 
-#include "baseaction.hpp"
+#include "action.hpp"
 #include "playarea.hpp"
 
 class HistoryAction final : public EditAction {

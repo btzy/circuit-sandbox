@@ -3,12 +3,12 @@
 #include <boost/process/spawn.hpp>
 #include <SDL.h>
 
-#include "baseaction.hpp"
+#include "action.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
 
-class FileNewAction final : public BaseAction {
+class FileNewAction final : public Action {
 public:
     FileNewAction(PlayArea& playArea) {
         boost::process::spawn(playArea.mainWindow.processName);

@@ -296,7 +296,7 @@ public:
 
         extensions::point newMin = min(secondTrans, firstTrans);
         extensions::point newMax = max(secondTrans + second.size(), firstTrans + first.size());
-        
+
         CanvasState newState;
         if (firstTrans == newMin && firstTrans + first.size() == newMax) {
             // optimization when `first` totally contains `second`; we can use the old matrix

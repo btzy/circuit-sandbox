@@ -9,13 +9,13 @@
 #include <nfd.h>
 
 #include "visitor.hpp"
-#include "baseaction.hpp"
+#include "action.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 
-class FileSaveAction final : public BaseAction {
+class FileSaveAction final : public Action {
 private:
     enum class WriteResult : char {
         OK,
@@ -68,11 +68,11 @@ private:
 
 public:
     FileSaveAction(PlayArea& playArea, const char* filePath = nullptr) {
-        
+
         // stop the simulator if running
         bool simulatorRunning = playArea.stateManager.simulator.running();
         if (simulatorRunning) playArea.stateManager.simulator.stop();
-        
+
         char* properPath = nullptr;
         char* outPath = nullptr;
         if (filePath == nullptr) {

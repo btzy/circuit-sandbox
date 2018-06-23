@@ -1,4 +1,4 @@
-#include "action.hpp"
+#include "actionmanager.hpp"
 #include "selectionaction.hpp"
 #include "historyaction.hpp"
 #include "pencilaction.hpp"
@@ -7,7 +7,7 @@
 #include "filesaveaction.hpp"
 
 
-bool Action::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
+bool ActionManager::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     return forwardEvent([&, this]() {
         return data->processMouseButtonDown(event);
     }, [&, this]() {
@@ -21,7 +21,7 @@ bool Action::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     });
 }
 
-bool Action::processMouseDrag(const SDL_MouseMotionEvent& event) {
+bool ActionManager::processMouseDrag(const SDL_MouseMotionEvent& event) {
     return forwardEvent([&, this]() {
         return data->processMouseDrag(event);
     }, [&, this]() {
@@ -35,7 +35,7 @@ bool Action::processMouseDrag(const SDL_MouseMotionEvent& event) {
     });
 }
 
-bool Action::processMouseButtonUp() {
+bool ActionManager::processMouseButtonUp() {
     return forwardEvent([&, this]() {
         return data->processMouseButtonUp();
     }, [&, this]() {
@@ -51,7 +51,7 @@ bool Action::processMouseButtonUp() {
 
 // should we expect the mouse to be in the playarea?
 // returns true if the event was consumed, false otherwise
-bool Action::processMouseWheel(const SDL_MouseWheelEvent& event) {
+bool ActionManager::processMouseWheel(const SDL_MouseWheelEvent& event) {
     return forwardEvent([&, this]() {
         return data->processMouseWheel(event);
     }, [&, this]() {
@@ -66,7 +66,7 @@ bool Action::processMouseWheel(const SDL_MouseWheelEvent& event) {
 }
 
 // returns true if the event was consumed, false otherwise
-bool Action::processKeyboard(const SDL_KeyboardEvent& event) {
+bool ActionManager::processKeyboard(const SDL_KeyboardEvent& event) {
     return forwardEvent([&, this]() {
         return data->processKeyboard(event);
     }, [&, this]() {
@@ -80,12 +80,12 @@ bool Action::processKeyboard(const SDL_KeyboardEvent& event) {
     });
 }
 
-bool Action::disableDefaultRender() const {
+bool ActionManager::disableDefaultRender() const {
     return data->disableDefaultRender();
 }
-void Action::renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {
+void ActionManager::renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {
     data->renderSurface(pixelBuffer, renderRect);
 }
-void Action::renderDirect(SDL_Renderer* renderer) const {
+void ActionManager::renderDirect(SDL_Renderer* renderer) const {
     data->renderDirect(renderer);
 }

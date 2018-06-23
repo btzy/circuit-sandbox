@@ -9,7 +9,7 @@
 #include "drawable.hpp"
 #include "statemanager.hpp"
 #include "point.hpp"
-#include "action.hpp"
+#include "actionmanager.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -39,7 +39,7 @@ private:
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
-    Action currentAction;
+    ActionManager currentAction;
 
 
     friend class EditAction;

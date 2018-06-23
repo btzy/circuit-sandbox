@@ -72,7 +72,7 @@ void Simulator::step() {
     // since the simulator is stopped, we can read from latestCompleteState without synchronization.
     const CanvasState& oldState = *latestCompleteState;
     CanvasState newState;
-    
+
     // calculate the new state
     calculate(oldState, newState);
 
@@ -98,7 +98,7 @@ void Simulator::takeSnapshot(CanvasState& returnState) const {
 void Simulator::run() {
     // set the next step time to now
     nextStepTime = std::chrono::steady_clock::now();
-    
+
     while (true) {
         // note: we just use the member field 'latestCompleteState' directly without any synchronization,
         // because when the simulator thread is running, no other thread will modify 'latestCompleteState'.

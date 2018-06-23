@@ -10,13 +10,13 @@
 #include <SDL.h>
 #include <nfd.h>
 
-#include "baseaction.hpp"
+#include "action.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 
-class FileOpenAction final : public BaseAction {
+class FileOpenAction final : public Action {
 private:
     enum class ReadResult : char {
         OK,
