@@ -30,9 +30,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-
-
-MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), processName(processName), interfaceFont(nullptr) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -71,14 +69,44 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
         SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
     }
 
+    // load fonts
+    updateFonts();
+
     // do the layout
     layoutComponents();
 }
 
 
 MainWindow::~MainWindow() {
+    if (interfaceFont != nullptr) {
+        TTF_CloseFont(interfaceFont);
+    }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+}
+
+
+void MainWindow::updateFonts() {
+    if (interfaceFont != nullptr) {
+        TTF_CloseFont(interfaceFont);
+        interfaceFont = nullptr;
+    }
+    {
+        char* cwd = SDL_GetBasePath();
+        if (cwd == nullptr) {
+            throw std::runtime_error("SDL_GetBasePath() failed:  "s + SDL_GetError());
+        }
+        const char* font_name = "OpenSans-Bold.ttf";
+        char* font_path = new char[std::strlen(cwd) + std::strlen(font_name) + 1];
+        std::strcpy(font_path, cwd);
+        std::strcat(font_path, font_name);
+        SDL_free(cwd);
+        interfaceFont = TTF_OpenFont(font_path, logicalToPhysicalSize(12));
+        delete[] font_path;
+    }
+    if (interfaceFont == nullptr) {
+        throw std::runtime_error("TTF_OpenFont() failed:  "s + TTF_GetError());
+    }
 }
 
 
@@ -120,6 +148,9 @@ bool MainWindow::updateDpiFields(bool useWindow) {
     bool fields_changed = tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
 
     if (fields_changed) {
+        // update font sizes
+        updateFonts();
+
         // tell the components to update their cached sizes
         playArea.updateDpi();
         toolbox.updateDpi();

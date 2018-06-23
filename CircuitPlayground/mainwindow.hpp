@@ -9,6 +9,7 @@
 #include <array>
 
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "declarations.hpp"
 #include "toolbox.hpp"
@@ -78,6 +79,11 @@ private:
     bool updateDpiFields(bool useWindow = true);
 
     /**
+     * Update fonts
+     */
+    void updateFonts();
+
+    /**
      * Update the title bar (uses the unsaved flag and the file name)
      */
     void updateTitleBar();
@@ -88,7 +94,8 @@ public:
     SDL_Window* window;
     SDL_Renderer* renderer;
 
-
+    // fonts (loaded in constructor and closed in destructor)
+    TTF_Font* interfaceFont;
 
 
     /**

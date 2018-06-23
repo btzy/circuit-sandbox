@@ -32,26 +32,6 @@ void Toolbox::render(SDL_Renderer* renderer) const {
     SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
     SDL_RenderDrawRect(renderer, &renderArea);
 
-    // load the font (TODO: this should be made so that we don't load the font at every render call)
-    TTF_Font* button_font;
-    {
-        char* cwd = SDL_GetBasePath();
-        if (cwd == nullptr) {
-            throw std::runtime_error("SDL_GetBasePath() failed:  "s + SDL_GetError());
-        }
-        const char* font_name = "OpenSans-Bold.ttf";
-        char* font_path = new char[std::strlen(cwd) + std::strlen(font_name) + 1];
-        std::strcpy(font_path, cwd);
-        std::strcat(font_path, font_name);
-        SDL_free(cwd);
-        button_font = TTF_OpenFont(font_path, mainWindow.logicalToPhysicalSize(12));
-        delete[] font_path;
-    }
-    if (button_font == nullptr) {
-        throw std::runtime_error("TTF_OpenFont() failed:  "s + TTF_GetError());
-    }
-
-
 
     // draw the selection rectangles
     for (size_t i = 0; i != NUM_INPUT_HANDLES; ++i) {
@@ -64,7 +44,7 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
 
     // draw the buttons to the screen one-by-one
-    tool_tags_t::for_each([this, renderer, button_font](const auto tool_tag, const auto index_tag) {
+    tool_tags_t::for_each([this, &renderer](const auto tool_tag, const auto index_tag) {
         // 'Tool' is the type of tool (e.g. ConductiveWire)
         using Tool = typename decltype(tool_tag)::type;
         // 'index' is the index of this element inside the tool_tags_t
@@ -85,7 +65,7 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
         // Render the text
         {
-            SDL_Surface* surface = TTF_RenderText_Shaded(button_font, Tool::displayName, Tool::displayColor, backgroundColorForText);
+            SDL_Surface* surface = TTF_RenderText_Shaded(this->mainWindow.interfaceFont, Tool::displayName, Tool::displayColor, backgroundColorForText);
             SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
             int textureWidth, textureHeight;
@@ -96,10 +76,6 @@ void Toolbox::render(SDL_Renderer* renderer) const {
             SDL_DestroyTexture(texture);
         }
     });
-
-
-    // free the font so we don't leak memory
-    TTF_CloseFont(button_font);
 }
 
 
