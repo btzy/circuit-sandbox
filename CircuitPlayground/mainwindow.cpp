@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include <string>
+#include <cstring>
 #include <numeric>
 #include <algorithm>
 
@@ -30,7 +30,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), processName(processName), interfaceFont(nullptr) {
+MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), interfaceFont(nullptr), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
