@@ -3,6 +3,7 @@
 #include <SDL.h>
 #include "point.hpp"
 #include "visitor.hpp"
+#include "drawing.hpp"
 #include "canvasaction.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
@@ -318,23 +319,39 @@ public:
 
     // rendering function, render the selection rectangle if it exists
     void renderDirect(SDL_Renderer* renderer) const override {
-        if (state == State::SELECTING) {
-            // normalize supplied points
-            extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);
-            extensions::point bottomRight = extensions::max(selectionOrigin, selectionEnd) + extensions::point{ 1, 1 };
+        switch (state) {
+        case State::SELECTING:
+            {
+                // normalize supplied points
+                extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);
+                extensions::point bottomRight = extensions::max(selectionOrigin, selectionEnd) + extensions::point{ 1, 1 };
 
+                SDL_Rect selectionArea{
+                    topLeft.x * playArea.scale + playArea.translation.x,
+                    topLeft.y * playArea.scale + playArea.translation.y,
+                    (bottomRight.x - topLeft.x) * playArea.scale,
+                    (bottomRight.y - topLeft.y) * playArea.scale
+                };
 
-            SDL_Rect selectionArea{
-                topLeft.x * playArea.scale + playArea.translation.x,
-                topLeft.y * playArea.scale + playArea.translation.y,
-                (bottomRight.x - topLeft.x) * playArea.scale,
-                (bottomRight.y - topLeft.y) * playArea.scale
-            };
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                extensions::renderDrawDashedRect(renderer, &selectionArea);
+            }
+            break;
+        case State::SELECTED:
+            [[fallthrough]]
+        case State::MOVING:
+            {
+                SDL_Rect selectionArea{
+                    selectionTrans.x * playArea.scale + playArea.translation.x,
+                    selectionTrans.y * playArea.scale + playArea.translation.y,
+                    selection.width() * playArea.scale,
+                    selection.height() * playArea.scale
+                };
 
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
-            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
-            SDL_RenderFillRect(renderer, &selectionArea);
-            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                extensions::renderDrawDashedRect(renderer, &selectionArea);
+            }
+            break;
         }
     }
 };
