@@ -45,6 +45,7 @@ private:
     friend class EditAction;
     friend class SaveableAction;
     template <typename T> friend class PencilAction;
+    friend class EyedropperAction;
     friend class SelectionAction;
     friend class HistoryAction;
     friend class FileOpenAction;

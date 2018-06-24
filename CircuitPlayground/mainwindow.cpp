@@ -135,7 +135,7 @@ bool MainWindow::updateDpiFields(bool useWindow) {
     default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
 #endif
 
-                      // use gcd, so the multipliers don't become too big
+    // use gcd, so the multipliers don't become too big
     int gcd = std::gcd(dpi, default_dpi);
 
     int tmp_physicalMultiplier = physicalMultiplier;
@@ -387,4 +387,17 @@ const char* MainWindow::getFilePath() const {
 
 bool MainWindow::hasFilePath() const {
     return !filePath.empty();
+}
+
+void MainWindow::bindTool(size_t inputHandleIndex, size_t tool_index) {
+    auto it = std::find(selectedToolIndices, selectedToolIndices + NUM_INPUT_HANDLES, tool_index);
+    if (it == selectedToolIndices + NUM_INPUT_HANDLES) {
+        // cannot find an existing handle
+        selectedToolIndices[inputHandleIndex] = tool_index;
+    }
+    else {
+        // can find an existing handle
+        using std::swap;
+        swap(selectedToolIndices[inputHandleIndex], *it);
+    }
 }

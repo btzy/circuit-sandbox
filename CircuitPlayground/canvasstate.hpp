@@ -34,6 +34,7 @@ private:
 
     friend class StateManager;
     friend class Simulator;
+    friend class EyedropperAction;
     friend class FileOpenAction;
     friend class FileSaveAction;
 

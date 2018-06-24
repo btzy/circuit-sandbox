@@ -1,4 +1,5 @@
 #include "actionmanager.hpp"
+#include "eyedropperaction.hpp"
 #include "selectionaction.hpp"
 #include "historyaction.hpp"
 #include "pencilaction.hpp"

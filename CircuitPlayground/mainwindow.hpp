@@ -149,9 +149,14 @@ public:
     const char* getFilePath() const;
 
     /**
-    * Check whether file path has been set
-    */
+     * Check whether file path has been set
+     */
     bool hasFilePath() const;
+
+    /**
+     * Bind a tool to an input handle. If there is already a handle bound to the tool, swap the handles.
+     */
+    void bindTool(size_t inputHandleIndex, size_t tool_index);
 
     /**
      * DPI conversion functions

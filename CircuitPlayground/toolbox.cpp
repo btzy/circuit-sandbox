@@ -117,20 +117,8 @@ void Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     // check if the mouse is on the button spacing instead of on the actual button
     if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;
 
-    // if there is already a handle binded to this tool, then swap the handles
-    auto it = std::find(mainWindow.selectedToolIndices, mainWindow.selectedToolIndices + NUM_INPUT_HANDLES, index);
-    if (it == mainWindow.selectedToolIndices + NUM_INPUT_HANDLES) {
-        // cannot find an existing handle
-        mainWindow.selectedToolIndices[resolveInputHandleIndex(event)] = index;
-    }
-    else {
-        // can find an existing handle
-        using std::swap;
-        swap(mainWindow.selectedToolIndices[resolveInputHandleIndex(event)], *it);
-    }
-
+    mainWindow.bindTool(resolveInputHandleIndex(event), index);
 }
-
 
 void Toolbox::processMouseLeave() {
     mouseoverToolIndex = MainWindow::EMPTY_INDEX;
