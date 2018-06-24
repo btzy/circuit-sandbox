@@ -4,9 +4,6 @@
 
 #include <SDL.h>
 
-#include "tag_tuple.hpp"
-#include "point.hpp"
-
 #include "declarations.hpp"
 
 #include "action.hpp"

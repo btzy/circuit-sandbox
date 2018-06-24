@@ -10,7 +10,7 @@
  * The size of the 2d array can be set at runtime, but it is not growable.
  */
 
-namespace extensions {
+namespace ext {
 
     template <typename T>
     class heap_matrix {
@@ -81,7 +81,7 @@ namespace extensions {
             }
         }
 
-        heap_matrix(const extensions::point& size) : heap_matrix(size.x, size.y) {}
+        heap_matrix(const ext::point& size) : heap_matrix(size.x, size.y) {}
 
         /**
          * returns true if the matrix is empty (i.e. has no width and height)
@@ -114,14 +114,14 @@ namespace extensions {
         /**
          * returns the size of the matrix
          */
-        extensions::point size() const noexcept {
+        ext::point size() const noexcept {
             return { _width, _height };
         }
 
         /**
          * returns true if the point is within the bounds of the matrix
          */
-        bool contains(const extensions::point& pt) const noexcept {
+        bool contains(const ext::point& pt) const noexcept {
             return 0 <= pt.x&& pt.x < _width && 0 <= pt.y && pt.y < _height;
         }
 

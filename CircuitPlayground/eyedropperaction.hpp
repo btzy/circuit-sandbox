@@ -33,8 +33,8 @@ public:
     ~EyedropperAction() {}
 
     static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
-        extensions::point physicalOffset = extensions::point{ event.x, event.y } - extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-        extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+        ext::point physicalOffset = ext::point{ event.x, event.y } - ext::point{ playArea.renderArea.x, playArea.renderArea.y };
+        ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
         size_t inputHandleIndex = resolveInputHandleIndex(event);
 
         SDL_Keymod modifiers = SDL_GetModState();

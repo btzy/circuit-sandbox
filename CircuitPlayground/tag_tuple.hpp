@@ -9,7 +9,7 @@
 #include <utility> // for std::forward
 #include <type_traits> // for std::integral_constant
 
-namespace extensions {
+namespace ext {
 
     template <typename T>
     struct tag{
@@ -20,7 +20,7 @@ namespace extensions {
     struct tag_tuple{
 
     private:
-        
+
         // Note: Verbose multiple functions for invoke is due Visual Studio choking on nested if-constexpr.
         // See https://stackoverflow.com/q/50857307/1021959
         template <size_t I, typename Callback>

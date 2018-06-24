@@ -8,7 +8,7 @@
 
 #include "integral_division.hpp"
 
-namespace extensions {
+namespace ext {
     struct point {
         int32_t x, y;
 
@@ -89,10 +89,10 @@ namespace extensions {
 
     // integral division functions
     inline point div_floor(point pt, int32_t scale) noexcept {
-        return { extensions::div_floor(pt.x, scale), extensions::div_floor(pt.y, scale) };
+        return { ext::div_floor(pt.x, scale), ext::div_floor(pt.y, scale) };
     }
     inline point div_ceil(point pt, int32_t scale) noexcept {
-        return { extensions::div_ceil(pt.x, scale), extensions::div_ceil(pt.y, scale) };
+        return { ext::div_ceil(pt.x, scale), ext::div_ceil(pt.y, scale) };
     }
 
     // top-left bound of two points

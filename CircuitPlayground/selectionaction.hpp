@@ -6,7 +6,6 @@
 #include "drawing.hpp"
 #include "canvasaction.hpp"
 #include "playarea.hpp"
-#include "mainwindow.hpp"
 
 
 /**
@@ -25,18 +24,18 @@ private:
     State state;
 
     // in State::SELECTING, selectionOrigin is the point where the mouse went down, and selectionEnd is the current point of the mouse
-    extensions::point selectionOrigin; // in canvas coordinates
-    extensions::point selectionEnd; // in canvas coordinates
+    ext::point selectionOrigin; // in canvas coordinates
+    ext::point selectionEnd; // in canvas coordinates
 
     // when entering State::SELECTED these will be set; after that these will not be modified
     CanvasState selection; // stores the selection
 
     // in State::SELECTED and State::MOVING, these are the translations of selection and base, relative to defaultState
-    extensions::point selectionTrans; // in canvas coordinates
-    extensions::point baseTrans; // in canvas coordinates
+    ext::point selectionTrans; // in canvas coordinates
+    ext::point baseTrans; // in canvas coordinates
 
     // in State::MOVING, this was the previous point of the mouse
-    extensions::point moveOrigin; // in canvas coordinates
+    ext::point moveOrigin; // in canvas coordinates
 
     inline static CanvasState clipboard; // the single clipboard; will be changed to support multi-clipboard
 
@@ -47,13 +46,13 @@ private:
         CanvasState& base = canvas();
 
         // normalize supplied points
-        extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);
-        extensions::point bottomRight = extensions::max(selectionOrigin, selectionEnd) + extensions::point{ 1, 1 };
+        ext::point topLeft = ext::min(selectionOrigin, selectionEnd);
+        ext::point bottomRight = ext::max(selectionOrigin, selectionEnd) + ext::point{ 1, 1 };
 
         // restrict selectionRect to the area within base
-        topLeft = extensions::max(topLeft, { 0, 0 });
-        bottomRight = extensions::min(bottomRight, base.size());
-        extensions::point selectionSize = bottomRight - topLeft;
+        topLeft = ext::max(topLeft, { 0, 0 });
+        bottomRight = ext::min(bottomRight, base.size());
+        ext::point selectionSize = bottomRight - topLeft;
 
         // no elements in the selection rect
         if (selectionSize.x <= 0 || selectionSize.y <= 0) return false;
@@ -62,7 +61,7 @@ private:
         selection = base.splice(topLeft.x, topLeft.y, selectionSize.x, selectionSize.y);
 
         // shrink the selection
-        extensions::point selectionShrinkTrans = selection.shrinkDataMatrix();
+        ext::point selectionShrinkTrans = selection.shrinkDataMatrix();
 
         // no elements in the selection rect
         if (selection.empty()) return false;
@@ -101,8 +100,8 @@ public:
             if constexpr (std::is_base_of_v<Selector, Tool>) {
                 // start selection action from dragging/clicking the playarea
                 auto& action = starter.start<SelectionAction>(playArea, State::SELECTING);
-                extensions::point physicalOffset = extensions::point{ event.x, event.y } -extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-                extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+                ext::point physicalOffset = ext::point{ event.x, event.y } -ext::point{ playArea.renderArea.x, playArea.renderArea.y };
+                ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                 action.selectionEnd = action.selectionOrigin = canvasOffset;
                 return ActionEventResult::PROCESSED;
             }
@@ -129,14 +128,14 @@ public:
                 if (modifiers & KMOD_CTRL) {
                     auto& action = starter.start<SelectionAction>(playArea, State::SELECTED);
 
-                    extensions::point physicalOffset;
+                    ext::point physicalOffset;
                     SDL_GetMouseState(&physicalOffset.x, &physicalOffset.y);
-                    extensions::point canvasOffset = physicalOffset - playArea.translation;
-                    canvasOffset = extensions::div_floor(canvasOffset, playArea.scale);
+                    ext::point canvasOffset = physicalOffset - playArea.translation;
+                    canvasOffset = ext::div_floor(canvasOffset, playArea.scale);
 
                     if (!point_in_rect(physicalOffset, playArea.renderArea)) {
                         // since the mouse is not in the play area, we paste in the middle of the play area
-                        canvasOffset = extensions::div_floor(extensions::point{ playArea.renderArea.w/2, playArea.renderArea.h/2 } - playArea.translation, playArea.scale);
+                        canvasOffset = ext::div_floor(ext::point{ playArea.renderArea.w/2, playArea.renderArea.h/2 } - playArea.translation, playArea.scale);
                     }
                     action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
                     action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
@@ -150,9 +149,9 @@ public:
         return ActionEventResult::UNPROCESSED;
     }
 
-    ActionEventResult processCanvasMouseDrag(const extensions::point&, const SDL_MouseMotionEvent& event) {
+    ActionEventResult processCanvasMouseDrag(const ext::point&, const SDL_MouseMotionEvent& event) {
         // compute the canvasOffset here and restrict it to the visible area
-        extensions::point canvasOffset;
+        ext::point canvasOffset;
         canvasOffset.x = std::clamp(event.x, playArea.renderArea.x, playArea.renderArea.x + playArea.renderArea.w);
         canvasOffset.y = std::clamp(event.y, playArea.renderArea.y, playArea.renderArea.y + playArea.renderArea.h);
         canvasOffset = playArea.computeCanvasCoords(canvasOffset);
@@ -177,7 +176,7 @@ public:
         return ActionEventResult::UNPROCESSED;
     }
 
-    ActionEventResult processCanvasMouseButtonDown(const extensions::point& canvasOffset, const SDL_MouseButtonEvent& event) {
+    ActionEventResult processCanvasMouseButtonDown(const ext::point& canvasOffset, const SDL_MouseButtonEvent& event) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
         size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
 
@@ -287,7 +286,7 @@ public:
             for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y) {
                 for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x) {
                     SDL_Color computedColor{ 0, 0, 0, 0 };
-                    const extensions::point canvasPt{ x, y };
+                    const ext::point canvasPt{ x, y };
 
                     // draw base, check if the requested pixel inside the buffer
                     if (canvas().contains(canvasPt - baseTrans)) {
@@ -323,8 +322,8 @@ public:
         case State::SELECTING:
             {
                 // normalize supplied points
-                extensions::point topLeft = extensions::min(selectionOrigin, selectionEnd);
-                extensions::point bottomRight = extensions::max(selectionOrigin, selectionEnd) + extensions::point{ 1, 1 };
+                ext::point topLeft = ext::min(selectionOrigin, selectionEnd);
+                ext::point bottomRight = ext::max(selectionOrigin, selectionEnd) + ext::point{ 1, 1 };
 
                 SDL_Rect selectionArea{
                     topLeft.x * playArea.scale + playArea.translation.x,
@@ -336,7 +335,7 @@ public:
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
                 SDL_RenderDrawRect(renderer, &selectionArea);
                 SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-                extensions::renderDrawDashedRect(renderer, &selectionArea);
+                ext::renderDrawDashedRect(renderer, &selectionArea);
             }
             break;
         case State::SELECTED:
@@ -353,7 +352,7 @@ public:
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
                 SDL_RenderDrawRect(renderer, &selectionArea);
                 SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-                extensions::renderDrawDashedRect(renderer, &selectionArea);
+                ext::renderDrawDashedRect(renderer, &selectionArea);
             }
             break;
         }

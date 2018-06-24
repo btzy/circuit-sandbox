@@ -147,7 +147,7 @@ void Simulator::run() {
 void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
 
     // holds the new state after simulating this step
-    extensions::heap_matrix<ElementState> intermediateState(oldState.dataMatrix.width(), oldState.dataMatrix.height());
+    ext::heap_matrix<ElementState> intermediateState(oldState.dataMatrix.width(), oldState.dataMatrix.height());
 
     // TODO: consider having an actual element type represent an 'Empty' element, so we don't need to keep checking for std::monostate everywhere
     for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
@@ -156,7 +156,7 @@ void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
             using positive_one_t = std::integral_constant<int32_t, 1>;
             using zero_t = std::integral_constant<int32_t, 0>;
             using negative_one_t = std::integral_constant<int32_t, -1>;
-            using directions_t = extensions::tag_tuple<std::pair<zero_t, negative_one_t>, std::pair<positive_one_t, zero_t>, std::pair<zero_t, positive_one_t>, std::pair<negative_one_t, zero_t>>;
+            using directions_t = ext::tag_tuple<std::pair<zero_t, negative_one_t>, std::pair<positive_one_t, zero_t>, std::pair<zero_t, positive_one_t>, std::pair<negative_one_t, zero_t>>;
             // populate the adjacent environment for this pixel
             AdjacentEnvironment env;
             directions_t::for_each([&oldState, &env, x, y](auto direction_tag_t, auto index_t) {
@@ -210,7 +210,7 @@ void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
         bool dir[2] = { false, false }; // {horizontal, vertical}
     };
 
-    extensions::heap_matrix<Visited> visitedMatrix(oldState.dataMatrix.width(), oldState.dataMatrix.height());
+    ext::heap_matrix<Visited> visitedMatrix(oldState.dataMatrix.width(), oldState.dataMatrix.height());
 
 
     // run a flood fill algorithm
@@ -225,14 +225,14 @@ void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
             }
         }
 
-        std::stack<std::pair<extensions::point, int>> pendingVisit;
+        std::stack<std::pair<ext::point, int>> pendingVisit;
 
         // insert all the sources into the stack
         for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
             for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
                 if (intermediateState[{x, y}] == ElementState::SOURCE) {
-                    pendingVisit.emplace(std::pair<extensions::point, int>{ {x, y}, 0});
-                    pendingVisit.emplace(std::pair<extensions::point, int>{ {x, y}, 1});
+                    pendingVisit.emplace(std::pair<ext::point, int>{ {x, y}, 0});
+                    pendingVisit.emplace(std::pair<ext::point, int>{ {x, y}, 1});
                 }
             }
         }
@@ -258,7 +258,7 @@ void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
             // put all the unvisited neighbours into the stack
             using positive_one_t = std::integral_constant<int32_t, 1>;
             using negative_one_t = std::integral_constant<int32_t, -1>;
-            using directions_t = extensions::tag_tuple<negative_one_t, positive_one_t>;
+            using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
             directions_t::for_each([&pendingVisit, &oldState, &intermediateState, &visitedMatrix, currentPoint, axis](auto direction_tag_t, auto) {
                 int32_t adjX = currentPoint.x;
                 int32_t adjY = currentPoint.y;
@@ -269,7 +269,7 @@ void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
                     adjY += decltype(direction_tag_t)::type::value;
                 }
 
-                extensions::point newPoint{ adjX, adjY };
+                ext::point newPoint{ adjX, adjY };
 
                 if (oldState.contains(newPoint) &&
                     intermediateState[newPoint] != ElementState::INSULATOR &&

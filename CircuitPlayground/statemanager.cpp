@@ -23,7 +23,7 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32
     for (int32_t y = top; y != top + height; ++y) {
         for (int32_t x = left; x != left + width; ++x) {
             uint32_t color = 0;
-            const extensions::point canvasPt{ x, y };
+            const ext::point canvasPt{ x, y };
 
             // check if the requested pixel is inside the buffer
             if (defaultState.contains(canvasPt)) {

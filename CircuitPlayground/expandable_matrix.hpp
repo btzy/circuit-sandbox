@@ -10,12 +10,12 @@
 #include <limits>
 #include "heap_matrix.hpp"
 
-namespace extensions {
+namespace ext {
 
     class expandable_bool_matrix {
     private:
 
-        using matrix_t = extensions::heap_matrix<bool>;
+        using matrix_t = ext::heap_matrix<bool>;
 
         matrix_t dataMatrix;
 
@@ -23,7 +23,7 @@ namespace extensions {
         * Modifies the dataMatrix so that the x and y will be within the matrix.
         * Returns the translation that should be applied on {x,y}.
         */
-        extensions::point prepareDataMatrixForAddition(const extensions::point& pt) {
+        ext::point prepareDataMatrixForAddition(const ext::point& pt) {
             if (dataMatrix.empty()) {
                 // special case for empty matrix
                 dataMatrix = matrix_t(1, 1);
@@ -35,14 +35,14 @@ namespace extensions {
                 return { 0, 0 }; // no preparation or translation needed
             }
 
-            extensions::point min_pt = extensions::min(pt, { 0, 0 });
-            extensions::point max_pt = extensions::max(pt + extensions::point{ 1, 1 }, dataMatrix.size());
-            extensions::point translation = -min_pt;
-            extensions::point new_size = max_pt + translation;
+            ext::point min_pt = ext::min(pt, { 0, 0 });
+            ext::point max_pt = ext::max(pt + ext::point{ 1, 1 }, dataMatrix.size());
+            ext::point translation = -min_pt;
+            ext::point new_size = max_pt + translation;
 
             matrix_t new_matrix(new_size);
             new_matrix.fill(false);
-            extensions::move_range(dataMatrix, new_matrix, 0, 0, translation.x, translation.y, dataMatrix.width(), dataMatrix.height());
+            ext::move_range(dataMatrix, new_matrix, 0, 0, translation.x, translation.y, dataMatrix.width(), dataMatrix.height());
 
             dataMatrix = std::move(new_matrix);
 
@@ -54,7 +54,7 @@ namespace extensions {
         * As an optimization, will only shrink if {x,y} is along a border.
         * Returns the translation that should be applied on {x,y}.
         */
-        extensions::point shrinkDataMatrix(const extensions::point& pt) {
+        ext::point shrinkDataMatrix(const ext::point& pt) {
 
             if (pt.x > 0 && pt.x + 1 < dataMatrix.width() && pt.y > 0 && pt.y + 1 < dataMatrix.height()) { // check if not on the border
                 return { 0, 0 }; // no preparation or translation needed
@@ -66,7 +66,7 @@ namespace extensions {
         /**
         * Shrink with no optimization.
         */
-        extensions::point shrinkDataMatrix() {
+        ext::point shrinkDataMatrix() {
 
             // we simply iterate the whole matrix to get the min and max values
             int32_t x_min = std::numeric_limits<int32_t>::max();
@@ -104,7 +104,7 @@ namespace extensions {
             int32_t new_height = y_max + 1 - y_min;
 
             matrix_t new_matrix(new_width, new_height);
-            extensions::move_range(dataMatrix, new_matrix, x_min, y_min, 0, 0, new_width, new_height);
+            ext::move_range(dataMatrix, new_matrix, x_min, y_min, 0, 0, new_width, new_height);
 
             dataMatrix = std::move(new_matrix);
 
@@ -118,7 +118,7 @@ namespace extensions {
         * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
         * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
         */
-        std::pair<bool, extensions::point> changePixelState(extensions::point pt, bool newValue) {
+        std::pair<bool, ext::point> changePixelState(ext::point pt, bool newValue) {
             // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
             if (!newValue) {
@@ -136,7 +136,7 @@ namespace extensions {
             }
             else {
                 // Element is not std::monostate, so we might need to expand the matrix size first
-                extensions::point translation = prepareDataMatrixForAddition(pt);
+                ext::point translation = prepareDataMatrixForAddition(pt);
                 pt += translation;
 
                 if (dataMatrix[pt] != newValue) {
@@ -155,7 +155,7 @@ namespace extensions {
         * @pre indices must be within the bounds of width and height
         * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
         */
-        bool& operator[](const extensions::point& indices) noexcept {
+        bool& operator[](const ext::point& indices) noexcept {
             return dataMatrix[indices];
         }
 
@@ -164,7 +164,7 @@ namespace extensions {
         * @pre indices must be within the bounds of width and height
         * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
         */
-        const bool& operator[](const extensions::point& indices) const noexcept {
+        const bool& operator[](const ext::point& indices) const noexcept {
             return dataMatrix[indices];
         }
 
@@ -193,7 +193,7 @@ namespace extensions {
         /**
          * returns the size of the matrix
          */
-        extensions::point size() const noexcept {
+        ext::point size() const noexcept {
             return dataMatrix.size();
         }
 

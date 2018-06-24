@@ -26,16 +26,16 @@ private:
     StateManager stateManager;
 
     // translation (in physical pixels)
-    extensions::point translation{ 0, 0 };
+    ext::point translation{ 0, 0 };
 
     // length (in physical pixels) of each element; changes with zoom level
     int32_t scale = 20;
 
     // point that is being mouseovered
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
-    std::optional<extensions::point> mouseoverPoint;
+    std::optional<ext::point> mouseoverPoint;
 
-    std::optional<extensions::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
+    std::optional<ext::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
@@ -88,13 +88,13 @@ public:
     virtual void processMouseWheel(const SDL_MouseWheelEvent&) override;
     virtual void processKeyboard(const SDL_KeyboardEvent&) override;
 
-    extensions::point computeCanvasCoords(extensions::point physicalOffset) const {
+    ext::point computeCanvasCoords(ext::point physicalOffset) const {
 
         // translation:
-        extensions::point offset = physicalOffset - translation;
+        ext::point offset = physicalOffset - translation;
 
         // scaling:
-        return extensions::div_floor(offset, scale);
+        return ext::div_floor(offset, scale);
     }
 
     /**

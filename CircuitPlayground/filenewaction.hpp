@@ -5,8 +5,6 @@
 
 #include "action.hpp"
 #include "playarea.hpp"
-#include "mainwindow.hpp"
-#include "canvasstate.hpp"
 
 class FileNewAction final : public Action {
 public:

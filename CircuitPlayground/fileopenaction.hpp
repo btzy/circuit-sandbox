@@ -12,7 +12,6 @@
 
 #include "action.hpp"
 #include "playarea.hpp"
-#include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 

@@ -23,12 +23,12 @@ private:
 
     // the possible elements that a pixel can represent
     // std::monostate is a 'default' state, which represents an empty pixel
-    using element_tags_t = extensions::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+    using element_tags_t = ext::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
     static_assert(element_tags_t::size <= (static_cast<size_t>(1) << (std::numeric_limits<uint8_t>::digits - 2)), "Number of elements cannot exceed number of available bits in file format.");
 
     using element_variant_t = element_tags_t::instantiate<std::variant>;
 
-    using matrix_t = extensions::heap_matrix<element_variant_t>;
+    using matrix_t = ext::heap_matrix<element_variant_t>;
 
     matrix_t dataMatrix;
 
@@ -42,7 +42,7 @@ private:
      * Modifies the dataMatrix so that the x and y will be within the matrix.
      * Returns the translation that should be applied on {x,y}.
      */
-    extensions::point prepareDataMatrixForAddition(const extensions::point& pt) {
+    ext::point prepareDataMatrixForAddition(const ext::point& pt) {
         if (dataMatrix.empty()) {
             // special case for empty matrix
             dataMatrix = matrix_t(1, 1);
@@ -53,13 +53,13 @@ private:
             return { 0, 0 }; // no preparation or translation needed
         }
 
-        extensions::point min_pt = extensions::min(pt, { 0, 0 });
-        extensions::point max_pt = extensions::min(pt + extensions::point{ 1, 1 }, dataMatrix.size());
-        extensions::point translation = -min_pt;
-        extensions::point new_size = max_pt + translation;
+        ext::point min_pt = ext::min(pt, { 0, 0 });
+        ext::point max_pt = ext::min(pt + ext::point{ 1, 1 }, dataMatrix.size());
+        ext::point translation = -min_pt;
+        ext::point new_size = max_pt + translation;
 
         matrix_t new_matrix(new_size);
-        extensions::move_range(dataMatrix, new_matrix, 0, 0, translation.x, translation.y, dataMatrix.width(), dataMatrix.height());
+        ext::move_range(dataMatrix, new_matrix, 0, 0, translation.x, translation.y, dataMatrix.width(), dataMatrix.height());
 
         dataMatrix = std::move(new_matrix);
 
@@ -71,7 +71,7 @@ private:
      * As an optimization, will only shrink if {x,y} is along a border.
      * Returns the translation that should be applied on {x,y}.
      */
-    extensions::point shrinkDataMatrix(const extensions::point& pt) {
+    ext::point shrinkDataMatrix(const ext::point& pt) {
 
         if (pt.x > 0 && pt.x + 1 < dataMatrix.width() && pt.y > 0 && pt.y + 1 < dataMatrix.height()) { // check if not on the border
             return { 0, 0 }; // no preparation or translation needed
@@ -85,7 +85,7 @@ public:
     /**
      * Shrink with no optimization.
      */
-    extensions::point shrinkDataMatrix() {
+    ext::point shrinkDataMatrix() {
 
         // we simply iterate the whole matrix to get the min and max values
         int32_t x_min = std::numeric_limits<int32_t>::max();
@@ -123,7 +123,7 @@ public:
         int32_t new_height = y_max + 1 - y_min;
 
         matrix_t new_matrix(new_width, new_height);
-        extensions::move_range(dataMatrix, new_matrix, x_min, y_min, 0, 0, new_width, new_height);
+        ext::move_range(dataMatrix, new_matrix, x_min, y_min, 0, 0, new_width, new_height);
 
         dataMatrix = std::move(new_matrix);
 
@@ -136,7 +136,7 @@ public:
      * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
      */
     template <typename Element>
-    std::pair<bool, extensions::point> changePixelState(extensions::point pt) {
+    std::pair<bool, ext::point> changePixelState(ext::point pt) {
         // note that this function performs linearly to the size of the matrix.  But since this is limited by how fast the user can click, it should be good enough
 
         if constexpr (std::is_same_v<std::monostate, Element>) {
@@ -154,7 +154,7 @@ public:
         }
         else {
             // Element is not std::monostate, so we might need to expand the matrix size first
-            extensions::point translation = prepareDataMatrixForAddition(pt);
+            ext::point translation = prepareDataMatrixForAddition(pt);
             pt += translation;
 
             if (!std::holds_alternative<Element>(dataMatrix[pt])) {
@@ -173,7 +173,7 @@ public:
      * @pre indices must be within the bounds of width and height
      * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
      */
-    element_variant_t& operator[](const extensions::point& indices) noexcept {
+    element_variant_t& operator[](const ext::point& indices) noexcept {
         return dataMatrix[indices];
     }
 
@@ -182,7 +182,7 @@ public:
      * @pre indices must be within the bounds of width and height
      * For a version that does bounds checking and expansion/contraction of the underlying matrix, use changePixelState
      */
-    const element_variant_t& operator[](const extensions::point& indices) const noexcept {
+    const element_variant_t& operator[](const ext::point& indices) const noexcept {
         return dataMatrix[indices];
     }
 
@@ -211,31 +211,31 @@ public:
     /**
      * returns the size of the matrix
      */
-    extensions::point size() const noexcept {
+    ext::point size() const noexcept {
         return dataMatrix.size();
     }
 
     /**
     * returns true if the point is within the bounds of the matrix
     */
-    bool contains(const extensions::point& pt) const noexcept {
+    bool contains(const ext::point& pt) const noexcept {
         return dataMatrix.contains(pt);
     }
 
     /**
      * grow the underlying matrix to a larger size
      */
-    extensions::point extend(const extensions::point& topLeft, const extensions::point& bottomRight) {
-        extensions::point newTopLeft = empty() ? topLeft : min(topLeft, { 0, 0 });
-        extensions::point newBottomRight = empty() ? bottomRight : max(bottomRight, size());
-        if (newTopLeft == extensions::point{ 0, 0 } && newBottomRight == size()) {
+    ext::point extend(const ext::point& topLeft, const ext::point& bottomRight) {
+        ext::point newTopLeft = empty() ? topLeft : min(topLeft, { 0, 0 });
+        ext::point newBottomRight = empty() ? bottomRight : max(bottomRight, size());
+        if (newTopLeft == ext::point{ 0, 0 } && newBottomRight == size()) {
             // optimization if we don't actually need to expand the current matrix
             return { 0, 0 };
         }
         else {
-            extensions::point newSize = newBottomRight - newTopLeft;
+            ext::point newSize = newBottomRight - newTopLeft;
             matrix_t newMatrix(newSize);
-            if (!empty()) extensions::move_range(dataMatrix, newMatrix, 0, 0, -newTopLeft.x, -newTopLeft.y, width(), height());
+            if (!empty()) ext::move_range(dataMatrix, newMatrix, 0, 0, -newTopLeft.x, -newTopLeft.y, width(), height());
             dataMatrix = std::move(newMatrix);
             return -newTopLeft;
         }
@@ -251,7 +251,7 @@ public:
     CanvasState splice(int32_t x, int32_t y, int32_t width, int32_t height) {
         CanvasState newState;
         newState.dataMatrix = matrix_t(width, height);
-        extensions::swap_range(dataMatrix, newState.dataMatrix, x, y, 0, 0, width, height);
+        ext::swap_range(dataMatrix, newState.dataMatrix, x, y, 0, 0, width, height);
         return newState;
     }
 
@@ -290,13 +290,13 @@ public:
      * Returns a matrix (not shrinked) and the translation required.
      * @pre Assumes that the parameters are within the bounds of this canvas state
      */
-    static std::pair<CanvasState, extensions::point> merge(CanvasState&& first, const extensions::point& firstTrans, CanvasState&& second, const extensions::point& secondTrans) {
+    static std::pair<CanvasState, ext::point> merge(CanvasState&& first, const ext::point& firstTrans, CanvasState&& second, const ext::point& secondTrans) {
         // special cases if we are merging with something empty
         if (first.empty()) return { std::move(second), -secondTrans };
         if (second.empty()) return { std::move(first), -firstTrans };
 
-        extensions::point newMin = min(secondTrans, firstTrans);
-        extensions::point newMax = max(secondTrans + second.size(), firstTrans + first.size());
+        ext::point newMin = min(secondTrans, firstTrans);
+        ext::point newMax = max(secondTrans + second.size(), firstTrans + first.size());
 
         CanvasState newState;
         if (firstTrans == newMin && firstTrans + first.size() == newMax) {
@@ -307,13 +307,13 @@ public:
             // create a new matrix
             newState.dataMatrix = matrix_t(newMax - newMin);
             // move first to newstate
-            extensions::move_range(first.dataMatrix, newState.dataMatrix, 0, 0, firstTrans.x - newMin.x, firstTrans.y - newMin.y, first.width(), first.height());
+            ext::move_range(first.dataMatrix, newState.dataMatrix, 0, 0, firstTrans.x - newMin.x, firstTrans.y - newMin.y, first.width(), first.height());
         }
         // move non-monostate elements from second to newstate
         for (int32_t y = 0; y < second.height(); ++y) {
             for (int32_t x = 0; x < second.width(); ++x) {
                 if (!std::holds_alternative<std::monostate>(second.dataMatrix[{x, y}])) {
-                    extensions::point pt{ x, y };
+                    ext::point pt{ x, y };
                     newState[pt + secondTrans - newMin] = std::move(second[pt]);
                 }
             }

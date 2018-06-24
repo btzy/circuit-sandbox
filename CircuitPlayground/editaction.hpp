@@ -3,7 +3,6 @@
 #include <boost/logic/tribool.hpp>
 #include "action.hpp"
 #include "playarea.hpp"
-#include "mainwindow.hpp"
 
 /**
  * Represents an action that needs to stop the simulator, make edits, then restart the simulator.
@@ -17,7 +16,7 @@
 class EditAction : public Action {
 
 protected:
-    extensions::point deltaTrans;
+    ext::point deltaTrans;
     PlayArea& playArea;
     bool const simulatorRunning;
 

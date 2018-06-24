@@ -1,8 +1,6 @@
 #pragma once
 
 #include "editaction.hpp"
-#include "playarea.hpp"
-#include "mainwindow.hpp"
 
 /**
  * Represents an EditAction that can be saved to history

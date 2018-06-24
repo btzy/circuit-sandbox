@@ -9,7 +9,6 @@
 #include "canvasaction.hpp"
 #include "statemanager.hpp"
 #include "playarea.hpp"
-#include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "elements.hpp"
 #include "expandable_matrix.hpp"
@@ -23,7 +22,7 @@
 namespace {
     // calls callback(pt) for every point between `from` and `to`, excluding `from` but including `to`.
     template <typename Callback>
-    void interpolate(const extensions::point& from, const extensions::point& to, Callback&& callback) {
+    void interpolate(const ext::point& from, const ext::point& to, Callback&& callback) {
         int32_t dx = to.x - from.x;
         int32_t dy = to.y - from.y;
         if (dx == 0 && dy == 0) {
@@ -31,26 +30,26 @@ namespace {
         }
         else if (dx >= std::abs(dy)) {
             for (int32_t x = from.x + 1; x <= to.x; ++x) {
-                int32_t y = extensions::div_round(dy * (x - from.x), dx) + from.y;
-                callback(extensions::point{ x, y });
+                int32_t y = ext::div_round(dy * (x - from.x), dx) + from.y;
+                callback(ext::point{ x, y });
             }
         }
         else if (-dx >= std::abs(dy)) {
             for (int32_t x = from.x - 1; x >= to.x; --x) {
-                int32_t y = extensions::div_round(dy * (from.x - x), -dx) + from.y;
-                callback(extensions::point{ x, y });
+                int32_t y = ext::div_round(dy * (from.x - x), -dx) + from.y;
+                callback(ext::point{ x, y });
             }
         }
         else if (dy >= std::abs(dx)) {
             for (int32_t y = from.y + 1; y <= to.y; ++y) {
-                int32_t x = extensions::div_round(dx * (y - from.y), dy) + from.x;
-                callback(extensions::point{ x, y });
+                int32_t x = ext::div_round(dx * (y - from.y), dy) + from.x;
+                callback(ext::point{ x, y });
             }
         }
         else if (-dy >= std::abs(dx)) {
             for (int32_t y = from.y - 1; y >= to.y; --y) {
-                int32_t x = extensions::div_round(dx * (from.y - y), -dy) + from.x;
-                callback(extensions::point{ x, y });
+                int32_t x = ext::div_round(dx * (from.y - y), -dy) + from.x;
+                callback(ext::point{ x, y });
             }
         }
     }
@@ -78,16 +77,16 @@ class PencilAction final : public CanvasAction<PencilAction<PencilType>> {
 private:
 
     // previous mouse position in canvas units (used to do interpolation for dragging)
-    extensions::point mousePos;
+    ext::point mousePos;
 // storage for the things drawn by the current action, and the transformation relative to defaultState
-    extensions::expandable_bool_matrix actionState;
-    extensions::point actionTrans;
+    ext::expandable_bool_matrix actionState;
+    ext::point actionTrans;
 
     /**
      * Use a drawing tool on (x, y) (in defaultState coordinates)
      */
-    void changePixelState(const extensions::point& pt, bool newValue) {
-        extensions::point translation = actionState.changePixelState(pt - actionTrans, newValue).second;
+    void changePixelState(const ext::point& pt, bool newValue) {
+        ext::point translation = actionState.changePixelState(pt - actionTrans, newValue).second;
         actionTrans -= translation;
     }
 
@@ -108,7 +107,7 @@ public:
         // note: eraser can be optimized to not extend the canvas first
         for (int32_t y = 0; y < actionState.height(); ++y) {
             for (int32_t x = 0; x < actionState.width(); ++x) {
-                extensions::point pt{ x, y };
+                ext::point pt{ x, y };
                 auto& element = outputState[actionTrans + this->deltaTrans + pt];
                 if (actionState[pt] && !std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
                     element = CanvasStateVariantElement_t<PencilType>{};
@@ -138,8 +137,8 @@ public:
                 auto& action = starter.start<PencilAction>(playArea);
 
                 // draw the element at the current location
-                extensions::point physicalOffset = extensions::point(event) - extensions::point{ playArea.renderArea.x, playArea.renderArea.y };
-                extensions::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+                ext::point physicalOffset = ext::point(event) - ext::point{ playArea.renderArea.x, playArea.renderArea.y };
+                ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
                 action.changePixelState(canvasOffset, true);
                 action.mousePos = canvasOffset;
                 return ActionEventResult::PROCESSED;
@@ -150,11 +149,11 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processCanvasMouseDrag(const extensions::point& canvasOffset, const SDL_MouseMotionEvent& event) {
+    ActionEventResult processCanvasMouseDrag(const ext::point& canvasOffset, const SDL_MouseMotionEvent& event) {
         // note: probably can be optimized to don't keep doing expansion/contraction checking when interpolating, but this is probably not going to be noticeably slow
         // interpolate by drawing a straight line from the previous point to the current point
-        interpolate(mousePos, canvasOffset, [&](const extensions::point& pt) {
-            if (extensions::point_in_rect(event, this->playArea.renderArea)) {
+        interpolate(mousePos, canvasOffset, [&](const ext::point& pt) {
+            if (ext::point_in_rect(event, this->playArea.renderArea)) {
                 // the if-statement here ensures that the pencil does not draw outside the visible part of the canvas
                 changePixelState(pt, true);
             }
@@ -175,8 +174,8 @@ public:
     void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
         for (int32_t y = 0; y != actionState.height(); ++y) {
             for (int32_t x = 0; x != actionState.width(); ++x) {
-                extensions::point actionPt{ x, y };
-                extensions::point canvasPt = actionPt + actionTrans;
+                ext::point actionPt{ x, y };
+                ext::point canvasPt = actionPt + actionTrans;
                 if (actionState[actionPt] && point_in_rect(canvasPt, renderRect)) {
                     constexpr SDL_Color color = PencilType::displayColor;
                     pixelBuffer[(canvasPt.y - renderRect.y) * renderRect.w + (canvasPt.x - renderRect.x)] = color.r | (color.g << 8) | (color.b << 16);

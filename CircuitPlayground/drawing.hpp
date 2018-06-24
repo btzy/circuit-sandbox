@@ -2,7 +2,7 @@
 
 #include <SDL.h>
 
-namespace extensions {
+namespace ext {
 
     void renderDrawDashedHorizontalLine(SDL_Renderer* renderer, int32_t x1, int32_t x2, int32_t y) {
         const int32_t segmentLength = 4;

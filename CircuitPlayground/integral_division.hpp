@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 
-namespace extensions {
+namespace ext {
 
     // division towards negative infinity
     // requires divisor to be positive

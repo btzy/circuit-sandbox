@@ -15,7 +15,6 @@
 #include <chrono>
 
 #include "canvasstate.hpp"
-#include "heap_matrix.hpp"
 
 
 class Simulator {

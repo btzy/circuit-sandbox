@@ -21,7 +21,7 @@ private:
     Simulator simulator; // stores the 'live' states and has methods to compile and run the simulation
 
     boost::tribool changed = false; // whether canvasstate changed since the last write to the undo stack
-    extensions::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
+    ext::point deltaTrans{ 0, 0 }; // difference in viewport translation from previous gamestate (TODO: move this into a proper UndoDelta class)
 
     bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting defaultState)
 

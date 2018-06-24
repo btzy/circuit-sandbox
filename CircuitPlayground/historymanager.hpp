@@ -9,8 +9,8 @@
 struct HistoryManager {
 private:
     // fields for undo/redo stack
-    std::stack<std::pair<CanvasState, extensions::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
-    std::stack<std::pair<CanvasState, extensions::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    std::stack<std::pair<CanvasState, ext::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    std::stack<std::pair<CanvasState, ext::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
     CanvasState currentHistoryState; // the canvas state treated as 'current' by the history manager; this is either the state when saveToHistory() was last called, or the state after an undo/redo operation.
 
     // distance of currentHistoryState from the last saved state in history
@@ -19,7 +19,7 @@ private:
     std::optional<size_t> saveDistance = 0;
 
 public:
-    void saveToHistory(const CanvasState& state, const extensions::point& deltaTrans) {
+    void saveToHistory(const CanvasState& state, const ext::point& deltaTrans) {
         // note: we save the inverse translation
         undoStack.emplace(std::move(currentHistoryState), -deltaTrans);
         // save a snapshot of the defaultState (which should be in sync with the simulator)
@@ -43,7 +43,7 @@ public:
      * Undo/redo. Returns the translation to apply to center viewport.
      * Assumes that relevant undoStack/redoStack is not empty.
      */
-    extensions::point undo(CanvasState& state) {
+    ext::point undo(CanvasState& state) {
         auto[canvasState, tmpDeltaTrans] = std::move(undoStack.top());
         undoStack.pop();
 
@@ -56,7 +56,7 @@ public:
         return tmpDeltaTrans;
     }
 
-    extensions::point redo(CanvasState& state) {
+    ext::point redo(CanvasState& state) {
         auto[canvasState, tmpDeltaTrans] = std::move(redoStack.top());
         redoStack.pop();
 

@@ -15,7 +15,7 @@ class PlayArea;
 
 
 // compile-time type tag which stores the list of available elements
-using tool_tags_t = extensions::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
+using tool_tags_t = ext::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
 
 
 // compile-time type tag which stores the list of available actions
@@ -27,7 +27,7 @@ class HistoryAction;
 class FileNewAction;
 class FileOpenAction;
 class FileSaveAction;
-using action_tags_t = extensions::tag_tuple<Action, EyedropperAction, SelectionAction, HistoryAction, FileNewAction, FileOpenAction, FileSaveAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
+using action_tags_t = ext::tag_tuple<Action, EyedropperAction, SelectionAction, HistoryAction, FileNewAction, FileOpenAction, FileSaveAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
 
 
 /**

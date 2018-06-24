@@ -2,9 +2,6 @@
 
 #include <SDL.h>
 
-#include "declarations.hpp"
-#include "elements.hpp"
-
 /**
  * An action stores the context for a group of related functionality involves multiple events.
  * Actions span an arbitrary amount of time.
