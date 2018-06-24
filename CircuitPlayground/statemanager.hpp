@@ -68,7 +68,7 @@ public:
      * Starts the simulator.
      * @pre simulator is stopped
      */
-    void startSimulator();
+    void startSimulatorUnchecked();
 
     /**
      * Toggle between running and pausing the simulator.
@@ -79,18 +79,28 @@ public:
      * Stops the simulator.
      * @pre simulator is running
      */
-    void stopSimulator();
+    void stopSimulatorUnchecked();
 
     /**
      * Steps the simulator.
      * @pre simulator is stopped
      */
-    void stepSimulator();
+    void stepSimulatorUnchecked();
+
+    /**
+     * Starts the simulator if it is currently stopped.
+     */
+    void startSimulator();
+
+    /**
+    * Stops the simulator if it is currently running.
+    */
+    void stopSimulator();
 
     /**
      * Steps the simulator if it is currently stopped.
      */
-    void stepSimulatorIfPossible();
+    void stepSimulator();
 
     /**
      * Reset all elements in the simulation to their default state.

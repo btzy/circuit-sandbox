@@ -14,7 +14,9 @@
 #include "declarations.hpp"
 #include "toolbox.hpp"
 #include "playarea.hpp"
+#include "buttonbar.hpp"
 #include "drawable.hpp"
+#include "font.hpp"
 
 
 class MainWindow {
@@ -22,9 +24,15 @@ public:
 
     // logical units
     constexpr static int LOGICAL_TOOLBOX_WIDTH = 128;
+    constexpr static int LOGICAL_BUTTONBAR_HEIGHT = 24;
 
     // physical units
     int TOOLBOX_WIDTH = LOGICAL_TOOLBOX_WIDTH;
+    int BUTTONBAR_HEIGHT = LOGICAL_BUTTONBAR_HEIGHT;
+
+    // hairline width (for drawing separating lines)
+    constexpr static int HAIRLINE_WIDTH = 1;
+
 
 private:
     bool closing; // whether the user has pressed the close button
@@ -32,8 +40,9 @@ private:
     // Render-able components in the window:
     Toolbox toolbox;
     PlayArea playArea;
+    ButtonBar buttonBar;
 
-    const std::array<Drawable*, 2> drawables{ &toolbox, &playArea };
+    const std::array<Drawable*, 3> drawables{ &toolbox, &playArea, &buttonBar };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
     Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
 
@@ -76,7 +85,7 @@ private:
     /**
      * Update the dpi fields.  Returns true if the dpi got changed
      */
-    bool updateDpiFields(bool useWindow = true);
+    bool updateDpiFields(bool useWindow = true, bool forceUpdateChildren = false);
 
     /**
      * Update fonts
@@ -95,7 +104,7 @@ public:
     SDL_Renderer* renderer;
 
     // fonts (loaded in constructor and closed in destructor)
-    TTF_Font* interfaceFont;
+    Font interfaceFont;
 
 
     /**

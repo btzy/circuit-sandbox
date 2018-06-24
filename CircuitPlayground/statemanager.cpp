@@ -88,33 +88,45 @@ void StateManager::saveToHistory() {
     deltaTrans = { 0, 0 };
 }
 
-void StateManager::startSimulator() {
+void StateManager::startSimulatorUnchecked() {
     simulator.start();
 }
 
 void StateManager::startOrStopSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) {
-        stopSimulator();
+        stopSimulatorUnchecked();
     }
     else {
-        startSimulator();
+        startSimulatorUnchecked();
     }
 }
 
-void StateManager::stopSimulator() {
+void StateManager::stopSimulatorUnchecked() {
     simulator.stop();
     updateDefaultState();
 }
 
-void StateManager::stepSimulator() {
+void StateManager::stepSimulatorUnchecked() {
     simulator.step();
     updateDefaultState();
 }
 
-void StateManager::stepSimulatorIfPossible() {
+void StateManager::startSimulator() {
     if (!simulator.running()) {
-        stepSimulator();
+        startSimulatorUnchecked();
+    }
+}
+
+void StateManager::stopSimulator() {
+    if (simulator.running()) {
+        stopSimulatorUnchecked();
+    }
+}
+
+void StateManager::stepSimulator() {
+    if (!simulator.running()) {
+        stepSimulatorUnchecked();
     }
 }
 

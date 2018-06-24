@@ -24,7 +24,7 @@ public:
 
     EditAction(PlayArea& playArea) :deltaTrans({ 0, 0 }), playArea(playArea), simulatorRunning(playArea.stateManager.simulator.running()) {
         // stop the simulator if running
-        if (simulatorRunning) playArea.stateManager.stopSimulator();
+        if (simulatorRunning) playArea.stateManager.stopSimulatorUnchecked();
         changed() = boost::indeterminate;
     };
 

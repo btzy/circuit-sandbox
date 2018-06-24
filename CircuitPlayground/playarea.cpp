@@ -10,6 +10,7 @@
 #include "integral_division.hpp"
 #include "point.hpp"
 #include "fileopenaction.hpp"
+#include "filesaveaction.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {
     stateManager.saveToHistory(); // so that the loaded savefile will be in the history
@@ -214,7 +215,7 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
                 break;
             case SDL_SCANCODE_S:
                 currentAction.reset();
-                stateManager.stepSimulatorIfPossible();
+                stateManager.stepSimulator();
                 break;
             default:
                 break;
@@ -237,5 +238,15 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
 
 void PlayArea::loadFile(const char* filePath) {
     currentAction.start<FileOpenAction>(*this, filePath);
+    currentAction.reset();
+}
+
+void PlayArea::saveFile(bool forceDialog) {
+    if (forceDialog) {
+        currentAction.start<FileSaveAction>(*this, nullptr);
+    }
+    else {
+        currentAction.start<FileSaveAction>(*this, mainWindow.getFilePath());
+    }
     currentAction.reset();
 }

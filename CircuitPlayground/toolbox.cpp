@@ -28,10 +28,6 @@ void Toolbox::updateDpi() {
 
 
 void Toolbox::render(SDL_Renderer* renderer) const {
-    // draw a grey border around the toolbox
-    SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
-    SDL_RenderDrawRect(renderer, &renderArea);
-
 
     // draw the selection rectangles
     for (size_t i = 0; i != NUM_INPUT_HANDLES; ++i) {

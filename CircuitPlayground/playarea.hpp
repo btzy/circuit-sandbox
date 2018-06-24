@@ -102,6 +102,49 @@ public:
      * This will reset the history system.
      */
     void loadFile(const char* filePath);
+
+    /**
+     * Save the current state to a file
+     */
+    void saveFile(bool forceDialog);
+
+    /**
+    * Starts the simulator if it is currently stopped.
+    */
+    void startSimulator() {
+        stateManager.startSimulator();
+    }
+
+    /**
+    * Stops the simulator if it is currently running.
+    */
+    void stopSimulator() {
+        stateManager.stopSimulator();
+    }
+
+    /**
+    * Steps the simulator if it is currently stopped.
+    */
+    void stepSimulator() {
+        stateManager.stepSimulator();
+    }
+
+    /**
+    * Start a playarea action.
+    */
+    template <typename ActionType, typename... Args>
+    void startAction(Args&&... args) {
+        currentAction.start<ActionType>(*this, std::forward<Args>(args)...);
+    }
+
+    /**
+    * Start a playarea action that should complete immediately.
+    */
+    template <typename ActionType, typename... Args>
+    void startInstantaneousAction(Args&&... args) {
+        startAction<ActionType>(std::forward<Args>(args)...);
+        currentAction.reset();
+    }
 };
 
 

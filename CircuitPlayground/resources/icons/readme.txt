@@ -1,0 +1,2 @@
+These icons are 24px svg, which are converted to an icon font.  Only the icon font is needed at runtime.
+The Unicode range U+E000 to U+F8FF is used - this is a "private use area" in the Unicode standard.

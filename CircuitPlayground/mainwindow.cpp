@@ -30,7 +30,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), interfaceFont(nullptr), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -64,7 +64,7 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
     // update dpi again (in case the window was opened on something other than the default monitor)
-    if (updateDpiFields()) {
+    if (updateDpiFields(true, true)) {
         // resize the window, if the dpi changed
         SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
     }
@@ -78,39 +78,17 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
 
 
 MainWindow::~MainWindow() {
-    if (interfaceFont != nullptr) {
-        TTF_CloseFont(interfaceFont);
-    }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 }
 
 
 void MainWindow::updateFonts() {
-    if (interfaceFont != nullptr) {
-        TTF_CloseFont(interfaceFont);
-        interfaceFont = nullptr;
-    }
-    {
-        char* cwd = SDL_GetBasePath();
-        if (cwd == nullptr) {
-            throw std::runtime_error("SDL_GetBasePath() failed:  "s + SDL_GetError());
-        }
-        const char* font_name = "OpenSans-Bold.ttf";
-        char* font_path = new char[std::strlen(cwd) + std::strlen(font_name) + 1];
-        std::strcpy(font_path, cwd);
-        std::strcat(font_path, font_name);
-        SDL_free(cwd);
-        interfaceFont = TTF_OpenFont(font_path, logicalToPhysicalSize(12));
-        delete[] font_path;
-    }
-    if (interfaceFont == nullptr) {
-        throw std::runtime_error("TTF_OpenFont() failed:  "s + TTF_GetError());
-    }
+    interfaceFont.updateDPI(*this);
 }
 
 
-bool MainWindow::updateDpiFields(bool useWindow) {
+bool MainWindow::updateDpiFields(bool useWindow, bool forceUpdateChildren) {
 
     int display_index = 0;
 
@@ -147,16 +125,18 @@ bool MainWindow::updateDpiFields(bool useWindow) {
     // check if the fields changed
     bool fields_changed = tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
 
-    if (fields_changed) {
+    if (fields_changed && useWindow || forceUpdateChildren) {
         // update font sizes
         updateFonts();
+
+        // remember to update my own pseudo-constants
+        TOOLBOX_WIDTH = logicalToPhysicalSize(LOGICAL_TOOLBOX_WIDTH);
+        BUTTONBAR_HEIGHT = logicalToPhysicalSize(LOGICAL_BUTTONBAR_HEIGHT);
 
         // tell the components to update their cached sizes
         playArea.updateDpi();
         toolbox.updateDpi();
-
-        // remember to update my own pseudo-constants
-        TOOLBOX_WIDTH = logicalToPhysicalSize(LOGICAL_TOOLBOX_WIDTH);
+        buttonBar.updateDpi(renderer);
     }
 
     // return true if the fields changed
@@ -185,9 +165,9 @@ void MainWindow::layoutComponents() {
     SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
 
     // position all the components:
-    playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH, pixelHeight};
-    toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight};
-
+    playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH - HAIRLINE_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
+    toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
+    buttonBar.renderArea = SDL_Rect{0, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, pixelWidth, BUTTONBAR_HEIGHT};
 }
 
 
@@ -355,9 +335,15 @@ void MainWindow::render() {
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
     SDL_RenderClear(renderer);
 
-    // TODO: draw everything to the screen - buttons, status info, play area, etc.
+    // draw everything to the screen - buttons, status info, play area, etc.
     playArea.render(renderer);
     toolbox.render(renderer);
+    buttonBar.render(renderer);
+
+    // draw the separators
+    SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
+    SDL_RenderDrawLine(renderer, toolbox.renderArea.x - 1, 0, toolbox.renderArea.x - 1, buttonBar.renderArea.y - 2);
+    SDL_RenderDrawLine(renderer, 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w - 1, buttonBar.renderArea.y - 1);
 
     // Then display to the user
     SDL_RenderPresent(renderer);
