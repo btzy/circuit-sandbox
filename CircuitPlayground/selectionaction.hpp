@@ -333,6 +333,8 @@ public:
                     (bottomRight.y - topLeft.y) * playArea.scale
                 };
 
+                SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+                SDL_RenderDrawRect(renderer, &selectionArea);
                 SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 extensions::renderDrawDashedRect(renderer, &selectionArea);
             }
@@ -348,6 +350,8 @@ public:
                     selection.height() * playArea.scale
                 };
 
+                SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+                SDL_RenderDrawRect(renderer, &selectionArea);
                 SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 extensions::renderDrawDashedRect(renderer, &selectionArea);
             }

@@ -114,8 +114,14 @@ void PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Panner, Tool>) {
-                // it is a Panner.
-                panOrigin = physicalOffset;
+                if (event.clicks == 1) {
+                    // if single click, set pan origin
+                    panOrigin = physicalOffset;
+                }
+                else if (event.clicks == 2) {
+                    // if double click, center viewport at clicked position
+                    translation += (extensions::div_floor(extensions::point{ renderArea.w/2, renderArea.h/2 }, scale) - extensions::div_floor(physicalOffset, scale)) * scale;
+                }
             }
         });
 
@@ -199,12 +205,15 @@ void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
                 defaultView = true;
                 break;
             case SDL_SCANCODE_R:
+                currentAction.reset();
                 stateManager.resetSimulator();
                 break;
             case SDL_SCANCODE_SPACE:
+                currentAction.reset();
                 stateManager.startOrStopSimulator();
                 break;
             case SDL_SCANCODE_S:
+                currentAction.reset();
                 stateManager.stepSimulatorIfPossible();
                 break;
             default:

@@ -79,12 +79,12 @@ private:
 
 public:
     FileOpenAction(PlayArea& playArea, const char* filePath = nullptr) {
-        
+
         // stop the simulator if running
         bool simulatorRunning = playArea.stateManager.simulator.running();
         if (simulatorRunning) playArea.stateManager.simulator.stop();
-        
-        
+
+
         // show the file dialog if necessary
         char* outPath = nullptr;
         if (filePath == nullptr) {
