@@ -287,7 +287,7 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         // ensure only one input handle can be down at any moment
-        if (activeInputHandleIndex) {
+        if (activeInputHandleIndex && currentEventTarget != nullptr) {
             currentEventTarget->processMouseButtonUp(event);
             SDL_CaptureMouse(SDL_FALSE);
             currentEventTarget = nullptr;
@@ -303,7 +303,7 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         }
     }
     else {
-        if (activeInputHandleIndex && *activeInputHandleIndex == inputHandleIndex) {
+        if (activeInputHandleIndex && *activeInputHandleIndex == inputHandleIndex && currentEventTarget != nullptr) {
             currentEventTarget->processMouseButtonUp(event);
             SDL_CaptureMouse(SDL_FALSE);
             currentEventTarget = nullptr;
