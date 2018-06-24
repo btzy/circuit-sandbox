@@ -339,7 +339,7 @@ public:
             }
             break;
         case State::SELECTED:
-            [[fallthrough]]
+            [[fallthrough]];
         case State::MOVING:
             {
                 SDL_Rect selectionArea{

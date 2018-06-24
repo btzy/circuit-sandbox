@@ -51,8 +51,8 @@ public:
     Toolbox(MainWindow&);
 
     /**
-    * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
-    */
+     * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
+     */
     void updateDpi();
 
     /**
@@ -72,6 +72,6 @@ public:
     /**
      * This is called to reset all the hovering of buttons, because mousemove events are only triggered when the mouse is still on the canvas
      */
-    void processMouseLeave();
+    void processMouseLeave() override;
 };
 
