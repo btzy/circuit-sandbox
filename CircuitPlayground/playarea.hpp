@@ -58,7 +58,7 @@ public:
     /**
      * Informs the play area that the dpi has been updated, so the play area should set its physical unit fields.
      */
-    void updateDpi();
+    void updateDpiFields();
 
     /**
      * Renders this play area on the given area of the renderer.

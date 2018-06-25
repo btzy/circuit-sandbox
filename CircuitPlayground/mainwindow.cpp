@@ -64,16 +64,13 @@ MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
     // update dpi again (in case the window was opened on something other than the default monitor)
-    if (updateDpiFields(true, true)) {
+    if (updateDpiFields()) {
         // resize the window, if the dpi changed
         SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
     }
 
-    // load fonts
-    updateFonts();
-
     // do the layout
-    layoutComponents();
+    layoutComponents(true);
 }
 
 
@@ -88,7 +85,7 @@ void MainWindow::updateFonts() {
 }
 
 
-bool MainWindow::updateDpiFields(bool useWindow, bool forceUpdateChildren) {
+bool MainWindow::updateDpiFields(bool useWindow) {
 
     int display_index = 0;
 
@@ -125,18 +122,16 @@ bool MainWindow::updateDpiFields(bool useWindow, bool forceUpdateChildren) {
     // check if the fields changed
     bool fields_changed = tmp_physicalMultiplier != physicalMultiplier || tmp_logicalMultiplier != logicalMultiplier;
 
-    if (fields_changed && useWindow || forceUpdateChildren) {
-        // update font sizes
-        updateFonts();
+    if (fields_changed) {
 
         // remember to update my own pseudo-constants
         TOOLBOX_WIDTH = logicalToPhysicalSize(LOGICAL_TOOLBOX_WIDTH);
         BUTTONBAR_HEIGHT = logicalToPhysicalSize(LOGICAL_BUTTONBAR_HEIGHT);
 
         // tell the components to update their cached sizes
-        playArea.updateDpi();
-        toolbox.updateDpi();
-        buttonBar.updateDpi(renderer);
+        playArea.updateDpiFields();
+        toolbox.updateDpiFields();
+        buttonBar.updateDpiFields();
     }
 
     // return true if the fields changed
@@ -155,10 +150,10 @@ void MainWindow::updateTitleBar() {
 }
 
 
-void MainWindow::layoutComponents() {
+void MainWindow::layoutComponents(bool forceLayout) {
 
     // update the two dpi member fields
-    updateDpiFields();
+    bool dpiChanged = updateDpiFields();
 
     // get the size of the render target (this is a physical size)
     int pixelWidth, pixelHeight;
@@ -168,6 +163,14 @@ void MainWindow::layoutComponents() {
     playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH - HAIRLINE_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     buttonBar.renderArea = SDL_Rect{0, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, pixelWidth, BUTTONBAR_HEIGHT};
+
+    if (dpiChanged || forceLayout) {
+        // update font sizes
+        updateFonts();
+
+        // tell children about the updated dpi
+        buttonBar.updateDpi(renderer);
+    }
 }
 
 

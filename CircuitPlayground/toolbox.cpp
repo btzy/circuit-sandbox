@@ -18,7 +18,7 @@ using namespace std::literals::string_literals; // gives the 's' suffix for stri
 Toolbox::Toolbox(MainWindow& main_window) : mainWindow(main_window) {};
 
 
-void Toolbox::updateDpi() {
+void Toolbox::updateDpiFields() {
     BUTTON_HEIGHT = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_HEIGHT);
     PADDING_HORIZONTAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_HORIZONTAL);
     PADDING_VERTICAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_VERTICAL);

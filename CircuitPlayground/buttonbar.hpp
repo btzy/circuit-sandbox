@@ -64,6 +64,11 @@ public:
     ButtonBar(MainWindow&, PlayArea&);
 
     /**
+     * Update the dpi fields (currently a no-op).
+     */
+    void updateDpiFields() {}
+
+    /**
      * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
      */
     void updateDpi(SDL_Renderer*);

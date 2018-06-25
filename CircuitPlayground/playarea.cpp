@@ -17,7 +17,7 @@ PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAc
 };
 
 
-void PlayArea::updateDpi() {
+void PlayArea::updateDpiFields() {
     // do nothing, because play area works fully in physical pixels and there are no hardcoded logical pixels constants
 }
 

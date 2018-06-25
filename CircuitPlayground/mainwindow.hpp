@@ -79,13 +79,13 @@ private:
      * Recalculate all the 'renderArea' for all the Drawables (call after resizing)
      * Also does DPI recalculation (SDL2 will send a resize event when the dpi changes)
      */
-    void layoutComponents();
+    void layoutComponents(bool forceLayout = false);
 
 
     /**
      * Update the dpi fields.  Returns true if the dpi got changed
      */
-    bool updateDpiFields(bool useWindow = true, bool forceUpdateChildren = false);
+    bool updateDpiFields(bool useWindow = true);
 
     /**
      * Update fonts
