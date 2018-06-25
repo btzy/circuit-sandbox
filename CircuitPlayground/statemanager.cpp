@@ -130,6 +130,10 @@ void StateManager::stepSimulator() {
     }
 }
 
+bool StateManager::simulatorRunning() const {
+    return simulator.running();
+}
+
 void StateManager::resetSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) simulator.stop();

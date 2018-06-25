@@ -103,6 +103,11 @@ public:
     void stepSimulator();
 
     /**
+    * Whether the simulator is running.
+    */
+    bool simulatorRunning() const;
+
+    /**
      * Reset all elements in the simulation to their default state.
      */
     void resetSimulator();

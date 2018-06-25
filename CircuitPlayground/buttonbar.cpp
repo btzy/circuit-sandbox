@@ -6,6 +6,7 @@
 #include "buttonbar.hpp"
 #include "mainwindow.hpp"
 #include "playarea.hpp"
+#include "point.hpp"
 #include "filenewaction.hpp"
 #include "fileopenaction.hpp"
 #include "filesaveaction.hpp"
@@ -23,7 +24,7 @@ void ButtonBar::updateDpi(SDL_Renderer* renderer) {
 void ButtonBar::render(SDL_Renderer* renderer) const {
     auto x = renderArea.x;
     for (const auto& item : items) {
-        item->render(renderer, { x, renderArea.y }, clickedItem == item.get() ? RenderStyle::CLICK : hoveredItem == item.get() ? RenderStyle::HOVER : RenderStyle::DEFAULT);
+        item->render(renderer, *this, { x, renderArea.y }, clickedItem == item.get() ? RenderStyle::CLICK : hoveredItem == item.get() ? RenderStyle::HOVER : RenderStyle::DEFAULT);
         x += item->width();
     }
 }
@@ -63,7 +64,7 @@ void ButtonBar::processMouseButtonUp() {
 
 
 template <uint16_t CodePoint>
-void IconButton<CodePoint>::render(SDL_Renderer* renderer, const ext::point& offset, RenderStyle style) const {
+void IconButton<CodePoint>::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
     const SDL_Rect destRect{ offset.x, offset.y, _length, _length };
     switch (style) {
     case RenderStyle::DEFAULT:
@@ -113,13 +114,53 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
         SDL_Keymod modifiers = SDL_GetModState();
         buttonBar.playArea.saveFile(modifiers & KMOD_SHIFT);
     }
-    else if constexpr (CodePoint == IconCodePoints::PLAY) {
-        buttonBar.playArea.startSimulator();
-    }
-    else if constexpr (CodePoint == IconCodePoints::PAUSE) {
-        buttonBar.playArea.stopSimulator();
-    }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
         buttonBar.playArea.stepSimulator();
     }
+}
+
+
+
+void PlayPauseButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
+    const SDL_Rect destRect{ offset.x, offset.y, _length, _length };
+    switch (style) {
+    case RenderStyle::DEFAULT:
+        SDL_RenderCopy(renderer, textureDefault[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        break;
+    case RenderStyle::HOVER:
+        SDL_RenderCopy(renderer, textureHover[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        break;
+    case RenderStyle::CLICK:
+        SDL_RenderCopy(renderer, textureClick[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        break;
+    }
+}
+
+void PlayPauseButton::setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) {
+    constexpr uint16_t codepoints[2] = { IconCodePoints::PLAY, IconCodePoints::PAUSE };
+    _length = height;
+    for (int i = 0; i < 2; ++i) {
+        {
+            textureDefault[i].reset(nullptr);
+            SDL_Surface* surface = TTF_RenderGlyph_Shaded(buttonBar.iconFont, codepoints[i], ButtonBar::foregroundColor, ButtonBar::backgroundColor);
+            textureDefault[i].reset(SDL_CreateTextureFromSurface(renderer, surface));
+            SDL_FreeSurface(surface);
+        }
+        {
+            textureHover[i].reset(nullptr);
+            SDL_Surface* surface = TTF_RenderGlyph_Shaded(buttonBar.iconFont, codepoints[i], ButtonBar::foregroundColor, ButtonBar::hoverColor);
+            textureHover[i].reset(SDL_CreateTextureFromSurface(renderer, surface));
+            SDL_FreeSurface(surface);
+        }
+        {
+            textureClick[i].reset(nullptr);
+            SDL_Surface* surface = TTF_RenderGlyph_Shaded(buttonBar.iconFont, codepoints[i], ButtonBar::backgroundColor, ButtonBar::foregroundColor);
+            textureClick[i].reset(SDL_CreateTextureFromSurface(renderer, surface));
+            SDL_FreeSurface(surface);
+        }
+    }
+}
+
+void PlayPauseButton::click(ButtonBar& buttonBar) {
+    buttonBar.playArea.startOrStopSimulator();
 }

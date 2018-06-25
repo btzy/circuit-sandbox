@@ -123,6 +123,20 @@ public:
     }
 
     /**
+     * Starts/stops the simulator.
+     */
+    void startOrStopSimulator() {
+        stateManager.startOrStopSimulator();
+    }
+
+    /**
+    * Whether the simulator is running.
+    */
+    bool simulatorRunning() const {
+        return stateManager.simulatorRunning();
+    }
+
+    /**
     * Steps the simulator if it is currently stopped.
     */
     void stepSimulator() {

@@ -44,13 +44,12 @@ private:
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
 
-    std::array<std::unique_ptr<ButtonBarItem>, 7> items{
+    const std::array<std::unique_ptr<ButtonBarItem>, 6> items{
         std::make_unique<IconButton<IconCodePoints::NEW>>(),
         std::make_unique<IconButton<IconCodePoints::OPEN>>(),
         std::make_unique<IconButton<IconCodePoints::SAVE>>(),
         std::make_unique<ButtonBarSpace>(),
-        std::make_unique<IconButton<IconCodePoints::PLAY>>(),
-        std::make_unique<IconButton<IconCodePoints::PAUSE>>(),
+        std::make_unique<PlayPauseButton>(),
         std::make_unique<IconButton<IconCodePoints::STEP>>()
     };
 
@@ -59,6 +58,7 @@ private:
 
     template <uint16_t>
     friend class IconButton;
+    friend class PlayPauseButton;
 
 public:
     ButtonBar(MainWindow&, PlayArea&);
