@@ -47,15 +47,15 @@ void ButtonBar::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     auto x = renderArea.x;
     for (const auto& item : items) {
         x += item->width();
-        if (x > event.x) {
+        if (x > event.x) { // found the correct button
             clickedItem = item.get();
-            item->click(*this);
             return;
         }
     }
 }
 
-void ButtonBar::processMouseButtonUp(const SDL_MouseButtonEvent &) {
+void ButtonBar::processMouseButtonUp() {
+    clickedItem->click(*this);
     clickedItem = nullptr;
 }
 

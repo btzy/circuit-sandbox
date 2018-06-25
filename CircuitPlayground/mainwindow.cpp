@@ -11,6 +11,11 @@
 #include "mainwindow.hpp"
 #include "fileutils.hpp"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
 
 using namespace std::literals::string_literals; // gives the 's' suffix for strings
 
@@ -186,16 +191,23 @@ void MainWindow::start() {
 
     // event/drawing loop:
     while (true) {
-        SDL_Event event;
-
+        
         // get the next event to process, if any
-        while(SDL_PollEvent(&event) != 0) {
-            processEvent(event);
-            if (closing) break;
+        while (true) {
+            
+#if defined(_WIN32)
+            MSG msg;
+            if (_suppressMouseUntilNextDown && PeekMessage(&msg, nullptr, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
+                _suppressMouseUntilNextDown = false;
+            }
+#endif
+            SDL_Event event;
+            if (SDL_PollEvent(&event)) {
+                processEvent(event);
+                if (closing) return;
+            }
+            else break;
         }
-
-        // immediately break out of the loop if the user pressed the close button
-        if (closing) break;
 
         // draw everything onto the screen
         render();
@@ -284,21 +296,20 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
 
 
 void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
+#if defined(_WIN32)
+    if (_suppressMouseUntilNextDown) return;
+#endif
 
     SDL_Point position{event.x, event.y};
     size_t inputHandleIndex = resolveInputHandleIndex(event);
 
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         // ensure only one input handle can be down at any moment
-        if (activeInputHandleIndex && currentEventTarget != nullptr) {
-            currentEventTarget->processMouseButtonUp(event);
-            SDL_CaptureMouse(SDL_FALSE);
-            currentEventTarget = nullptr;
-        }
-        activeInputHandleIndex = inputHandleIndex;
+        stopMouseDrag();
         for (Drawable* drawable : drawables) {
             if (SDL_PointInRect(&position, &drawable->renderArea)) {
                 currentEventTarget = drawable;
+                activeInputHandleIndex = inputHandleIndex;
                 SDL_CaptureMouse(SDL_TRUE);
                 currentEventTarget->processMouseButtonDown(event);
                 break;
@@ -306,12 +317,17 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         }
     }
     else {
-        if (activeInputHandleIndex && *activeInputHandleIndex == inputHandleIndex && currentEventTarget != nullptr) {
-            currentEventTarget->processMouseButtonUp(event);
-            SDL_CaptureMouse(SDL_FALSE);
-            currentEventTarget = nullptr;
-            activeInputHandleIndex = std::nullopt;
+        if (activeInputHandleIndex == inputHandleIndex) {
+            stopMouseDrag();
         }
+    }
+}
+
+void MainWindow::stopMouseDrag() {
+    if (currentEventTarget != nullptr) {
+        SDL_CaptureMouse(SDL_FALSE);
+        currentEventTarget->processMouseButtonUp();
+        currentEventTarget = nullptr;
     }
 }
 

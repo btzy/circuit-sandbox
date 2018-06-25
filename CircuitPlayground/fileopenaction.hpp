@@ -88,6 +88,7 @@ public:
         char* outPath = nullptr;
         if (filePath == nullptr) {
             nfdresult_t result = NFD_OpenDialog(CCPG_FILE_EXTENSION, nullptr, &outPath);
+            playArea.mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 filePath = outPath;
             }

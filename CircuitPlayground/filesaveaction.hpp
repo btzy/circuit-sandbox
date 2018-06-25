@@ -76,6 +76,7 @@ public:
         char* outPath = nullptr;
         if (filePath == nullptr) {
             nfdresult_t result = NFD_SaveDialog(CCPG_FILE_EXTENSION, nullptr, &outPath);
+            playArea.mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 properPath = new char[std::strlen(outPath) + 6];
                 filePath = addExtensionIfNecessary(outPath, properPath);

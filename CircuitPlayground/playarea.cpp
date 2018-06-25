@@ -146,22 +146,14 @@ void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
 }
 
 
-void PlayArea::processMouseButtonUp(const SDL_MouseButtonEvent& event) {
+void PlayArea::processMouseButtonUp() {
 
     if (!currentAction.processMouseButtonUp()) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
-        size_t inputHandleIndex = resolveInputHandleIndex(event);
-        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, &event](const auto tool_tag) {
-            // 'Tool' is the type of tool (e.g. Selector)
-            using Tool = typename decltype(tool_tag)::type;
-
-            if constexpr (std::is_base_of_v<Panner, Tool>) {
-                // it is a Panner.
-                panOrigin = std::nullopt;
-            }
-        });
-
+        if (panOrigin) { // the panner is active
+            panOrigin = std::nullopt;
+        }
     }
 
 }

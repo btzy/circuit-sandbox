@@ -87,5 +87,5 @@ public:
     void processMouseLeave() override;
 
     void processMouseButtonDown(const SDL_MouseButtonEvent&) override;
-    void processMouseButtonUp(const SDL_MouseButtonEvent&) override;
+    void processMouseButtonUp() override;
 };

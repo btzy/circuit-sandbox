@@ -45,6 +45,7 @@ private:
     const std::array<Drawable*, 3> drawables{ &toolbox, &playArea, &buttonBar };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
     Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
+    size_t activeInputHandleIndex; // the active input handle index associated with currentEventTarget; only valid when currentEventTarget != nullptr
 
     // High DPI stuff:
     int physicalMultiplier = 1; // physical size = size in real monitor pixels
@@ -54,7 +55,9 @@ private:
     std::string filePath; // empty string for untitled
     bool unsaved = false; // whether there are unsaved changes
 
-    std::optional<size_t> activeInputHandleIndex;
+#if defined(_WIN32)
+    bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
+#endif
 
     /**
      * Process the event that has occurred (called by start())
@@ -166,6 +169,22 @@ public:
      * Bind a tool to an input handle. If there is already a handle bound to the tool, swap the handles.
      */
     void bindTool(size_t inputHandleIndex, size_t tool_index);
+
+    /**
+     * Lifts up the current mouse button, if any.
+     * processMouseButtonUp() will be called immediately if the mouse button is currently down
+     * This is a no-op if currentEventTarget == nullptr
+     */
+    void stopMouseDrag();
+
+    /**
+     * Prevent mousedown event from entering the event system until the next real Windows WM_LBUTTONDOWN is received.
+     */
+    void suppressMouseUntilNextDown() {
+#if defined(_WIN32)
+        _suppressMouseUntilNextDown = true;
+#endif
+    }
 
     /**
      * DPI conversion functions

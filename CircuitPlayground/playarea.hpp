@@ -83,7 +83,7 @@ public:
 
     void processMouseButtonDown(const SDL_MouseButtonEvent&) override; // fires when the mouse is pressed down, must be inside the renderArea
     void processMouseDrag(const SDL_MouseMotionEvent&) override; // fires when mouse is moved, and was previously pressed down
-    void processMouseButtonUp(const SDL_MouseButtonEvent&) override; // fires when the mouse is lifted up, might be outside the renderArea
+    void processMouseButtonUp() override; // fires when the mouse is lifted up, might be outside the renderArea
 
     virtual void processMouseWheel(const SDL_MouseWheelEvent&) override;
     virtual void processKeyboard(const SDL_KeyboardEvent&) override;
