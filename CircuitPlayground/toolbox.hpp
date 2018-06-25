@@ -6,6 +6,8 @@
 
 #include <SDL.h>
 
+#include <utility>
+
 #include "declarations.hpp"
 #include "drawable.hpp"
 
@@ -60,6 +62,9 @@ public:
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
+    void render(SDL_Renderer* renderer) override {
+        std::as_const(*this).render(renderer);
+    }
     void render(SDL_Renderer* renderer) const;
 
     /**

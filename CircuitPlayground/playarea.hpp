@@ -66,7 +66,7 @@ public:
      * This method is non-const because the cached state might be updated from the simulator when rendering.
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer);
+    void render(SDL_Renderer* renderer) override;
 
     /**
      * Check if default view is being used

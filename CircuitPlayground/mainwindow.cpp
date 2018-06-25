@@ -170,6 +170,9 @@ void MainWindow::layoutComponents(bool forceLayout) {
     buttonBar.renderArea = SDL_Rect{0, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, pixelWidth, BUTTONBAR_HEIGHT};
 
     if (dpiChanged || forceLayout) {
+        // set min window size
+        SDL_SetWindowMinimumSize(window, toolbox.renderArea.w + logicalToPhysicalSize(100), buttonBar.renderArea.h + logicalToPhysicalSize(100));
+
         // update font sizes
         updateFonts();
 
@@ -355,9 +358,14 @@ void MainWindow::render() {
     SDL_RenderClear(renderer);
 
     // draw everything to the screen - buttons, status info, play area, etc.
-    playArea.render(renderer);
-    toolbox.render(renderer);
-    buttonBar.render(renderer);
+    for (Drawable* drawable : drawables) {
+        // set clip rect to clip off parts of the surface outside renderArea
+        SDL_RenderSetClipRect(renderer, &drawable->renderArea);
+        // render the stuff
+        drawable->render(renderer);
+        // reset the clip rect
+        SDL_RenderSetClipRect(renderer, nullptr);
+    }
 
     // draw the separators
     SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);

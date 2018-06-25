@@ -39,8 +39,6 @@ void PlayArea::render(SDL_Renderer* renderer) {
     currentAction.renderSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
-    // set clip rect to clip off parts of the surface outside renderArea
-    SDL_RenderSetClipRect(renderer, &renderArea);
     // scale and translate the surface according to the the pan and zoom level
     // the section of the surface enclosed within surfaceRect is mapped to dstRect
     const SDL_Rect dstRect {
@@ -83,9 +81,6 @@ void PlayArea::render(SDL_Renderer* renderer) {
         };
         SDL_RenderFillRect(renderer, &squareBox);
     }
-
-    // reset the clip rect
-    SDL_RenderSetClipRect(renderer, nullptr);
 }
 
 

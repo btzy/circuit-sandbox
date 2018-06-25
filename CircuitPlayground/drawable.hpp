@@ -12,5 +12,7 @@
 class Drawable : public EventReceiver {
 public:
     SDL_Rect renderArea; // this is a physical size
+
+    virtual void render(SDL_Renderer*) = 0;
 };
 

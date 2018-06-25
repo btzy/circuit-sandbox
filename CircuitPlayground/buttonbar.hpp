@@ -74,10 +74,13 @@ public:
     void updateDpi(SDL_Renderer*);
 
     /**
-     * Renders this toolbox on the given area of the renderer.
+     * Renders this button bar on the given area of the renderer.
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
+    void render(SDL_Renderer* renderer) override {
+        std::as_const(*this).render(renderer);
+    }
     void render(SDL_Renderer* renderer) const;
 
     /**
