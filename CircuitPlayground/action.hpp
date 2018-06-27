@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <SDL.h>
 
 /**
@@ -47,6 +48,14 @@ public:
 
     virtual ~Action() {}
 
+    // TODO: all these virtual methods should come from EventHook instead of from Action.
+    // expects the mouse to be in the playarea
+    /*virtual inline ActionEventResult processMouseHover(const SDL_MouseMotionEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }
+    virtual inline ActionEventResult processMouseLeave() {
+        return ActionEventResult::UNPROCESSED;
+    }
     // expects the mouse to be in the playarea
     virtual inline ActionEventResult processMouseButtonDown(const SDL_MouseButtonEvent&) {
         return ActionEventResult::UNPROCESSED;
@@ -54,7 +63,8 @@ public:
     // might be outside the playarea if the mouse was dragged out
     virtual inline ActionEventResult processMouseDrag(const SDL_MouseMotionEvent&) {
         return ActionEventResult::UNPROCESSED;
-    }// might be outside the playarea if the mouse was dragged out
+    }
+    // might be outside the playarea if the mouse was dragged out
     virtual inline ActionEventResult processMouseButtonUp() {
         return ActionEventResult::UNPROCESSED;
     }
@@ -62,54 +72,14 @@ public:
     // expects the mouse to be in the playarea
     virtual inline ActionEventResult processMouseWheel(const SDL_MouseWheelEvent&) {
         return ActionEventResult::UNPROCESSED;
-    }
-
-    // mouse might be anywhere, so shortcut keys are not dependent on the mouse position
-    virtual inline ActionEventResult processKeyboard(const SDL_KeyboardEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-
-
-
-
-    // static methods to create actions, writes to the ActionVariant& to start it (and destroy the previous action, if any)
-    // returns true if an action was started, false otherwise
-    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent&, PlayArea&, const ActionStarter&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    static inline ActionEventResult startWithMouseDrag(const SDL_MouseMotionEvent&, PlayArea&, const ActionStarter&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    static inline ActionEventResult startWithMouseButtonUp(PlayArea&, const ActionStarter&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    static inline ActionEventResult startWithMouseWheel(const SDL_MouseWheelEvent&, PlayArea&, const ActionStarter&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent&, PlayArea&, const ActionStarter&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-
+    }*/
 
 
     // rendering functions
     /**
-     * Disable the default rendering function, which draws everything from StateManager::defaultState.
-     * Use this if you have modified StateManager::defaultState and don't want to show the modifications,
-     * or you want to draw something that covers the whole playarea.
+     * Render directly using the SDL_Renderer (it is in window coordinates).
      */
-    virtual bool disableDefaultRender() const {
-        return false;
-    }
-    /**
-     * Render on a surface (in canvas units) using its pixel buffer.
-     * `renderRect` is the part of the canvas that should be drawn onto this surface.
-     */
-    virtual void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {}
-    /**
-     * Render directly using the SDL_Renderer (it is in playarea coordinates).
-     */
-    virtual void renderDirect(SDL_Renderer*) const {}
+    virtual void render(SDL_Renderer*) const {}
 };
 
 class ActionStarter {
@@ -120,8 +90,11 @@ private:
 public:
     template <typename T, typename... Args>
     T& start(Args&&... args) const {
-        data = nullptr; // destroy the old action
+        reset(); // destroy the old action
         data = std::make_unique<T>(std::forward<Args>(args)...); // construct the new action
         return static_cast<T&>(*data);
+    }
+    void reset() const {
+        data = nullptr;
     }
 };

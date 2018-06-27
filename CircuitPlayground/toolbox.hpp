@@ -71,7 +71,7 @@ public:
      * Processing of events.
      */
     void processMouseHover(const SDL_MouseMotionEvent&) override;
-    void processMouseButtonDown(const SDL_MouseButtonEvent&) override;
+    bool processMouseButtonDown(const SDL_MouseButtonEvent&) override;
 
 
     /**

@@ -98,22 +98,23 @@ void Toolbox::processMouseHover(const SDL_MouseMotionEvent& event) {
 }
 
 
-void Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
+bool Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
     int offsetX = event.x - renderArea.x;
     int offsetY = event.y - renderArea.y;
 
     // check left/right out of bounds
-    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return;
+    if(offsetX < PADDING_HORIZONTAL || offsetX >= renderArea.w - PADDING_HORIZONTAL) return true;
 
     // element index
     size_t index = static_cast<size_t>((offsetY - PADDING_VERTICAL) / (BUTTON_HEIGHT + BUTTON_SPACING));
-    if (index >= tool_tags_t::size) return;
+    if (index >= tool_tags_t::size) return true;
 
     // check if the mouse is on the button spacing instead of on the actual button
-    if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return;
+    if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return true;
 
     mainWindow.bindTool(resolveInputHandleIndex(event), index);
+    return true;
 }
 
 void Toolbox::processMouseLeave() {

@@ -6,9 +6,10 @@
 
 #include <SDL.h>
 #include "point.hpp"
-#include "canvasaction.hpp"
+#include "saveableaction.hpp"
 #include "statemanager.hpp"
 #include "playarea.hpp"
+#include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "elements.hpp"
 #include "expandable_matrix.hpp"
@@ -72,7 +73,7 @@ namespace {
 }
 
 template <typename PencilType>
-class PencilAction final : public CanvasAction<PencilAction<PencilType>> {
+class PencilAction final : public SaveableAction {
 
 private:
 
@@ -93,13 +94,13 @@ private:
 
 public:
 
-    PencilAction(PlayArea& playArea) :CanvasAction<PencilAction>(playArea), actionTrans({ 0, 0 }) {}
+    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), actionTrans({ 0, 0 }) {}
 
 
     ~PencilAction() override {
         // commit the state
         CanvasState& outputState = this->canvas();
-        this->deltaTrans = outputState.extend(actionTrans,  actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
+        this->deltaTrans = outputState.extend(actionTrans, actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
 
         // whether we actually changed anything
         bool hasChanges = false;
@@ -124,9 +125,9 @@ public:
         this->changed() = hasChanges;
     }
 
-    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
+    static inline ActionEventResult startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event, MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = mainWindow.selectedToolIndices[inputHandleIndex];
 
         return tool_tags_t::get(currentToolIndex, [&](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
@@ -134,11 +135,10 @@ public:
 
             if constexpr (std::is_same_v<PencilType, Tool>) {
                 // create the new action
-                auto& action = starter.start<PencilAction>(playArea);
+                auto& action = starter.start<PencilAction>(mainWindow);
 
                 // draw the element at the current location
-                ext::point physicalOffset = ext::point(event) - ext::point{ playArea.renderArea.x, playArea.renderArea.y };
-                ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+                ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
                 action.changePixelState(canvasOffset, true);
                 action.mousePos = canvasOffset;
                 return ActionEventResult::PROCESSED;
@@ -149,11 +149,12 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processCanvasMouseDrag(const ext::point& canvasOffset, const SDL_MouseMotionEvent& event) {
+    ActionEventResult processPlayAreaMouseDrag(const SDL_MouseMotionEvent& event) {
         // note: probably can be optimized to don't keep doing expansion/contraction checking when interpolating, but this is probably not going to be noticeably slow
+        ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
         // interpolate by drawing a straight line from the previous point to the current point
         interpolate(mousePos, canvasOffset, [&](const ext::point& pt) {
-            if (ext::point_in_rect(event, this->playArea.renderArea)) {
+            if (ext::point_in_rect(event, this->playArea().renderArea)) {
                 // the if-statement here ensures that the pencil does not draw outside the visible part of the canvas
                 changePixelState(pt, true);
             }
@@ -164,14 +165,14 @@ public:
         return ActionEventResult::PROCESSED;
     }
 
-    ActionEventResult processMouseButtonUp() {
+    ActionEventResult processPlayAreaMouseButtonUp() {
         // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
         return ActionEventResult::COMPLETED;
     }
 
 
     // rendering function, render the elements that are being drawn in this action
-    void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
+    void renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
         for (int32_t y = 0; y != actionState.height(); ++y) {
             for (int32_t x = 0; x != actionState.width(); ++x) {
                 ext::point actionPt{ x, y };

@@ -10,12 +10,12 @@ class SaveableAction : public EditAction {
 
 public:
 
-    SaveableAction(PlayArea& playArea) : EditAction(playArea) {};
+    SaveableAction(MainWindow& mainWindow) : EditAction(mainWindow) {};
 
     ~SaveableAction() override {
         // amend the translation for stateManager
-        playArea.stateManager.deltaTrans += deltaTrans;
+        stateManager().deltaTrans += deltaTrans;
         // save to history when this action ends
-        playArea.stateManager.saveToHistory();
+        stateManager().saveToHistory();
     }
 };

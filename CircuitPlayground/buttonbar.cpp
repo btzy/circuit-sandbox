@@ -44,15 +44,16 @@ void ButtonBar::processMouseLeave() {
     hoveredItem = nullptr;
 }
 
-void ButtonBar::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
+bool ButtonBar::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     auto x = renderArea.x;
     for (const auto& item : items) {
         x += item->width();
         if (x > event.x) { // found the correct button
             clickedItem = item.get();
-            return;
+            return true;
         }
     }
+    return true;
 }
 
 void ButtonBar::processMouseButtonUp() {
@@ -105,17 +106,16 @@ void IconButton<CodePoint>::setHeight(SDL_Renderer* renderer, const ButtonBar& b
 template <uint16_t CodePoint>
 void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
     if constexpr (CodePoint == IconCodePoints::NEW) {
-        buttonBar.playArea.startInstantaneousAction<FileNewAction>();
+        FileNewAction::start(buttonBar.mainWindow, buttonBar.mainWindow.currentAction.getStarter());
     }
     else if constexpr (CodePoint == IconCodePoints::OPEN) {
-        buttonBar.playArea.startInstantaneousAction<FileOpenAction>();
+        FileOpenAction::start(buttonBar.mainWindow, buttonBar.playArea, buttonBar.mainWindow.currentAction.getStarter());
     }
     else if constexpr (CodePoint == IconCodePoints::SAVE) {
-        SDL_Keymod modifiers = SDL_GetModState();
-        buttonBar.playArea.saveFile(modifiers & KMOD_SHIFT);
+        FileSaveAction::start(buttonBar.mainWindow, SDL_GetModState(), buttonBar.mainWindow.currentAction.getStarter());
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
-        buttonBar.playArea.stepSimulator();
+        buttonBar.mainWindow.stateManager.stepSimulator();
     }
 }
 
@@ -125,13 +125,13 @@ void PlayPauseButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar,
     const SDL_Rect destRect{ offset.x, offset.y, _length, _length };
     switch (style) {
     case RenderStyle::DEFAULT:
-        SDL_RenderCopy(renderer, textureDefault[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        SDL_RenderCopy(renderer, textureDefault[buttonBar.mainWindow.stateManager.simulatorRunning()].get(), nullptr, &destRect);
         break;
     case RenderStyle::HOVER:
-        SDL_RenderCopy(renderer, textureHover[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        SDL_RenderCopy(renderer, textureHover[buttonBar.mainWindow.stateManager.simulatorRunning()].get(), nullptr, &destRect);
         break;
     case RenderStyle::CLICK:
-        SDL_RenderCopy(renderer, textureClick[buttonBar.playArea.simulatorRunning()].get(), nullptr, &destRect);
+        SDL_RenderCopy(renderer, textureClick[buttonBar.mainWindow.stateManager.simulatorRunning()].get(), nullptr, &destRect);
         break;
     }
 }
@@ -162,5 +162,5 @@ void PlayPauseButton::setHeight(SDL_Renderer* renderer, const ButtonBar& buttonB
 }
 
 void PlayPauseButton::click(ButtonBar& buttonBar) {
-    buttonBar.playArea.startOrStopSimulator();
+    buttonBar.mainWindow.stateManager.startOrStopSimulator();
 }

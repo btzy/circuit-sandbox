@@ -4,15 +4,17 @@
 #include "point.hpp"
 #include "visitor.hpp"
 #include "drawing.hpp"
-#include "canvasaction.hpp"
+#include "saveableaction.hpp"
 #include "playarea.hpp"
+#include "mainwindow.hpp"
+#include "eventhook.hpp"
 
 
 /**
  * Action that represents selection.
  */
 
-class SelectionAction final : public CanvasAction<SelectionAction> {
+class SelectionAction final : public SaveableAction, public KeyboardEventHook {
 
 private:
     enum class State {
@@ -37,7 +39,7 @@ private:
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
 
-    inline static CanvasState clipboard; // the single clipboard; will be changed to support multi-clipboard
+    static CanvasState clipboard; // the single clipboard; will be changed to support multi-clipboard
 
     /**
      * Prepare base, selection, baseTrans, selectionTrans from selectionOrigin and selectionEnd. Returns true if the selection is not empty.
@@ -74,7 +76,7 @@ private:
     }
 
 public:
-    SelectionAction(PlayArea& playArea, State state) :CanvasAction<SelectionAction>(playArea), state(state) {}
+    SelectionAction(MainWindow& mainWindow, State state) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), state(state) {}
 
     // destructor, called to finish the action immediately
     ~SelectionAction() override {
@@ -89,19 +91,18 @@ public:
     // TODO: refractor calculation of canvasOffset from event somewhere else as well
 
     // check if we need to start selection action from dragging/clicking the playarea
-    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
+    static inline ActionEventResult startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event, MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = mainWindow.selectedToolIndices[inputHandleIndex];
 
-        return tool_tags_t::get(currentToolIndex, [&event, &playArea, &starter](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [&](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_base_of_v<Selector, Tool>) {
                 // start selection action from dragging/clicking the playarea
-                auto& action = starter.start<SelectionAction>(playArea, State::SELECTING);
-                ext::point physicalOffset = ext::point{ event.x, event.y } -ext::point{ playArea.renderArea.x, playArea.renderArea.y };
-                ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+                auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTING);
+                ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
                 action.selectionEnd = action.selectionOrigin = canvasOffset;
                 return ActionEventResult::PROCESSED;
             }
@@ -111,50 +112,37 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    // check if we need to start selection action from Ctrl-A or Ctrl-V
-    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
-        if (event.type == SDL_KEYDOWN) {
-            SDL_Keymod modifiers = SDL_GetModState();
-            switch (event.keysym.scancode) {
-            case SDL_SCANCODE_A:
-                if (modifiers & KMOD_CTRL) {
-                    auto& action = starter.start<SelectionAction>(playArea, State::SELECTED);
-                    action.selection = std::move(action.canvas());
-                    action.selectionTrans = action.baseTrans = { 0, 0 };
-                    action.canvas() = CanvasState(); // clear defaultState
-                    return ActionEventResult::PROCESSED;
-                }
-            case SDL_SCANCODE_V:
-                if (modifiers & KMOD_CTRL) {
-                    auto& action = starter.start<SelectionAction>(playArea, State::SELECTED);
+    static inline void startBySelectingAll(MainWindow& mainWindow, const ActionStarter& starter) {
+        if (mainWindow.stateManager.defaultState.empty()) return;
 
-                    ext::point physicalOffset;
-                    SDL_GetMouseState(&physicalOffset.x, &physicalOffset.y);
-                    ext::point canvasOffset = physicalOffset - playArea.translation;
-                    canvasOffset = ext::div_floor(canvasOffset, playArea.scale);
-
-                    if (!point_in_rect(physicalOffset, playArea.renderArea)) {
-                        // since the mouse is not in the play area, we paste in the middle of the play area
-                        canvasOffset = ext::div_floor(ext::point{ playArea.renderArea.w/2, playArea.renderArea.h/2 } - playArea.translation, playArea.scale);
-                    }
-                    action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
-                    action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
-                    action.baseTrans = { 0, 0 };
-                    return ActionEventResult::PROCESSED;
-                }
-            default:
-                return ActionEventResult::UNPROCESSED;
-            }
-        }
-        return ActionEventResult::UNPROCESSED;
+        auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
+        action.selection = std::move(action.canvas());
+        action.selectionTrans = action.baseTrans = { 0, 0 };
+        action.canvas() = CanvasState(); // clear defaultState
     }
 
-    ActionEventResult processCanvasMouseDrag(const ext::point&, const SDL_MouseMotionEvent& event) {
+    static inline void startByPasting(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
+        if (clipboard.empty()) return;
+        
+        auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
+
+        ext::point windowOffset;
+        SDL_GetMouseState(&windowOffset.x, &windowOffset.y);
+
+        if (!point_in_rect(windowOffset, playArea.renderArea)) {
+            // since the mouse is not in the play area, we paste in the middle of the play area
+            windowOffset = ext::point{ playArea.renderArea.x + playArea.renderArea.w / 2, playArea.renderArea.y + playArea.renderArea.h / 2 };
+        }
+        ext::point canvasOffset = playArea.canvasFromWindowOffset(windowOffset);
+
+        action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
+        action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
+        action.baseTrans = { 0, 0 };
+    }
+
+    ActionEventResult processPlayAreaMouseDrag(const SDL_MouseMotionEvent& event) override {
         // compute the canvasOffset here and restrict it to the visible area
-        ext::point canvasOffset;
-        canvasOffset.x = std::clamp(event.x, playArea.renderArea.x, playArea.renderArea.x + playArea.renderArea.w);
-        canvasOffset.y = std::clamp(event.y, playArea.renderArea.y, playArea.renderArea.y + playArea.renderArea.h);
-        canvasOffset = playArea.computeCanvasCoords(canvasOffset);
+        ext::point canvasOffset = playArea().canvasFromWindowOffset(ext::restrict_to_rect(event, playArea().renderArea));
 
         switch (state) {
         case State::SELECTING:
@@ -176,9 +164,11 @@ public:
         return ActionEventResult::UNPROCESSED;
     }
 
-    ActionEventResult processCanvasMouseButtonDown(const ext::point& canvasOffset, const SDL_MouseButtonEvent& event) {
+    ActionEventResult processPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event) override {
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        size_t currentToolIndex = playArea.mainWindow.selectedToolIndices[inputHandleIndex];
+        size_t currentToolIndex = mainWindow.selectedToolIndices[inputHandleIndex];
+
+        ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
 
         return tool_tags_t::get(currentToolIndex, [this, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
@@ -210,7 +200,7 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processCanvasMouseButtonUp() {
+    ActionEventResult processPlayAreaMouseButtonUp() {
         switch (state) {
             case State::SELECTING:
                 state = State::SELECTED;
@@ -228,7 +218,7 @@ public:
         }
     }
 
-    inline ActionEventResult processKeyboard(const SDL_KeyboardEvent& event) override {
+    ActionEventResult processKeyboard(const SDL_KeyboardEvent& event) override {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
@@ -274,14 +264,14 @@ public:
 
 
     // disable default rendering when not SELECTING
-    bool disableDefaultRender() const override {
+    bool disablePlayAreaDefaultRender() const override {
         return state != State::SELECTING;
     }
 
     // rendering function, render the selection (since base will already be rendered)
-    void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
+    void renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
         if (state != State::SELECTING) {
-            bool defaultView = playArea.isDefaultView();
+            bool defaultView = playArea().isDefaultView();
 
             for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y) {
                 for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x) {
@@ -317,7 +307,7 @@ public:
     }
 
     // rendering function, render the selection rectangle if it exists
-    void renderDirect(SDL_Renderer* renderer) const override {
+    void renderPlayAreaDirect(SDL_Renderer* renderer) const override {
         switch (state) {
         case State::SELECTING:
             {
@@ -325,11 +315,14 @@ public:
                 ext::point topLeft = ext::min(selectionOrigin, selectionEnd);
                 ext::point bottomRight = ext::max(selectionOrigin, selectionEnd) + ext::point{ 1, 1 };
 
+                ext::point windowTopLeft = playArea().windowFromCanvasOffset(topLeft);
+                ext::point windowBottomRight = playArea().windowFromCanvasOffset(bottomRight);
+                
                 SDL_Rect selectionArea{
-                    topLeft.x * playArea.scale + playArea.translation.x,
-                    topLeft.y * playArea.scale + playArea.translation.y,
-                    (bottomRight.x - topLeft.x) * playArea.scale,
-                    (bottomRight.y - topLeft.y) * playArea.scale
+                    windowTopLeft.x,
+                    windowTopLeft.y,
+                    windowBottomRight.x - windowTopLeft.x,
+                    windowBottomRight.y - windowTopLeft.y
                 };
 
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -342,11 +335,13 @@ public:
             [[fallthrough]];
         case State::MOVING:
             {
+                ext::point windowTopLeft = playArea().windowFromCanvasOffset(selectionTrans);
+            
                 SDL_Rect selectionArea{
-                    selectionTrans.x * playArea.scale + playArea.translation.x,
-                    selectionTrans.y * playArea.scale + playArea.translation.y,
-                    selection.width() * playArea.scale,
-                    selection.height() * playArea.scale
+                    windowTopLeft.x,
+                    windowTopLeft.y,
+                    selection.width() * playArea().getScale(),
+                    selection.height() * playArea().getScale()
                 };
 
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);

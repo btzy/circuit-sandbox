@@ -4,7 +4,7 @@
 
 namespace ext {
 
-    void renderDrawDashedHorizontalLine(SDL_Renderer* renderer, int32_t x1, int32_t x2, int32_t y) {
+    inline void renderDrawDashedHorizontalLine(SDL_Renderer* renderer, int32_t x1, int32_t x2, int32_t y) {
         const int32_t segmentLength = 4;
         int32_t width = x2 - x1 + 1;
         int32_t segments = width / segmentLength;
@@ -26,7 +26,7 @@ namespace ext {
         }
     }
 
-    void renderDrawDashedVerticalLine(SDL_Renderer* renderer, int32_t x, int32_t y1, int32_t y2) {
+    inline void renderDrawDashedVerticalLine(SDL_Renderer* renderer, int32_t x, int32_t y1, int32_t y2) {
         const int32_t segmentLength = 4;
         int32_t height = y2 - y1 + 1;
         int32_t segments = height / segmentLength;
@@ -48,7 +48,7 @@ namespace ext {
         }
     }
 
-    void renderDrawDashedRect(SDL_Renderer* renderer, const SDL_Rect* rect) {
+    inline void renderDrawDashedRect(SDL_Renderer* renderer, const SDL_Rect* rect) {
         int32_t x1 = rect->x;
         int32_t y1 = rect->y;
         int32_t x2 = x1 + rect->w - 1;

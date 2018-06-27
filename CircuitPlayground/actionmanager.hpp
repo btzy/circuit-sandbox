@@ -7,6 +7,7 @@
 #include "declarations.hpp"
 
 #include "action.hpp"
+#include "drawable.hpp"
 
 /**
  * ActionManager holds an action and ensures that only one action can be active at any moment.
@@ -17,15 +18,16 @@ class ActionManager {
 
 private:
 
-    PlayArea& playArea;
+    MainWindow& mainWindow;
 
-    std::unique_ptr<Action> data;
+    std::unique_ptr<Action> data; // current action that receives playarea events, might be nullptr
 
     /**
      * returns true if event is consumed, false otherwise
      */
-    template<typename ProcessCallback, typename StartWithCallback>
-    inline bool forwardEvent(ProcessCallback&& process, StartWithCallback&& startWith) {
+    template<typename Data, typename ProcessCallback>
+    inline bool forwardEvent(const Data& data, ProcessCallback&& process) {
+        if (!data) return false;
         ActionEventResult result = std::forward<ProcessCallback>(process)();
         switch (result) {
         case ActionEventResult::COMPLETED:
@@ -39,53 +41,24 @@ private:
         case ActionEventResult::UNPROCESSED:
             break;
         }
-
-        // have to ask all the actions if they would like to start
-        ActionEventResult startResult = std::forward<StartWithCallback>(startWith)();
-        switch (startResult) {
-        case ActionEventResult::COMPLETED:
-            reset();
-            [[fallthrough]];
-        case ActionEventResult::PROCESSED:
-            return true;
-        case ActionEventResult::CANCELLED:
-            reset();
-            [[fallthrough]];
-        case ActionEventResult::UNPROCESSED:
-            break;
-        }
-
         return false;
     }
 
 public:
     // disable all the copy and move constructors and assignment operators, because this class is intended to be a 'policy' type class
 
-    ActionManager(PlayArea& playArea) : playArea(playArea), data(std::make_unique<Action>()) {}
+    ActionManager(MainWindow& mainWindow) : mainWindow(mainWindow), data(nullptr) {}
 
     ~ActionManager() {}
 
     void reset() {
-        start<Action>();
+        data = nullptr;
     }
 
-    template <typename T, typename... Args>
-    T& start(Args&&... args) {
-        data = nullptr; // destroy the old action
-        data = std::make_unique<T>(std::forward<Args>(args)...); // construct the new action
-        return static_cast<T&>(*data);
+    ActionStarter getStarter() {
+        return ActionStarter(data);
     }
-
-    // requirements here follow those in Action.
-    bool processMouseButtonDown(const SDL_MouseButtonEvent&);
-    bool processMouseDrag(const SDL_MouseMotionEvent&);
-    bool processMouseButtonUp();
-
-    bool processMouseWheel(const SDL_MouseWheelEvent&);
-    bool processKeyboard(const SDL_KeyboardEvent&);
 
     // renderer
-    bool disableDefaultRender() const;
-    void renderSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const;
-    void renderDirect(SDL_Renderer* renderer) const;
+    void render(SDL_Renderer* renderer) const;
 };

@@ -5,14 +5,13 @@
 
 #include <SDL.h>
 #include "point.hpp"
-#include "action.hpp"
+#include "playareaaction.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "visitor.hpp"
 
-class EyedropperAction final : public Action {
+class EyedropperAction final : public PlayAreaAction {
 private:
-    MainWindow& mainWindow;
 
     template <typename Element>
     void bindToolFromElement(size_t inputHandleIndex, Element element) {
@@ -28,24 +27,23 @@ private:
     }
 
 public:
-    EyedropperAction(MainWindow& mainWindow) : mainWindow(mainWindow) {}
+    EyedropperAction(MainWindow& mainWindow) : PlayAreaAction(mainWindow) {}
 
     ~EyedropperAction() {}
 
-    static inline ActionEventResult startWithMouseButtonDown(const SDL_MouseButtonEvent& event, PlayArea& playArea, const ActionStarter& starter) {
-        ext::point physicalOffset = ext::point{ event.x, event.y } - ext::point{ playArea.renderArea.x, playArea.renderArea.y };
-        ext::point canvasOffset = playArea.computeCanvasCoords(physicalOffset);
+    static inline ActionEventResult startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event, MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
+        ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
         size_t inputHandleIndex = resolveInputHandleIndex(event);
 
         SDL_Keymod modifiers = SDL_GetModState();
         if (modifiers & KMOD_CTRL) {
-            auto& action = starter.start<EyedropperAction>(playArea.mainWindow);
+            auto& action = starter.start<EyedropperAction>(mainWindow);
             std::visit(visitor{
                 [](std::monostate) {},
                 [&](const auto& element) {
                     action.bindToolFromElement(inputHandleIndex, element);
                 }
-            }, playArea.stateManager.defaultState[canvasOffset]);
+            }, action.canvas()[canvasOffset]);
             return ActionEventResult::COMPLETED;
         }
         return ActionEventResult::UNPROCESSED;

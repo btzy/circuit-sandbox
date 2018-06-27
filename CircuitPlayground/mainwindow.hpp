@@ -6,7 +6,7 @@
 
 #include <variant>
 #include <optional>
-#include <array>
+#include <vector>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -17,6 +17,7 @@
 #include "buttonbar.hpp"
 #include "drawable.hpp"
 #include "font.hpp"
+#include "statemanager.hpp"
 
 
 class MainWindow {
@@ -33,6 +34,8 @@ public:
     // hairline width (for drawing separating lines)
     constexpr static int HAIRLINE_WIDTH = 1;
 
+    // game state
+    StateManager stateManager;
 
 private:
     bool closing; // whether the user has pressed the close button
@@ -42,7 +45,8 @@ private:
     PlayArea playArea;
     ButtonBar buttonBar;
 
-    const std::array<Drawable*, 3> drawables{ &toolbox, &playArea, &buttonBar };
+    std::vector<Drawable*> drawables{ &toolbox, &playArea, &buttonBar };
+    std::vector<KeyboardEventReceiver*> keyboardEventReceivers{ &toolbox, &playArea, &buttonBar };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
     Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
     size_t activeInputHandleIndex; // the active input handle index associated with currentEventTarget; only valid when currentEventTarget != nullptr
@@ -58,6 +62,13 @@ private:
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
 #endif
+
+public:
+    // action state
+    ActionManager currentAction;
+
+    friend class PlayAreaAction;
+    friend class KeyboardEventHook;
 
     /**
      * Process the event that has occurred (called by start())
@@ -141,9 +152,7 @@ public:
      * Overwrite the current canvas state with the given file.
      * This will reset the history system.
      */
-    void loadFile(const char* filePath) {
-        playArea.loadFile(filePath);
-    }
+    void loadFile(const char* filePath);
 
     /**
      * Set the asterisk in the title bar

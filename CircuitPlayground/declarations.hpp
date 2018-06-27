@@ -18,8 +18,9 @@ class PlayArea;
 using tool_tags_t = ext::tag_tuple<Selector, Panner, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate>;
 
 
-// compile-time type tag which stores the list of available actions
+// all the available action
 class Action;
+class PlayAreaAction;
 template <typename> class PencilAction;
 class EyedropperAction;
 class SelectionAction;
@@ -27,7 +28,9 @@ class HistoryAction;
 class FileNewAction;
 class FileOpenAction;
 class FileSaveAction;
-using action_tags_t = ext::tag_tuple<Action, EyedropperAction, SelectionAction, HistoryAction, FileNewAction, FileOpenAction, FileSaveAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
+
+// list of actions that have a static startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent&, MainWindow&, PlayArea& const ActionStarter&);
+using playarea_action_tags_t = ext::tag_tuple<EyedropperAction, SelectionAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>>;
 
 
 /**

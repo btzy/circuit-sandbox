@@ -38,13 +38,13 @@ private:
      */
     void reloadSimulator();
 
+    friend class StatefulAction;
     friend class EditAction;
     friend class SaveableAction;
     friend class HistoryAction;
-    friend class EyedropperAction;
     friend class FileOpenAction;
     friend class FileSaveAction;
-    friend class FileNewAction;
+    friend class SelectionAction;
 
 public:
 

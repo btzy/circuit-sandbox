@@ -9,20 +9,19 @@
 #include "elements.hpp"
 #include "integral_division.hpp"
 #include "point.hpp"
-#include "fileopenaction.hpp"
-#include "filesaveaction.hpp"
+#include "playareaaction.hpp"
 
-PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(*this) {
-    stateManager.saveToHistory(); // so that the loaded savefile will be in the history
-};
+PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {};
 
 
 void PlayArea::updateDpiFields() {
     // do nothing, because play area works fully in physical pixels and there are no hardcoded logical pixels constants
 }
 
-
 void PlayArea::render(SDL_Renderer* renderer) {
+    render(renderer, mainWindow.stateManager);
+}
+void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
     // calculate the rectangle (in gamestate coordinates) that we will be drawing:
     SDL_Rect surfaceRect;
     surfaceRect.x = ext::div_floor(-translation.x, scale);
@@ -32,11 +31,11 @@ void PlayArea::render(SDL_Renderer* renderer) {
 
     // render the gamestate
     SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
-    if (!currentAction.disableDefaultRender()) {
+    if (!currentAction.disablePlayAreaDefaultRender()) {
         stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
     }
     // ask current action to render pixels to the surface if necessary
-    currentAction.renderSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
+    currentAction.renderPlayAreaSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     // scale and translate the surface according to the the pan and zoom level
@@ -69,7 +68,7 @@ void PlayArea::render(SDL_Renderer* renderer) {
     }
 
     // ask current action to render itself directly if necessary
-    currentAction.renderDirect(renderer);
+    currentAction.renderPlayAreaDirect(renderer);
 
     if (defaultView) {
         SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
@@ -96,9 +95,9 @@ void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
 }
 
-void PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
+bool PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
 
-    if (!currentAction.processMouseButtonDown(event)) {
+    if (!currentAction.processPlayAreaMouseButtonDown(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         // offset relative to top-left of toolbox (in physical size; both event and renderArea are in physical size units)
@@ -122,12 +121,13 @@ void PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
         });
 
     }
+    return true;
 
 }
 
 void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
 
-    if (!currentAction.processMouseDrag(event)) {
+    if (!currentAction.processPlayAreaMouseDrag(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         // update translation if panning
@@ -143,7 +143,7 @@ void PlayArea::processMouseDrag(const SDL_MouseMotionEvent& event) {
 
 void PlayArea::processMouseButtonUp() {
 
-    if (!currentAction.processMouseButtonUp()) {
+    if (!currentAction.processPlayAreaMouseButtonUp()) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         if (panOrigin) { // the panner is active
@@ -153,9 +153,9 @@ void PlayArea::processMouseButtonUp() {
 
 }
 
-void PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
+bool PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
 
-    if (!currentAction.processMouseWheel(event)) {
+    if (!currentAction.processPlayAreaMouseWheel(event)) {
         // at this point, no actions are able to handle this event, so we do the default for playarea
 
         if (mouseoverPoint) {
@@ -177,63 +177,31 @@ void PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
         }
 
     }
-
+    return true;
 }
 
-void PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
+bool PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
 
-    if (!currentAction.processKeyboard(event)) {
-        // at this point, no actions are able to handle this event, so we do the default for playarea
-
-        if (event.type == SDL_KEYDOWN) {
-            //SDL_Keymod modifiers = SDL_GetModState();
-            switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
-            case SDL_SCANCODE_T:
-                // default view is active while T is held
-                defaultView = true;
-                break;
-            case SDL_SCANCODE_R:
-                currentAction.reset();
-                stateManager.resetSimulator();
-                break;
-            case SDL_SCANCODE_SPACE:
-                currentAction.reset();
-                stateManager.startOrStopSimulator();
-                break;
-            case SDL_SCANCODE_S:
-                currentAction.reset();
-                stateManager.stepSimulator();
-                break;
-            default:
-                break;
-            }
+    if (event.type == SDL_KEYDOWN) {
+        //SDL_Keymod modifiers = SDL_GetModState();
+        switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+        case SDL_SCANCODE_T:
+            // default view is active while T is held
+            defaultView = true;
+            return true;
+        default:
+            break;
         }
-        else if (event.type == SDL_KEYUP) {
-            switch (event.keysym.scancode) {
-            case SDL_SCANCODE_T:
-                // default view is active while T is held
-                defaultView = false;
-                break;
-            default:
-                break;
-            }
+    }
+    else if (event.type == SDL_KEYUP) {
+        switch (event.keysym.scancode) {
+        case SDL_SCANCODE_T:
+            // default view is active while T is held
+            defaultView = false;
+            return true;
+        default:
+            break;
         }
-
     }
-
-}
-
-void PlayArea::loadFile(const char* filePath) {
-    currentAction.start<FileOpenAction>(*this, filePath);
-    currentAction.reset();
-}
-
-void PlayArea::saveFile(bool forceDialog) {
-    if (forceDialog) {
-        currentAction.start<FileSaveAction>(*this, nullptr);
-    }
-    else {
-        currentAction.start<FileSaveAction>(*this, mainWindow.getFilePath());
-    }
-    currentAction.reset();
+    return false;
 }

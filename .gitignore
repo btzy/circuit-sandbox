@@ -48,6 +48,7 @@ Release/
 *.sln
 *.filters
 *.user
+CodeGraphData/
 
 # Save files for Circuit Playground
 *.sav

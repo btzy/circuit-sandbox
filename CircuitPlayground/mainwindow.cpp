@@ -8,8 +8,14 @@
 
 #include <iostream>
 
+#include "reverse_adaptor.hpp"
 #include "mainwindow.hpp"
 #include "fileutils.hpp"
+#include "selectionaction.hpp"
+#include "filenewaction.hpp"
+#include "fileopenaction.hpp"
+#include "filesaveaction.hpp"
+#include "historyaction.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -35,7 +41,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -274,12 +280,18 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     }
 
     // determine new currentLocationTarget
-    if (currentLocationTarget == nullptr) {
-        for (Drawable* drawable : drawables) {
-            if (SDL_PointInRect(&position, &drawable->renderArea)) {
-                currentLocationTarget = drawable;
-                break; // we assume renderAreas never intersect, so 'break' here is valid
+    for (Drawable* drawable : ext::reverse(drawables)) {
+        if (drawable == currentLocationTarget) {
+            break;
+        }
+        if (SDL_PointInRect(&position, &drawable->renderArea)) {
+            // found a new Drawable that isn't currently being hovered
+            if (currentLocationTarget != nullptr) {
+                currentLocationTarget->processMouseLeave();
+                currentLocationTarget = nullptr;
             }
+            currentLocationTarget = drawable;
+            break;
         }
     }
 
@@ -309,12 +321,11 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         // ensure only one input handle can be down at any moment
         stopMouseDrag();
-        for (Drawable* drawable : drawables) {
-            if (SDL_PointInRect(&position, &drawable->renderArea)) {
+        activeInputHandleIndex = inputHandleIndex;
+        for (Drawable* drawable : ext::reverse(drawables)) {
+            if (SDL_PointInRect(&position, &drawable->renderArea) && drawable->processMouseButtonDown(event)) {
                 currentEventTarget = drawable;
-                activeInputHandleIndex = inputHandleIndex;
                 SDL_CaptureMouse(SDL_TRUE);
-                currentEventTarget->processMouseButtonDown(event);
                 break;
             }
         }
@@ -329,8 +340,9 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
 void MainWindow::stopMouseDrag() {
     if (currentEventTarget != nullptr) {
         SDL_CaptureMouse(SDL_FALSE);
-        currentEventTarget->processMouseButtonUp();
+        auto drawable = currentEventTarget;
         currentEventTarget = nullptr;
+        drawable->processMouseButtonUp();
     }
 }
 
@@ -338,15 +350,70 @@ void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     SDL_Point position;
     // poll the mouse position since it's not reflected in the event
     SDL_GetMouseState(&position.x, &position.y);
-    if (SDL_PointInRect(&position, &playArea.renderArea)) {
-        playArea.processMouseWheel(event);
+    for (Drawable* drawable : ext::reverse(drawables)) {
+        if (SDL_PointInRect(&position, &drawable->renderArea) && drawable->processMouseWheel(event)) {
+            break;
+        }
     }
 }
 
 
 void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
-    // TODO: currently all keyboard events are forwarded to playarea, is this the right thing to do?
-    playArea.processKeyboard(event);
+    // invoke the handlers for all drawables and see if they want to stop event propagation
+    for (KeyboardEventReceiver* receiver : ext::reverse(keyboardEventReceivers)) {
+        if (receiver->processKeyboard(event)) {
+            return;
+        }
+    }
+    
+    if (event.type == SDL_KEYDOWN) {
+        SDL_Keymod modifiers = SDL_GetModState();
+        if (modifiers & KMOD_CTRL) {
+            switch (event.keysym.scancode) {
+            case SDL_SCANCODE_A:
+                SelectionAction::startBySelectingAll(*this, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_N:
+                FileNewAction::start(*this, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_O:
+                FileOpenAction::start(*this, playArea, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_S:
+                FileSaveAction::start(*this, modifiers, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_V:
+                SelectionAction::startByPasting(*this, playArea, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_Y:
+                HistoryAction::startByRedoing(*this, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_Z:
+                HistoryAction::startByUndoing(*this, currentAction.getStarter());
+                return;
+            default:
+                break;
+            }
+        }
+        else {
+            switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+            case SDL_SCANCODE_R:
+                currentAction.reset();
+                stateManager.resetSimulator();
+                return;
+            case SDL_SCANCODE_SPACE:
+                currentAction.reset();
+                stateManager.startOrStopSimulator();
+                return;
+            case SDL_SCANCODE_S:
+                currentAction.reset();
+                stateManager.stepSimulator();
+                return;
+            default:
+                break;
+            }
+        }
+    }
 }
 
 
@@ -376,6 +443,10 @@ void MainWindow::render() {
     SDL_RenderPresent(renderer);
 }
 
+
+void MainWindow::loadFile(const char* filePath) {
+    FileOpenAction::start(*this, playArea, currentAction.getStarter(), filePath);
+}
 
 void MainWindow::setUnsaved(bool unsaved) {
     if (this->unsaved != unsaved) {

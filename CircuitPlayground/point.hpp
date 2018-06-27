@@ -105,8 +105,11 @@ namespace ext {
     }
 
 #ifdef SDL_h_ // additional convenience conversion functions if we are using SDL
-    inline bool point_in_rect(const point& pt, const SDL_Rect& rect) noexcept {
+    constexpr inline bool point_in_rect(const point& pt, const SDL_Rect& rect) noexcept {
         return pt.x >= rect.x && pt.x < rect.x + rect.w && pt.y >= rect.y && pt.y < rect.y + rect.h;
+    }
+    constexpr inline point restrict_to_rect(const point& pt, const SDL_Rect& rect) noexcept {
+        return { std::clamp(pt.x, rect.x, rect.x + rect.w - 1), std::clamp(pt.y, rect.y, rect.y + rect.h - 1) };
     }
 #endif // SDL_h_
 }

@@ -3,30 +3,17 @@
 #include <boost/process/spawn.hpp>
 #include <SDL.h>
 
-#include "action.hpp"
-#include "playarea.hpp"
+#include "statefulaction.hpp"
+#include "mainwindow.hpp"
 
 class FileNewAction final : public Action {
 public:
-    FileNewAction(PlayArea& playArea) {
-        boost::process::spawn(playArea.mainWindow.processName);
+    FileNewAction(MainWindow& mainWindow) {
+        boost::process::spawn(mainWindow.processName);
     };
 
-    // check if we need to start action from Ctrl-N
-    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
-        if (event.type == SDL_KEYDOWN) {
-            SDL_Keymod modifiers = SDL_GetModState();
-            switch (event.keysym.scancode) {
-            case SDL_SCANCODE_N:
-                if (modifiers & KMOD_CTRL) {
-                    starter.start<FileNewAction>(playArea);
-                    return ActionEventResult::COMPLETED;
-                }
-                break;
-            default:
-                break;
-            }
-        }
-        return ActionEventResult::UNPROCESSED;
+    static inline void start(MainWindow& mainWindow, const ActionStarter& starter) {
+        starter.start<FileNewAction>(mainWindow);
+        starter.reset();
     }
 };

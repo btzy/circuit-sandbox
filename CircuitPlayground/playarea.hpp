@@ -9,7 +9,7 @@
 #include "drawable.hpp"
 #include "statemanager.hpp"
 #include "point.hpp"
-#include "actionmanager.hpp"
+#include "playareaactionmanager.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -21,9 +21,6 @@ class PlayArea final : public Drawable {
 private:
     // owner window
     MainWindow& mainWindow;
-
-    // game state
-    StateManager stateManager;
 
     // translation (in physical pixels)
     ext::point translation{ 0, 0 };
@@ -39,10 +36,13 @@ private:
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
 
-    ActionManager currentAction;
+    PlayAreaActionManager currentAction; // current action that receives playarea events, might be nullptr
 
-
+    friend class PlayAreaAction;
     friend class EditAction;
+    friend class FileOpenAction;
+
+    /*friend class EditAction;
     friend class SaveableAction;
     template <typename T> friend class PencilAction;
     friend class EyedropperAction;
@@ -50,7 +50,7 @@ private:
     friend class HistoryAction;
     friend class FileOpenAction;
     friend class FileSaveAction;
-    friend class FileNewAction;
+    friend class FileNewAction;*/
 
 public:
     PlayArea(MainWindow&);
@@ -67,7 +67,10 @@ public:
      * @pre renderer must not be null.
      */
     void render(SDL_Renderer* renderer) override;
+private:
+    void render(SDL_Renderer* renderer, StateManager& stateManager);
 
+public:
     /**
      * Check if default view is being used
      */
@@ -81,14 +84,16 @@ public:
     void processMouseHover(const SDL_MouseMotionEvent&) override; // fires when mouse is inside the renderArea
     void processMouseLeave() override; // fires once when mouse goes out of the renderArea
 
-    void processMouseButtonDown(const SDL_MouseButtonEvent&) override; // fires when the mouse is pressed down, must be inside the renderArea
+    bool processMouseButtonDown(const SDL_MouseButtonEvent&) override; // fires when the mouse is pressed down, must be inside the renderArea
     void processMouseDrag(const SDL_MouseMotionEvent&) override; // fires when mouse is moved, and was previously pressed down
     void processMouseButtonUp() override; // fires when the mouse is lifted up, might be outside the renderArea
 
-    virtual void processMouseWheel(const SDL_MouseWheelEvent&) override;
-    virtual void processKeyboard(const SDL_KeyboardEvent&) override;
+    bool processMouseWheel(const SDL_MouseWheelEvent&) override;
+    bool processKeyboard(const SDL_KeyboardEvent&) override;
 
-    ext::point computeCanvasCoords(ext::point physicalOffset) const {
+    inline ext::point canvasFromWindowOffset(const ext::point& windowOffset) const {
+
+        ext::point physicalOffset = windowOffset - ext::point(renderArea.x, renderArea.y);
 
         // translation:
         ext::point offset = physicalOffset - translation;
@@ -97,67 +102,12 @@ public:
         return ext::div_floor(offset, scale);
     }
 
-    /**
-     * Overwrite the current canvas state with the given file.
-     * This will reset the history system.
-     */
-    void loadFile(const char* filePath);
-
-    /**
-     * Save the current state to a file
-     */
-    void saveFile(bool forceDialog);
-
-    /**
-    * Starts the simulator if it is currently stopped.
-    */
-    void startSimulator() {
-        stateManager.startSimulator();
+    inline ext::point windowFromCanvasOffset(const ext::point& canvasOffset) const {
+        return canvasOffset * scale + translation + ext::point(renderArea.x, renderArea.y);
     }
 
-    /**
-    * Stops the simulator if it is currently running.
-    */
-    void stopSimulator() {
-        stateManager.stopSimulator();
-    }
-
-    /**
-     * Starts/stops the simulator.
-     */
-    void startOrStopSimulator() {
-        stateManager.startOrStopSimulator();
-    }
-
-    /**
-    * Whether the simulator is running.
-    */
-    bool simulatorRunning() const {
-        return stateManager.simulatorRunning();
-    }
-
-    /**
-    * Steps the simulator if it is currently stopped.
-    */
-    void stepSimulator() {
-        stateManager.stepSimulator();
-    }
-
-    /**
-    * Start a playarea action.
-    */
-    template <typename ActionType, typename... Args>
-    void startAction(Args&&... args) {
-        currentAction.start<ActionType>(*this, std::forward<Args>(args)...);
-    }
-
-    /**
-    * Start a playarea action that should complete immediately.
-    */
-    template <typename ActionType, typename... Args>
-    void startInstantaneousAction(Args&&... args) {
-        startAction<ActionType>(std::forward<Args>(args)...);
-        currentAction.reset();
+    inline int32_t getScale() const {
+        return scale;
     }
 };
 

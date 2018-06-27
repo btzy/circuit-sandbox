@@ -11,7 +11,7 @@
 #include <nfd.h>
 
 #include "action.hpp"
-#include "playarea.hpp"
+#include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 
@@ -77,61 +77,61 @@ private:
     }
 
 public:
-    FileOpenAction(PlayArea& playArea, const char* filePath = nullptr) {
+    FileOpenAction(MainWindow& mainWindow, PlayArea& playArea, const char* filePath = nullptr) {
 
         // stop the simulator if running
-        bool simulatorRunning = playArea.stateManager.simulator.running();
-        if (simulatorRunning) playArea.stateManager.simulator.stop();
+        bool simulatorRunning = mainWindow.stateManager.simulator.running();
+        if (simulatorRunning) mainWindow.stateManager.simulator.stop();
 
 
         // show the file dialog if necessary
         char* outPath = nullptr;
         if (filePath == nullptr) {
             nfdresult_t result = NFD_OpenDialog(CCPG_FILE_EXTENSION, nullptr, &outPath);
-            playArea.mainWindow.suppressMouseUntilNextDown();
+            mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 filePath = outPath;
             }
         }
 
         if (filePath != nullptr) { // means that the user wants to open filePath
-            if (playArea.stateManager.historyManager.empty() && !playArea.mainWindow.hasFilePath()) {
+            if (mainWindow.stateManager.historyManager.empty() && !mainWindow.hasFilePath()) {
                 // read from filePath
-                ReadResult result = readSave(playArea.stateManager.defaultState, filePath);
+                ReadResult result = readSave(mainWindow.stateManager.defaultState, filePath);
                 switch (result) {
                 case ReadResult::OK:
                     // reset the translations
-                    playArea.stateManager.deltaTrans = { 0, 0 };
+                    mainWindow.stateManager.deltaTrans = { 0, 0 };
                     // TODO: some intelligent translation/scale depending on dimensions of canvasstate
                     playArea.translation = { 0, 0 };
                     playArea.scale = 20;
                     // imbue the history
-                    playArea.stateManager.historyManager.imbue(playArea.stateManager.defaultState);
-                    playArea.mainWindow.setUnsaved(false);
-                    playArea.mainWindow.setFilePath(filePath);
+                    mainWindow.stateManager.historyManager.imbue(mainWindow.stateManager.defaultState);
+                    mainWindow.setUnsaved(false);
+                    mainWindow.setFilePath(filePath);
                     // recompile the simulator
-                    playArea.stateManager.simulator.compile(playArea.stateManager.defaultState, false);
+                    mainWindow.stateManager.simulator.compile(mainWindow.stateManager.defaultState, false);
                     simulatorRunning = false; // don't restart the simulator
                     break;
                 case ReadResult::OUTDATED:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Playground, and cannot be opened here.  Please update Circuit Playground and try again.", playArea.mainWindow.window);
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Playground, and cannot be opened here.  Please update Circuit Playground and try again.", mainWindow.window);
                     break;
                 case ReadResult::CORRUPTED:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "File is corrupted.", playArea.mainWindow.window);
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "File is corrupted.", mainWindow.window);
                     break;
                 case ReadResult::IO_ERROR:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file cannot be accessed.", playArea.mainWindow.window);
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file cannot be accessed.", mainWindow.window);
                     break;
                 }
             }
             else {
                 // launch a new instance
-                boost::process::spawn(playArea.mainWindow.processName, filePath);
+                boost::process::spawn(mainWindow.processName, filePath);
             }
         }
 
         // start the simulator if necessary
-        if (simulatorRunning) playArea.stateManager.simulator.start();
+        if (simulatorRunning) mainWindow.stateManager.simulator.start();
 
         // free the memory
         if (outPath != nullptr) {
@@ -139,21 +139,8 @@ public:
         }
     };
 
-    // check if we need to start action from Ctrl-O
-    static inline ActionEventResult startWithKeyboard(const SDL_KeyboardEvent& event, PlayArea& playArea, const ActionStarter& starter) {
-        if (event.type == SDL_KEYDOWN) {
-            SDL_Keymod modifiers = SDL_GetModState();
-            switch (event.keysym.scancode) {
-            case SDL_SCANCODE_O:
-                if (modifiers & KMOD_CTRL) {
-                    starter.start<FileOpenAction>(playArea, nullptr);
-                    return ActionEventResult::COMPLETED;
-                }
-                break;
-            default:
-                break;
-            }
-        }
-        return ActionEventResult::UNPROCESSED;
+    static inline void start(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter, const char* filePath = nullptr) {
+        starter.start<FileOpenAction>(mainWindow, playArea, filePath);
+        starter.reset();
     }
 };
