@@ -218,7 +218,7 @@ public:
         }
     }
 
-    ActionEventResult processKeyboard(const SDL_KeyboardEvent& event) override {
+    ActionEventResult processWindowKeyboard(const SDL_KeyboardEvent& event) override {
         if (event.type == SDL_KEYDOWN) {
             SDL_Keymod modifiers = SDL_GetModState();
             switch (event.keysym.scancode) {
