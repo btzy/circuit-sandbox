@@ -4,17 +4,12 @@
 #include <cstdint>
 #include <SDL.h>
 #include "point.hpp"
+#include "sdl_deleters.hpp"
 
 enum class RenderStyle : unsigned char {
     DEFAULT,
     HOVER,
     CLICK
-};
-
-struct TextureDeleter {
-    void operator()(SDL_Texture* ptr) const noexcept {
-        SDL_DestroyTexture(ptr);
-    }
 };
 
 class ButtonBar;

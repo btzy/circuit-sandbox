@@ -220,7 +220,7 @@ public:
 
     ActionEventResult processWindowKeyboard(const SDL_KeyboardEvent& event) override {
         if (event.type == SDL_KEYDOWN) {
-            SDL_Keymod modifiers = SDL_GetModState();
+            SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
             switch (event.keysym.scancode) {
             case SDL_SCANCODE_H:
                 selection.flipHorizontal();

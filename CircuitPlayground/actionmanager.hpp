@@ -36,7 +36,4 @@ public:
     ActionStarter getStarter() {
         return ActionStarter(data);
     }
-
-    // renderer
-    void render(SDL_Renderer* renderer) const;
 };

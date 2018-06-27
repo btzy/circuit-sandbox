@@ -34,11 +34,18 @@ public:
     // hairline width (for drawing separating lines)
     constexpr static int HAIRLINE_WIDTH = 1;
 
+    std::string displayedSimulationFPS = "5"; // the FPS as displayed in the dialog box (has to be defined before stateManager)
+
+    // throws std::logic_error or its derived classes
+    static Simulator::period_t geSimulatorPeriodFromFPS(long double fps);
+
     // game state
     StateManager stateManager;
 
 private:
     bool closing; // whether the user has pressed the close button
+
+    SDL_Rect renderArea;
 
     // Render-able components in the window:
     Toolbox toolbox;
@@ -69,6 +76,7 @@ public:
 
     friend class PlayAreaAction;
     friend class KeyboardEventHook;
+    friend class MainWindowEventHook;
 
     /**
      * Process the event that has occurred (called by start())
@@ -79,6 +87,7 @@ public:
     void processMouseButtonEvent(const SDL_MouseButtonEvent&);
     void processMouseWheelEvent(const SDL_MouseWheelEvent&);
     void processKeyboardEvent(const SDL_KeyboardEvent&);
+    void processTextInputEvent(const SDL_TextInputEvent&);
 
     /**
      * Renders everything to the screen
@@ -95,6 +104,12 @@ public:
      */
     void layoutComponents(bool forceLayout = false);
 
+    /**
+     * Gets the render area of this window
+     */
+    const SDL_Rect& getRenderArea() const {
+        return renderArea;
+    }
 
     /**
      * Update the dpi fields.  Returns true if the dpi got changed

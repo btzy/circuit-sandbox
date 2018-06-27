@@ -45,10 +45,11 @@ private:
     friend class FileOpenAction;
     friend class FileSaveAction;
     friend class SelectionAction;
+    friend class ChangeSimulationSpeedAction;
 
 public:
 
-    StateManager();
+    StateManager(Simulator::period_t);
     ~StateManager();
 
     /**

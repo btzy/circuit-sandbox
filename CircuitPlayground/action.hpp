@@ -47,39 +47,6 @@ public:
     Action& operator=(const Action&) = delete;
 
     virtual ~Action() {}
-
-    // TODO: all these virtual methods should come from EventHook instead of from Action.
-    // expects the mouse to be in the playarea
-    /*virtual inline ActionEventResult processMouseHover(const SDL_MouseMotionEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    virtual inline ActionEventResult processMouseLeave() {
-        return ActionEventResult::UNPROCESSED;
-    }
-    // expects the mouse to be in the playarea
-    virtual inline ActionEventResult processMouseButtonDown(const SDL_MouseButtonEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    // might be outside the playarea if the mouse was dragged out
-    virtual inline ActionEventResult processMouseDrag(const SDL_MouseMotionEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }
-    // might be outside the playarea if the mouse was dragged out
-    virtual inline ActionEventResult processMouseButtonUp() {
-        return ActionEventResult::UNPROCESSED;
-    }
-
-    // expects the mouse to be in the playarea
-    virtual inline ActionEventResult processMouseWheel(const SDL_MouseWheelEvent&) {
-        return ActionEventResult::UNPROCESSED;
-    }*/
-
-
-    // rendering functions
-    /**
-     * Render directly using the SDL_Renderer (it is in window coordinates).
-     */
-    virtual void render(SDL_Renderer*) const {}
 };
 
 class ActionStarter {

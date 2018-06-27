@@ -6,11 +6,10 @@
 #include "statemanager.hpp"
 #include "visitor.hpp"
 
-StateManager::StateManager() {
+StateManager::StateManager(Simulator::period_t period) {
     // compile the empty stateManager, so that simulator won't be empty
     simulator.compile(defaultState, false);
-    using namespace std::chrono_literals;
-    simulator.setPeriod(200ms);
+    simulator.setPeriod(period);
 }
 
 StateManager::~StateManager() {

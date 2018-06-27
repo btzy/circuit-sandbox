@@ -18,6 +18,8 @@
 
 
 class Simulator {
+public:
+    using period_t = std::chrono::steady_clock::duration;
 private:
     // The thread on which the simulation will run.
     std::thread simThread;
@@ -31,7 +33,7 @@ private:
     std::condition_variable simSleepCV;
 
     // minimum time between successive simulation steps (zero = as fast as possible)
-    std::atomic<std::chrono::steady_clock::duration::rep> period_rep; // it is stored using the underlying integer type so that we can use atomics
+    std::atomic<period_t::rep> period_rep; // it is stored using the underlying integer type so that we can use atomics
     std::chrono::steady_clock::time_point nextStepTime; // next time the simulator will be stepped
 
     /**

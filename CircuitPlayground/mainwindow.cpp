@@ -16,9 +16,11 @@
 #include "fileopenaction.hpp"
 #include "filesaveaction.hpp"
 #include "historyaction.hpp"
+#include "changesimulationspeedaction.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #endif
 
@@ -41,7 +43,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : stateManager(geSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -167,13 +169,13 @@ void MainWindow::layoutComponents(bool forceLayout) {
     bool dpiChanged = updateDpiFields();
 
     // get the size of the render target (this is a physical size)
-    int pixelWidth, pixelHeight;
-    SDL_GetRendererOutputSize(renderer, &pixelWidth, &pixelHeight);
+    renderArea.x = renderArea.y = 0;
+    SDL_GetRendererOutputSize(renderer, &renderArea.w, &renderArea.h);
 
     // position all the components:
-    playArea.renderArea = SDL_Rect{0, 0, pixelWidth - TOOLBOX_WIDTH - HAIRLINE_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
-    toolbox.renderArea = SDL_Rect{pixelWidth - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
-    buttonBar.renderArea = SDL_Rect{0, pixelHeight - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, pixelWidth, BUTTONBAR_HEIGHT};
+    playArea.renderArea = SDL_Rect{0, 0, renderArea.w - TOOLBOX_WIDTH - HAIRLINE_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
+    toolbox.renderArea = SDL_Rect{ renderArea.w - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
+    buttonBar.renderArea = SDL_Rect{0, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, renderArea.w, BUTTONBAR_HEIGHT};
 
     if (dpiChanged || forceLayout) {
         // set min window size
@@ -183,7 +185,9 @@ void MainWindow::layoutComponents(bool forceLayout) {
         updateFonts();
 
         // tell children about the updated dpi
-        buttonBar.updateDpi(renderer);
+        for (Drawable* drawable : drawables) {
+            drawable->updateDpi(renderer);
+        }
     }
 }
 
@@ -243,6 +247,8 @@ void MainWindow::processEvent(const SDL_Event& event) {
     case SDL_KEYUP:
         processKeyboardEvent(event.key);
         break;
+    case SDL_TEXTINPUT:
+        processTextInputEvent(event.text);
     }
 }
 
@@ -367,29 +373,33 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
     }
     
     if (event.type == SDL_KEYDOWN) {
-        SDL_Keymod modifiers = SDL_GetModState();
+        SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
         if (modifiers & KMOD_CTRL) {
+            // In alphabetical order
             switch (event.keysym.scancode) {
-            case SDL_SCANCODE_A:
+            case SDL_SCANCODE_A: // Select all
                 SelectionAction::startBySelectingAll(*this, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_N:
+            case SDL_SCANCODE_N: // Spawn new instance
                 FileNewAction::start(*this, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_O:
+            case SDL_SCANCODE_O: // Open file
                 FileOpenAction::start(*this, playArea, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_S:
+            case SDL_SCANCODE_S: // Save file
                 FileSaveAction::start(*this, modifiers, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_V:
+            case SDL_SCANCODE_V: // Paste
                 SelectionAction::startByPasting(*this, playArea, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_Y:
+            case SDL_SCANCODE_Y: // Redo
                 HistoryAction::startByRedoing(*this, currentAction.getStarter());
                 return;
-            case SDL_SCANCODE_Z:
+            case SDL_SCANCODE_Z: // Undo
                 HistoryAction::startByUndoing(*this, currentAction.getStarter());
+                return;
+            case SDL_SCANCODE_SPACE: // Change simulation speed
+                ChangeSimulationSpeedAction::start(*this, renderer, currentAction.getStarter());
                 return;
             default:
                 break;
@@ -397,21 +407,30 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
         }
         else {
             switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
-            case SDL_SCANCODE_R:
+            case SDL_SCANCODE_R: // Reset simulator
                 currentAction.reset();
                 stateManager.resetSimulator();
                 return;
-            case SDL_SCANCODE_SPACE:
+            case SDL_SCANCODE_SPACE: // Start/stop simulator
                 currentAction.reset();
                 stateManager.startOrStopSimulator();
                 return;
-            case SDL_SCANCODE_S:
+            case SDL_SCANCODE_RIGHT: // Step simulator
                 currentAction.reset();
                 stateManager.stepSimulator();
                 return;
             default:
                 break;
             }
+        }
+    }
+}
+
+void MainWindow::processTextInputEvent(const SDL_TextInputEvent& event) {
+    // invoke the handlers for all drawables and see if they want to stop event propagation
+    for (KeyboardEventReceiver* receiver : ext::reverse(keyboardEventReceivers)) {
+        if (receiver->processTextInput(event)) {
+            return;
         }
     }
 }
@@ -484,4 +503,25 @@ void MainWindow::bindTool(size_t inputHandleIndex, size_t tool_index) {
         using std::swap;
         swap(selectedToolIndices[inputHandleIndex], *it);
     }
+}
+
+// throws std::logic_error or its derived classes
+Simulator::period_t MainWindow::geSimulatorPeriodFromFPS(long double fps) {
+    // try to parse and save the fps of the simulator
+    using rep = Simulator::period_t::rep;
+    rep period;
+    if (fps == 0.0) {
+        period = 0;
+    }
+    else if (fps < 0) {
+        throw std::logic_error("FPS cannot be less than zero!");
+    }
+    else {
+        long double _period = static_cast<long double>(Simulator::period_t::period::den / Simulator::period_t::period::num) / fps;
+        if (_period == std::numeric_limits<long double>::infinity() || _period == 0.0 || !(_period < std::numeric_limits<rep>::max())) {
+            throw std::logic_error("FPS too small or too large!");
+        }
+        period = static_cast<rep>(_period);
+    }
+    return Simulator::period_t(period);
 }
