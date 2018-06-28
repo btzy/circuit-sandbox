@@ -110,26 +110,27 @@ public:
         SDL_Surface* surface2 = TTF_RenderText_Shaded(mainWindow.interfaceFont, "(0 = as fast as possible)", detailColor, backgroundColor);
         SDL_Texture* texture1 = SDL_CreateTextureFromSurface(renderer, surface1);
         SDL_Texture* texture2 = SDL_CreateTextureFromSurface(renderer, surface2);
-        ext::point textureSize{ mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH + 2 * PADDING), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT + 2 * PADDING + surface1->h + surface2->h) };
+        ext::point textureSize{ mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH + 2 * PADDING), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT + 2 * PADDING) + surface1->h + surface2->h };
         auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, textureSize.x, textureSize.y);
         SDL_SetRenderTarget(renderer, texture);
         SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a);
+        auto real_padding = mainWindow.logicalToPhysicalSize(PADDING);
         { // outer box
             const SDL_Rect target{ 0, 0, textureSize.x, textureSize.y };
             SDL_RenderDrawRect(renderer, &target);
         }
         { // first line of text
-            const SDL_Rect target{ PADDING, PADDING, surface1->w, surface1->h };
+            const SDL_Rect target{ real_padding, real_padding, surface1->w, surface1->h };
             SDL_RenderCopy(renderer, texture1, nullptr, &target);
         }
         { // second line of text
-            const SDL_Rect target{ PADDING, PADDING + surface1->h, surface2->w, surface2->h };
+            const SDL_Rect target{ real_padding, real_padding + surface1->h, surface2->w, surface2->h };
             SDL_RenderCopy(renderer, texture2, nullptr, &target);
         }
         { // text box outline
-            const SDL_Rect target{ PADDING, PADDING + surface1->h + surface2->h, mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT) };
+            const SDL_Rect target{ real_padding, real_padding + surface1->h + surface2->h, mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT) };
             SDL_RenderDrawRect(renderer, &target);
         }
         SDL_SetRenderTarget(renderer, nullptr);
