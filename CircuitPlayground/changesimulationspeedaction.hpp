@@ -23,9 +23,9 @@ class ChangeSimulationSpeedAction final : public StatefulAction, public MainWind
 private:
     std::string text;
     bool const simulatorRunning;
-    constexpr static int LOGICAL_WIDTH = 200;
-    constexpr static int LOGICAL_HEIGHT = 32;
-    constexpr static int PADDING = 8;
+    constexpr static ext::point LOGICAL_TEXTBOX_SIZE{ 200, 32 };
+    constexpr static ext::point LOGICAL_PADDING{ 8, 8 };
+    constexpr static ext::point LOGICAL_TEXT_PADDING{ 4, 4 };
     constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     constexpr static SDL_Color detailColor{ 0x99, 0x99, 0x99, 0xFF };
@@ -36,7 +36,7 @@ private:
 public:
     ChangeSimulationSpeedAction(MainWindow& mainWindow, SDL_Renderer* renderer) : StatefulAction(mainWindow), MainWindowEventHook(mainWindow, mainWindow.getRenderArea()), simulatorRunning(stateManager().simulator.running()), inputFont("OpenSans-Bold.ttf", 16), dialogTexture(nullptr) {
         if (simulatorRunning) stateManager().stopSimulatorUnchecked();
-        updateDpi(renderer);
+        layoutComponents(renderer);
         text = mainWindow.displayedSimulationFPS;
         SDL_StartTextInput();
     }
@@ -100,50 +100,57 @@ public:
         }
     }
 
-    void updateDpi(SDL_Renderer* renderer) override {
+    void layoutComponents(SDL_Renderer* renderer) override {
         dialogTexture.reset(nullptr);
         renderArea = mainWindow.getRenderArea();
         inputFont.updateDPI(mainWindow);
 
-        // draw all the stuff that don't change (unless the DPI changes)
+        // pseudo-constants
+        ext::point TEXTBOX_SIZE = mainWindow.logicalToPhysicalSize(LOGICAL_TEXTBOX_SIZE);
+        ext::point PADDING = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING);
+        ext::point TEXT_PADDING = mainWindow.logicalToPhysicalSize(LOGICAL_TEXT_PADDING);
+
+        // draw all the stuff that don't change (unless the layout changes)
         SDL_Surface* surface1 = TTF_RenderText_Shaded(mainWindow.interfaceFont, "Enter FPS:", foregroundColor, backgroundColor);
         SDL_Surface* surface2 = TTF_RenderText_Shaded(mainWindow.interfaceFont, "(0 = as fast as possible)", detailColor, backgroundColor);
         SDL_Texture* texture1 = SDL_CreateTextureFromSurface(renderer, surface1);
         SDL_Texture* texture2 = SDL_CreateTextureFromSurface(renderer, surface2);
-        ext::point textureSize{ mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH + 2 * PADDING), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT + 2 * PADDING) + surface1->h + surface2->h };
+        ext::point textureSize = TEXTBOX_SIZE + PADDING * 2;
+        textureSize.y += surface1->h + surface2->h;
         auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, textureSize.x, textureSize.y);
         SDL_SetRenderTarget(renderer, texture);
         SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a);
-        auto real_padding = mainWindow.logicalToPhysicalSize(PADDING);
         { // outer box
             const SDL_Rect target{ 0, 0, textureSize.x, textureSize.y };
             SDL_RenderDrawRect(renderer, &target);
         }
         { // first line of text
-            const SDL_Rect target{ real_padding, real_padding, surface1->w, surface1->h };
+            const SDL_Rect target{ PADDING.x, PADDING.y, surface1->w, surface1->h };
             SDL_RenderCopy(renderer, texture1, nullptr, &target);
         }
         { // second line of text
-            const SDL_Rect target{ real_padding, real_padding + surface1->h, surface2->w, surface2->h };
+            const SDL_Rect target{ PADDING.x, PADDING.y + surface1->h, surface2->w, surface2->h };
             SDL_RenderCopy(renderer, texture2, nullptr, &target);
         }
         { // text box outline
-            const SDL_Rect target{ real_padding, real_padding + surface1->h + surface2->h, mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT) };
+            const SDL_Rect target{ PADDING.x, PADDING.y + surface1->h + surface2->h, TEXTBOX_SIZE.x, TEXTBOX_SIZE.y };
             SDL_RenderDrawRect(renderer, &target);
         }
         SDL_SetRenderTarget(renderer, nullptr);
         SDL_DestroyTexture(texture1);
         SDL_DestroyTexture(texture2);
+
+        // save the offsets so that the render() function can do its job
+        topLeftOffset = { renderArea.x + renderArea.w / 2 - textureSize.x / 2 + PADDING.x, renderArea.y + renderArea.h / 2 - textureSize.y / 2 + PADDING.y + surface1->h + surface2->h };
+        topLeftOffset += TEXT_PADDING;
+        textSize = TEXTBOX_SIZE - TEXT_PADDING * 2;
+
+        // free the surfaces here (because topLeftOffset calculation needs data from the surfaces)
         SDL_FreeSurface(surface1);
         SDL_FreeSurface(surface2);
 
-        // save the offsets so that the render() function can do its job
-        topLeftOffset = { renderArea.x + renderArea.w / 2 - mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH) / 2, renderArea.y + renderArea.h / 2 - textureSize.y / 2 + textureSize.y - mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT + PADDING) };
-        textSize = { mainWindow.logicalToPhysicalSize(LOGICAL_WIDTH), mainWindow.logicalToPhysicalSize(LOGICAL_HEIGHT) };
-        topLeftOffset += {4, 4};
-        textSize -= {8, 8};
         dialogTexture.reset(texture);
     }
 

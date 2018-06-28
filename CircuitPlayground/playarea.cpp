@@ -14,10 +14,6 @@
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {};
 
 
-void PlayArea::updateDpiFields() {
-    // do nothing, because play area works fully in physical pixels and there are no hardcoded logical pixels constants
-}
-
 void PlayArea::render(SDL_Renderer* renderer) {
     render(renderer, mainWindow.stateManager);
 }

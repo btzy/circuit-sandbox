@@ -213,10 +213,12 @@ public:
     /**
      * DPI conversion functions
      */
-    inline int logicalToPhysicalSize(int logicalSize) const {
+    template <typename T>
+    inline T logicalToPhysicalSize(T logicalSize) const {
         return logicalSize * physicalMultiplier / logicalMultiplier;
     }
-    inline int physicalToLogicalSize(int physicalSize) const {
+    template <typename T>
+    inline T physicalToLogicalSize(T physicalSize) const {
         return physicalSize * logicalMultiplier / physicalMultiplier;
     }
 };

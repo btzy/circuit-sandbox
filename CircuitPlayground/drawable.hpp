@@ -14,7 +14,7 @@ public:
     SDL_Rect renderArea; // this is a physical size
 
     virtual void render(SDL_Renderer*) = 0;
-
-    virtual void updateDpi(SDL_Renderer*) {}
+    virtual void layoutComponents(SDL_Renderer*) {}
+    
 };
 

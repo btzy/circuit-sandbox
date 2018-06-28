@@ -22,6 +22,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#include <SDL_syswm.h>
 #endif
 
 
@@ -140,11 +141,6 @@ bool MainWindow::updateDpiFields(bool useWindow) {
         // remember to update my own pseudo-constants
         TOOLBOX_WIDTH = logicalToPhysicalSize(LOGICAL_TOOLBOX_WIDTH);
         BUTTONBAR_HEIGHT = logicalToPhysicalSize(LOGICAL_BUTTONBAR_HEIGHT);
-
-        // tell the components to update their cached sizes
-        playArea.updateDpiFields();
-        toolbox.updateDpiFields();
-        buttonBar.updateDpiFields();
     }
 
     // return true if the fields changed
@@ -177,6 +173,8 @@ void MainWindow::layoutComponents(bool forceLayout) {
     toolbox.renderArea = SDL_Rect{ renderArea.w - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     buttonBar.renderArea = SDL_Rect{0, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, renderArea.w, BUTTONBAR_HEIGHT};
 
+
+
     if (dpiChanged || forceLayout) {
         // set min window size
         SDL_SetWindowMinimumSize(window, toolbox.renderArea.w + logicalToPhysicalSize(100), buttonBar.renderArea.h + logicalToPhysicalSize(100));
@@ -184,10 +182,11 @@ void MainWindow::layoutComponents(bool forceLayout) {
         // update font sizes
         updateFonts();
 
-        // tell children about the updated dpi
-        for (Drawable* drawable : drawables) {
-            drawable->updateDpi(renderer);
-        }
+    }
+
+    // tell children about the updated layout
+    for (Drawable* drawable : drawables) {
+        drawable->layoutComponents(renderer);
     }
 }
 
@@ -202,6 +201,15 @@ void MainWindow::start() {
     // Show the window to the user
     SDL_ShowWindow(window);
 
+#if defined(_WIN32)
+    HWND hWnd;
+    {
+        SDL_SysWMinfo info;
+        SDL_GetWindowWMInfo(window, &info);
+        hWnd = info.info.win.window;
+    }
+#endif
+
     // event/drawing loop:
     while (true) {
         
@@ -210,8 +218,13 @@ void MainWindow::start() {
             
 #if defined(_WIN32)
             MSG msg;
-            if (_suppressMouseUntilNextDown && PeekMessage(&msg, nullptr, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
+            if (_suppressMouseUntilNextDown && PeekMessage(&msg, hWnd, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
                 _suppressMouseUntilNextDown = false;
+            }
+            if (PeekMessage(&msg, hWnd, WM_DPICHANGED, WM_DPICHANGED, PM_REMOVE)) {
+                // See https://docs.microsoft.com/en-us/windows/desktop/hidpi/wm-dpichanged
+                RECT* const newPos = reinterpret_cast<RECT*>(msg.lParam);
+                SetWindowPos(hWnd, nullptr, newPos->left, newPos->top, newPos->right - newPos->left, newPos->bottom - newPos->top, SWP_NOZORDER | SWP_NOACTIVATE);
             }
 #endif
             SDL_Event event;

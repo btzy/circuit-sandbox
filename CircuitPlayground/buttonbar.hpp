@@ -67,14 +67,9 @@ public:
     ButtonBar(MainWindow&, PlayArea&);
 
     /**
-     * Update the dpi fields (currently a no-op).
+     * Informs the toolbox size or dpi has changed, so the component should recalculate its contents
      */
-    void updateDpiFields() {}
-
-    /**
-     * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
-     */
-    void updateDpi(SDL_Renderer*) override;
+    void layoutComponents(SDL_Renderer*) override;
 
     /**
      * Renders this button bar on the given area of the renderer.

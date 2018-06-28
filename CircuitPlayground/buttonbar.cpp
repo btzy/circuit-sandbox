@@ -14,7 +14,7 @@
 
 ButtonBar::ButtonBar(MainWindow& mainWindow, PlayArea& playArea) : mainWindow(mainWindow), playArea(playArea), iconFont("ButtonIcons.ttf", MainWindow::LOGICAL_BUTTONBAR_HEIGHT) {}
 
-void ButtonBar::updateDpi(SDL_Renderer* renderer) {
+void ButtonBar::layoutComponents(SDL_Renderer* renderer) {
     iconFont.updateDPI(mainWindow);
     int32_t height = mainWindow.BUTTONBAR_HEIGHT;
     for (auto& item : items) {

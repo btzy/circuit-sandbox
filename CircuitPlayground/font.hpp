@@ -17,9 +17,10 @@ class Font {
 private:
     char* fontPath;
     const int logicalSize;
+    int physicalSize;
     std::unique_ptr<TTF_Font, FontDeleter> font;
 public:
-    Font(const char* fontName, int logicalSize) :logicalSize(logicalSize) {
+    Font(const char* fontName, int logicalSize) :logicalSize(logicalSize), physicalSize(-1) {
         char* cwd = SDL_GetBasePath();
         if (cwd == nullptr) {
             using namespace std::literals::string_literals;
@@ -37,8 +38,12 @@ public:
 
     template <typename MainWindow>
     void updateDPI(const MainWindow& mainWindow) {
-        font.reset(nullptr); // delete the old font first
-        font.reset(TTF_OpenFont(fontPath, mainWindow.logicalToPhysicalSize(logicalSize))); // make the new font
+        int newPhysicalSize = mainWindow.logicalToPhysicalSize(logicalSize);
+        if (newPhysicalSize != physicalSize) {
+            font.reset(nullptr); // delete the old font first
+            physicalSize = newPhysicalSize;
+            font.reset(TTF_OpenFont(fontPath, physicalSize)); // make the new font
+        }
     }
 
     operator TTF_Font*() const {

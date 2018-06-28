@@ -56,11 +56,6 @@ public:
     PlayArea(MainWindow&);
 
     /**
-     * Informs the play area that the dpi has been updated, so the play area should set its physical unit fields.
-     */
-    void updateDpiFields();
-
-    /**
      * Renders this play area on the given area of the renderer.
      * This method is called by MainWindow
      * This method is non-const because the cached state might be updated from the simulator when rendering.

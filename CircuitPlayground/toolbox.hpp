@@ -55,7 +55,7 @@ public:
     /**
      * Informs the toolbox that the dpi has been updated, so the toolbox should set its physical unit fields.
      */
-    void updateDpiFields();
+    void layoutComponents(SDL_Renderer*) override;
 
     /**
      * Renders this toolbox on the given area of the renderer.
