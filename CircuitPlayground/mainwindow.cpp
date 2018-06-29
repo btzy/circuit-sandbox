@@ -35,8 +35,10 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
         if (event_window == main_window->window) {
-            main_window->layoutComponents();
-            main_window->render();
+            if (false && main_window->_enableEventWatch.load(std::memory_order_acquire)) {
+                main_window->layoutComponents();
+                main_window->render();
+            }
         }
     }
     return 0;
@@ -165,13 +167,19 @@ void MainWindow::layoutComponents(bool forceLayout) {
     bool dpiChanged = updateDpiFields();
 
     // get the size of the render target (this is a physical size)
-    renderArea.x = renderArea.y = 0;
-    SDL_GetRendererOutputSize(renderer, &renderArea.w, &renderArea.h);
+    int32_t newW, newH;
+    SDL_GetRendererOutputSize(renderer, &newW, &newH);
+    bool sizeChanged = newW != renderArea.w || newH != renderArea.h;
+    if (sizeChanged || forceLayout) {
+        renderArea.x = renderArea.y = 0;
+        renderArea.w = newW;
+        renderArea.h = newH;
+    }
 
     // position all the components:
     playArea.renderArea = SDL_Rect{0, 0, renderArea.w - TOOLBOX_WIDTH - HAIRLINE_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     toolbox.renderArea = SDL_Rect{ renderArea.w - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
-    buttonBar.renderArea = SDL_Rect{0, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH, renderArea.w, BUTTONBAR_HEIGHT};
+    buttonBar.renderArea = SDL_Rect{0, renderArea.h - BUTTONBAR_HEIGHT, renderArea.w, BUTTONBAR_HEIGHT};
 
 
 
@@ -184,9 +192,11 @@ void MainWindow::layoutComponents(bool forceLayout) {
 
     }
 
-    // tell children about the updated layout
-    for (Drawable* drawable : drawables) {
-        drawable->layoutComponents(renderer);
+    if (dpiChanged || sizeChanged || forceLayout) {
+        // tell children about the updated layout
+        for (Drawable* drawable : drawables) {
+            drawable->layoutComponents(renderer);
+        }
     }
 }
 
@@ -212,11 +222,9 @@ void MainWindow::start() {
 
     // event/drawing loop:
     while (true) {
-        
         // get the next event to process, if any
-        while (true) {
-            
 #if defined(_WIN32)
+        while (true) {
             MSG msg;
             if (_suppressMouseUntilNextDown && PeekMessage(&msg, hWnd, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
                 _suppressMouseUntilNextDown = false;
@@ -226,14 +234,23 @@ void MainWindow::start() {
                 RECT* const newPos = reinterpret_cast<RECT*>(msg.lParam);
                 SetWindowPos(hWnd, nullptr, newPos->left, newPos->top, newPos->right - newPos->left, newPos->bottom - newPos->top, SWP_NOZORDER | SWP_NOACTIVATE);
             }
-#endif
             SDL_Event event;
-            if (SDL_PollEvent(&event)) {
+            _enableEventWatch.store(true, std::memory_order_release);
+            bool ans = SDL_PollEvent(&event);
+            _enableEventWatch.store(false, std::memory_order_release);
+            if (ans) {
                 processEvent(event);
                 if (closing) return;
             }
             else break;
         }
+#else
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            processEvent(event);
+            if (closing) break;
+        }
+#endif
 
         // draw everything onto the screen
         render();
@@ -342,10 +359,15 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         stopMouseDrag();
         activeInputHandleIndex = inputHandleIndex;
         for (Drawable* drawable : ext::reverse(drawables)) {
-            if (SDL_PointInRect(&position, &drawable->renderArea) && drawable->processMouseButtonDown(event)) {
+            if (SDL_PointInRect(&position, &drawable->renderArea)){
                 currentEventTarget = drawable;
-                SDL_CaptureMouse(SDL_TRUE);
-                break;
+                if (drawable->processMouseButtonDown(event)) {
+                    SDL_CaptureMouse(SDL_TRUE);
+                    break;
+                }
+                else {
+                    currentEventTarget = nullptr;
+                }
             }
         }
     }
@@ -456,20 +478,20 @@ void MainWindow::render() {
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
     SDL_RenderClear(renderer);
 
+    // draw the separators
+    SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
+    SDL_RenderDrawLine(renderer, toolbox.renderArea.x - 1, 0, toolbox.renderArea.x - 1, buttonBar.renderArea.y - 2);
+    SDL_RenderDrawLine(renderer, 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w - 1, buttonBar.renderArea.y - 1);
+
     // draw everything to the screen - buttons, status info, play area, etc.
     for (Drawable* drawable : drawables) {
         // set clip rect to clip off parts of the surface outside renderArea
         SDL_RenderSetClipRect(renderer, &drawable->renderArea);
         // render the stuff
         drawable->render(renderer);
-        // reset the clip rect
-        SDL_RenderSetClipRect(renderer, nullptr);
     }
-
-    // draw the separators
-    SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
-    SDL_RenderDrawLine(renderer, toolbox.renderArea.x - 1, 0, toolbox.renderArea.x - 1, buttonBar.renderArea.y - 2);
-    SDL_RenderDrawLine(renderer, 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w - 1, buttonBar.renderArea.y - 1);
+    // reset the clip rect
+    SDL_RenderSetClipRect(renderer, nullptr);
 
     // Then display to the user
     SDL_RenderPresent(renderer);
@@ -527,14 +549,18 @@ Simulator::period_t MainWindow::geSimulatorPeriodFromFPS(long double fps) {
         period = 0;
     }
     else if (fps < 0) {
-        throw std::logic_error("FPS cannot be less than zero!");
+        throw std::logic_error("The FPS you have entered cannot be less than zero.");
     }
     else {
         long double _period = static_cast<long double>(Simulator::period_t::period::den / Simulator::period_t::period::num) / fps;
-        if (_period == std::numeric_limits<long double>::infinity() || _period == 0.0 || !(_period < std::numeric_limits<rep>::max())) {
-            throw std::logic_error("FPS too small or too large!");
+        if (_period == 0.0) {
+            throw std::logic_error("The FPS you have entered is too large.");
+        }
+        if (_period == std::numeric_limits<long double>::infinity() || !(_period < std::numeric_limits<rep>::max())) {
+            throw std::logic_error("The FPS you have entered is too small.");
         }
         period = static_cast<rep>(_period);
+        if (period <= 0) throw std::logic_error("The FPS you have entered is too large.");
     }
     return Simulator::period_t(period);
 }

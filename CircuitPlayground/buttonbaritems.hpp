@@ -5,12 +5,7 @@
 #include <SDL.h>
 #include "point.hpp"
 #include "sdl_deleters.hpp"
-
-enum class RenderStyle : unsigned char {
-    DEFAULT,
-    HOVER,
-    CLICK
-};
+#include "renderable.hpp"
 
 class ButtonBar;
 
