@@ -264,6 +264,7 @@ void MainWindow::processEvent(const SDL_Event& event) {
         break;
     case SDL_TEXTINPUT:
         processTextInputEvent(event.text);
+        break;
     }
 }
 

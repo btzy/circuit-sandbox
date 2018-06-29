@@ -58,6 +58,7 @@ bool ButtonBar::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
 }
 
 void ButtonBar::processMouseButtonUp() {
+    if (!clickedItem) return;
     clickedItem->click(*this);
     clickedItem = nullptr;
 }

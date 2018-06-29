@@ -56,8 +56,8 @@ private:
         std::make_unique<IconButton<IconCodePoints::SPEED>>()
     };
 
-    ButtonBarItem* hoveredItem;
-    ButtonBarItem* clickedItem;
+    ButtonBarItem* hoveredItem = nullptr;
+    ButtonBarItem* clickedItem = nullptr;
 
     template <uint16_t>
     friend class IconButton;
