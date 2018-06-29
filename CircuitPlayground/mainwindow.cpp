@@ -34,10 +34,8 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
         if (event_window == main_window->window) {
-            if (false && main_window->_enableEventWatch.load(std::memory_order_acquire)) {
-                main_window->layoutComponents();
-                main_window->render();
-            }
+            main_window->layoutComponents();
+            main_window->render();
         }
     }
     return 0;
@@ -216,9 +214,11 @@ void MainWindow::start() {
 
     // event/drawing loop:
     while (true) {
+
         // get the next event to process, if any
-#if defined(_WIN32)
         while (true) {
+
+#if defined(_WIN32)
             MSG msg;
             if (_suppressMouseUntilNextDown && PeekMessage(&msg, hWnd, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
                 _suppressMouseUntilNextDown = false;
@@ -228,23 +228,14 @@ void MainWindow::start() {
                 RECT* const newPos = reinterpret_cast<RECT*>(msg.lParam);
                 SetWindowPos(hWnd, nullptr, newPos->left, newPos->top, newPos->right - newPos->left, newPos->bottom - newPos->top, SWP_NOZORDER | SWP_NOACTIVATE);
             }
+#endif
             SDL_Event event;
-            _enableEventWatch.store(true, std::memory_order_release);
-            bool ans = SDL_PollEvent(&event);
-            _enableEventWatch.store(false, std::memory_order_release);
-            if (ans) {
+            if (SDL_PollEvent(&event)) {
                 processEvent(event);
                 if (closing) return;
             }
             else break;
         }
-#else
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            processEvent(event);
-            if (closing) break;
-        }
-#endif
 
         // draw everything onto the screen
         render();

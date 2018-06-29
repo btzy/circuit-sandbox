@@ -7,7 +7,6 @@
 #include <variant>
 #include <optional>
 #include <vector>
-#include <atomic>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -69,7 +68,6 @@ private:
 
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
-    std::atomic<bool> _enableEventWatch = false; // Windows hack to enable the event watch only when the main thread is stuck in SDL_PollEvent()
 #endif
 
 public:
