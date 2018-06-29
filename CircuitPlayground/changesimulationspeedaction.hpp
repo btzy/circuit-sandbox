@@ -222,6 +222,9 @@ public:
         cancelButton.layoutComponents(renderer, SDL_Rect{ textBoxTopLeftOffset.x + TEXTBOX_SIZE.x - buttonWidth, buttonY, buttonWidth, BUTTON_HEIGHT });
 
         dialogTexture.reset(texture);
+
+        // this is to fix a Windows issue where double click to maximize when the dialog box is open will trigger a mousedown that is outside the dialogArea (thereby closing the dialog).
+        mainWindow.suppressMouseUntilNextDown();
     }
 
     ActionEventResult processWindowMouseButtonDown(const SDL_MouseButtonEvent& event) override {

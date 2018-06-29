@@ -22,7 +22,6 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
-#include <SDL_syswm.h>
 #endif
 
 
@@ -212,12 +211,7 @@ void MainWindow::start() {
     SDL_ShowWindow(window);
 
 #if defined(_WIN32)
-    HWND hWnd;
-    {
-        SDL_SysWMinfo info;
-        SDL_GetWindowWMInfo(window, &info);
-        hWnd = info.info.win.window;
-    }
+    HWND hWnd = GetActiveWindow();
 #endif
 
     // event/drawing loop:
