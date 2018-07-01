@@ -28,6 +28,19 @@ void ButtonBar::render(SDL_Renderer* renderer) const {
         item->render(renderer, *this, { x, renderArea.y }, clickedItem == item.get() ? RenderStyle::CLICK : hoveredItem == item.get() ? RenderStyle::HOVER : RenderStyle::DEFAULT);
         x += item->width();
     }
+    if (hoveredItem) {
+        const char* description = hoveredItem->description(*this);
+        if (description) {
+            SDL_Surface* surface = TTF_RenderText_Shaded(mainWindow.interfaceFont, description, ButtonBar::foregroundColor, ButtonBar::backgroundColor);
+            if (surface != nullptr) { // if there is text to show
+                SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+                SDL_Rect target{ x + mainWindow.logicalToPhysicalSize(20),renderArea.y + (mainWindow.BUTTONBAR_HEIGHT - surface->h) / 2, surface->w, surface->h };
+                SDL_RenderCopy(renderer, texture, nullptr, &target);
+                SDL_DestroyTexture(texture);
+                SDL_FreeSurface(surface);
+            }
+        }
+    }
 }
 
 void ButtonBar::processMouseHover(const SDL_MouseMotionEvent& event) {
@@ -125,6 +138,25 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
 }
 
 
+template <uint16_t CodePoint>
+const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const {
+    if constexpr (CodePoint == IconCodePoints::NEW) {
+        return "Start a new instance (Ctrl-N)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::OPEN) {
+        return "Open an existing file (Ctrl-O)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::SAVE) {
+        return "Save to file (Ctrl-S); hold Shift key for \"Save As\" dialog";
+    }
+    else if constexpr (CodePoint == IconCodePoints::STEP) {
+        return "Run simulation for a single step (Right arrow)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::SPEED) {
+        return "Set simulation speed (Ctrl-Space)";
+    }
+}
+
 
 void PlayPauseButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
     const SDL_Rect destRect{ offset.x, offset.y, _length, _length };
@@ -168,4 +200,13 @@ void PlayPauseButton::setHeight(SDL_Renderer* renderer, const ButtonBar& buttonB
 
 void PlayPauseButton::click(ButtonBar& buttonBar) {
     buttonBar.mainWindow.stateManager.startOrStopSimulator();
+}
+
+const char* PlayPauseButton::description(const ButtonBar& buttonBar) const {
+    if (buttonBar.mainWindow.stateManager.simulatorRunning()) {
+        return "Pause simulation (Space)";
+    }
+    else {
+        return "Run simulation (Space)";
+    }
 }

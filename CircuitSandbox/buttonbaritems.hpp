@@ -15,6 +15,7 @@ public:
     virtual int32_t width() const = 0;
     virtual void setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) = 0;
     virtual void click(ButtonBar& buttonBar) {}
+    virtual const char* description(const ButtonBar& buttonBar) const { return nullptr; };
 };
 
 template <uint16_t CodePoint>
@@ -31,6 +32,7 @@ public:
     }
     void setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) override;
     void click(ButtonBar& buttonBar) override;
+    const char* description(const ButtonBar& buttonBar) const override;
 };
 
 class PlayPauseButton final : public ButtonBarItem {
@@ -46,6 +48,7 @@ public:
     }
     void setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) override;
     void click(ButtonBar& buttonBar) override;
+    const char* description(const ButtonBar& buttonBar) const override;
 };
 
 class ButtonBarSpace final : public ButtonBarItem {
