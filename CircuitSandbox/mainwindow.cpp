@@ -22,6 +22,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#include <SDL_syswm.h>
 #endif
 
 
@@ -120,7 +121,7 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 #elif defined(__linux__)
     default_dpi = 144;
 #else
-    default_dpi = 96; // Windows default is 96; I think the Linux default is also 96.
+    default_dpi = USER_DEFAULT_SCREEN_DPI; // The Windows default DPI.
 #endif
 
     // use gcd, so the multipliers don't become too big
@@ -211,6 +212,7 @@ void MainWindow::start() {
 
 #if defined(_WIN32)
     HWND hWnd = GetActiveWindow();
+    SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 
     // event/drawing loop:
@@ -218,21 +220,26 @@ void MainWindow::start() {
 
         // get the next event to process, if any
         while (true) {
-
-#if defined(_WIN32)
-            MSG msg;
-            if (_suppressMouseUntilNextDown && PeekMessage(&msg, hWnd, WM_LBUTTONDOWN, WM_LBUTTONDOWN, PM_NOREMOVE)) {
-                _suppressMouseUntilNextDown = false;
-            }
-            if (PeekMessage(&msg, hWnd, WM_DPICHANGED, WM_DPICHANGED, PM_REMOVE)) {
-                // See https://docs.microsoft.com/en-us/windows/desktop/hidpi/wm-dpichanged
-                RECT* const newPos = reinterpret_cast<RECT*>(msg.lParam);
-                SetWindowPos(hWnd, nullptr, newPos->left, newPos->top, newPos->right - newPos->left, newPos->bottom - newPos->top, SWP_NOZORDER | SWP_NOACTIVATE);
-            }
-#endif
             SDL_Event event;
-            if (SDL_PollEvent(&event)) {
+            if (visible ? SDL_PollEvent(&event) : SDL_WaitEvent(&event)) {
+#if defined(_WIN32)
+                if (event.type == SDL_SYSWMEVENT) {
+                    const auto& winMessage = event.syswm.msg->msg.win;
+                    if (winMessage.msg == WM_LBUTTONDOWN) {
+                        if (_suppressMouseUntilNextDown) {
+                            _suppressMouseUntilNextDown = false;
+                        }
+                    }
+                    else if (winMessage.msg == WM_DPICHANGED) {
+                        layoutComponents(); // for safety, in case the window size didn't change, then we won't get SDL_WINDOWEVENT_RESIZED
+                    }
+                }
+                else {
+                    processEvent(event);
+                }
+#else
                 processEvent(event);
+#endif
                 if (closing) return;
             }
             else break;
@@ -283,6 +290,15 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
             currentLocationTarget->processMouseLeave();
             currentLocationTarget = nullptr;
         }
+        break;
+    case SDL_WINDOWEVENT_MINIMIZED:
+        visible = false;
+        break;
+    case SDL_WINDOWEVENT_MAXIMIZED:
+        visible = true;
+        break;
+    case SDL_WINDOWEVENT_RESTORED:
+        visible = true;
         break;
     }
 }

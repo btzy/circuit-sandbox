@@ -69,6 +69,8 @@ private:
     std::string filePath; // empty string for untitled
     bool unsaved = false; // whether there are unsaved changes
 
+    bool visible = true; // whether the window is visible (used to avoid rendering if window is not visible)
+
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
 #endif
