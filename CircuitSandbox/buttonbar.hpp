@@ -26,6 +26,7 @@ namespace IconCodePoints {
         PLAY = 0xE010,
         PAUSE = 0xE011,
         STEP = 0xE012,
+        RESET = 0xE013,
         SPEED = 0xE018
     };
 }
@@ -45,13 +46,14 @@ private:
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
 
-    const std::array<std::unique_ptr<ButtonBarItem>, 8> items{
+    const std::array<std::unique_ptr<ButtonBarItem>, 9> items{
         std::make_unique<IconButton<IconCodePoints::NEW>>(),
         std::make_unique<IconButton<IconCodePoints::OPEN>>(),
         std::make_unique<IconButton<IconCodePoints::SAVE>>(),
         std::make_unique<ButtonBarSpace>(),
         std::make_unique<PlayPauseButton>(),
         std::make_unique<IconButton<IconCodePoints::STEP>>(),
+        std::make_unique<IconButton<IconCodePoints::RESET>>(),
         std::make_unique<ButtonBarSpace>(),
         std::make_unique<IconButton<IconCodePoints::SPEED>>()
     };

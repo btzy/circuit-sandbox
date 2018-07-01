@@ -131,11 +131,16 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
         if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
+            buttonBar.mainWindow.currentAction.reset();
             buttonBar.mainWindow.stateManager.stepSimulatorUnchecked();
         }
         else {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Step Simulator", "Pause the simulation before using this function.", buttonBar.mainWindow.window);
         }
+    }
+    else if constexpr (CodePoint == IconCodePoints::RESET) {
+        buttonBar.mainWindow.currentAction.reset();
+        buttonBar.mainWindow.stateManager.resetSimulator();
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         ChangeSimulationSpeedAction::start(buttonBar.mainWindow, buttonBar.mainWindow.renderer, buttonBar.mainWindow.currentAction.getStarter());
@@ -156,6 +161,9 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
         return "Process single step of simulation (Right arrow)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::RESET) {
+        return "Reset on/off state of circuit (R)";
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         return "Set simulation speed (Ctrl-Space)";
@@ -204,6 +212,7 @@ void PlayPauseButton::setHeight(SDL_Renderer* renderer, const ButtonBar& buttonB
 }
 
 void PlayPauseButton::click(ButtonBar& buttonBar) {
+    buttonBar.mainWindow.currentAction.reset();
     buttonBar.mainWindow.stateManager.startOrStopSimulator();
 }
 
