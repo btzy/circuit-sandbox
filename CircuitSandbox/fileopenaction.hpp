@@ -31,7 +31,7 @@ private:
         // read the magic sequence
         char data[4];
         saveFile.read(data, 4);
-        if (!std::equal(data, data + 4, CCPG_FILE_MAGIC)) return ReadResult::CORRUPTED;
+        if (!std::equal(data, data + 4, CCSB_FILE_MAGIC)) return ReadResult::CORRUPTED;
 
         // read the version number
         int32_t version;
@@ -87,7 +87,7 @@ public:
         // show the file dialog if necessary
         char* outPath = nullptr;
         if (filePath == nullptr) {
-            nfdresult_t result = NFD_OpenDialog(CCPG_FILE_EXTENSION, nullptr, &outPath);
+            nfdresult_t result = NFD_OpenDialog(CCSB_FILE_EXTENSION, nullptr, &outPath);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 filePath = outPath;
@@ -114,7 +114,7 @@ public:
                     simulatorRunning = false; // don't restart the simulator
                     break;
                 case ReadResult::OUTDATED:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Playground, and cannot be opened here.  Please update Circuit Playground and try again.", mainWindow.window);
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Sandbox, and cannot be opened here.  Please update Circuit Sandbox and try again.", mainWindow.window);
                     break;
                 case ReadResult::CORRUPTED:
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "File is corrupted.", mainWindow.window);

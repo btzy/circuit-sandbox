@@ -26,7 +26,7 @@ private:
         if (!saveFile.is_open()) return WriteResult::IO_ERROR;
 
         // write the magic sequence
-        saveFile.write(CCPG_FILE_MAGIC, 4);
+        saveFile.write(CCSB_FILE_MAGIC, 4);
 
         // write the version number
         int32_t version = 0;
@@ -75,7 +75,7 @@ public:
         char* properPath = nullptr;
         char* outPath = nullptr;
         if (filePath == nullptr) {
-            nfdresult_t result = NFD_SaveDialog(CCPG_FILE_EXTENSION, nullptr, &outPath);
+            nfdresult_t result = NFD_SaveDialog(CCSB_FILE_EXTENSION, nullptr, &outPath);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 properPath = new char[std::strlen(outPath) + 6];

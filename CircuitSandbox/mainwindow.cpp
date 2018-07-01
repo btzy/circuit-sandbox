@@ -51,7 +51,7 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);
 
-    window = SDL_CreateWindow("Circuit Playground", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
@@ -150,9 +150,10 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
 void MainWindow::updateTitleBar() {
     std::string title = ((unsaved) ? "* " : "") + (filePath.empty() ? "" : getFileName(filePath.c_str()) + " "s);
-    if (title.empty()) title = "Circuit Playground";
+    if (title.empty()) title = WINDOW_TITLE;
     else {
-        title += u8"\u2013 Circuit Playground";
+        title += u8"\u2013 ";
+        title += WINDOW_TITLE;
     }
     SDL_SetWindowTitle(window, title.c_str());
 }

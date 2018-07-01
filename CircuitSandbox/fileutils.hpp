@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-constexpr const char* CCPG_FILE_MAGIC = "CCPG";
-constexpr const char* CCPG_FILE_EXTENSION = "ccpg";
+constexpr const char* CCSB_FILE_MAGIC = "CCPG";
+constexpr const char* CCSB_FILE_EXTENSION = "ccsb";
 
 /**
  * Add extension to the given file name if no extension is specified
@@ -30,7 +30,7 @@ inline const char* addExtensionIfNecessary(const char* given, char* buffer) {
         // add extension
         char* bufferEnd = std::copy(given, givenEnd, buffer);
         *bufferEnd++ = '.';
-        bufferEnd = std::copy(CCPG_FILE_EXTENSION, CCPG_FILE_EXTENSION + 4, bufferEnd);
+        bufferEnd = std::copy(CCSB_FILE_EXTENSION, CCSB_FILE_EXTENSION + 4, bufferEnd);
         *bufferEnd = '\0';
         return buffer;
     }
