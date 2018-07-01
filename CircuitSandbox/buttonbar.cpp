@@ -130,7 +130,12 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
         FileSaveAction::start(buttonBar.mainWindow, SDL_GetModState(), buttonBar.mainWindow.currentAction.getStarter());
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
-        buttonBar.mainWindow.stateManager.stepSimulator();
+        if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
+            buttonBar.mainWindow.stateManager.stepSimulatorUnchecked();
+        }
+        else {
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Step Simulator", "Pause the simulation before using this function.", buttonBar.mainWindow.window);
+        }
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         ChangeSimulationSpeedAction::start(buttonBar.mainWindow, buttonBar.mainWindow.renderer, buttonBar.mainWindow.currentAction.getStarter());
@@ -150,7 +155,7 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
         return "Save to file (Ctrl-S); hold Shift key for \"Save As\" dialog";
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
-        return "Run simulation for a single step (Right arrow)";
+        return "Process single step of simulation (Right arrow)";
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         return "Set simulation speed (Ctrl-Space)";
