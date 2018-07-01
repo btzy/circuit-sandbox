@@ -105,14 +105,29 @@ public:
         // whether we actually changed anything
         bool hasChanges = false;
 
-        // note: eraser can be optimized to not extend the canvas first
-        for (int32_t y = 0; y < actionState.height(); ++y) {
-            for (int32_t x = 0; x < actionState.width(); ++x) {
-                ext::point pt{ x, y };
-                auto& element = outputState[actionTrans + this->deltaTrans + pt];
-                if (actionState[pt] && !std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
-                    element = CanvasStateVariantElement_t<PencilType>{};
+        // check if the PencilAction was a single click instead of a drag
+        // clicking on a gate/relay with the same tool draws a signal instead
+        if (actionState.width() == 1 && actionState.height() == 1) {
+            auto& element = outputState[actionTrans + this->deltaTrans];
+            if (!std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
+                element = CanvasStateVariantElement_t<PencilType>{};
+                hasChanges = true;
+            } else if constexpr (std::is_same_v<PencilType, AndGate> || std::is_same_v<PencilType, OrGate> || std::is_same_v<PencilType, NandGate> || std::is_same_v<PencilType, NorGate> || std::is_same_v<PencilType, PositiveRelay> || std::is_same_v<PencilType, NegativeRelay>) {
+                if (std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
+                    element = Signal{};
                     hasChanges = true;
+                }
+            }
+        } else {
+            // note: eraser can be optimized to not extend the canvas first
+            for (int32_t y = 0; y < actionState.height(); ++y) {
+                for (int32_t x = 0; x < actionState.width(); ++x) {
+                    ext::point pt{ x, y };
+                    auto& element = outputState[actionTrans + this->deltaTrans + pt];
+                    if (actionState[pt] && !std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
+                        element = CanvasStateVariantElement_t<PencilType>{};
+                        hasChanges = true;
+                    }
                 }
             }
         }
