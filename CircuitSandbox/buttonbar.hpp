@@ -10,26 +10,13 @@
 #include "drawable.hpp"
 #include "font.hpp"
 #include "buttonbaritems.hpp"
+#include "iconcodepoints.hpp"
 
 /**
  * Represents the the strip of buttons at the bottom of the window.
  * Some of the buttons will start playarea's actions.
  */
 
-
-
-namespace IconCodePoints {
-    enum : uint16_t {
-        NEW = 0xE000,
-        OPEN = 0xE001,
-        SAVE = 0xE002,
-        PLAY = 0xE010,
-        PAUSE = 0xE011,
-        STEP = 0xE012,
-        RESET = 0xE013,
-        SPEED = 0xE018
-    };
-}
 
 class ButtonBar final : public Drawable {
 private:
@@ -52,8 +39,8 @@ private:
         std::make_unique<IconButton<IconCodePoints::SAVE>>(),
         std::make_unique<ButtonBarSpace>(),
         std::make_unique<PlayPauseButton>(),
-        std::make_unique<IconButton<IconCodePoints::STEP>>(),
         std::make_unique<IconButton<IconCodePoints::RESET>>(),
+        std::make_unique<StepButton>(),
         std::make_unique<ButtonBarSpace>(),
         std::make_unique<IconButton<IconCodePoints::SPEED>>()
     };
@@ -63,6 +50,7 @@ private:
 
     template <uint16_t>
     friend class IconButton;
+    friend class StepButton;
     friend class PlayPauseButton;
 
 public:

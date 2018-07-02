@@ -130,13 +130,8 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
         FileSaveAction::start(buttonBar.mainWindow, SDL_GetModState(), buttonBar.mainWindow.currentAction.getStarter());
     }
     else if constexpr (CodePoint == IconCodePoints::STEP) {
-        if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
-            buttonBar.mainWindow.currentAction.reset();
-            buttonBar.mainWindow.stateManager.stepSimulatorUnchecked();
-        }
-        else {
-            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Step Simulator", "Pause the simulation before using this function.", buttonBar.mainWindow.window);
-        }
+        buttonBar.mainWindow.currentAction.reset();
+        buttonBar.mainWindow.stateManager.stepSimulator();
     }
     else if constexpr (CodePoint == IconCodePoints::RESET) {
         buttonBar.mainWindow.currentAction.reset();
@@ -169,6 +164,30 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
         return "Set simulation speed (Ctrl-Space)";
     }
 }
+
+
+
+void StepButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
+    if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
+        IconButton::render(renderer, buttonBar, offset, style);
+    }
+}
+
+void StepButton::click(ButtonBar& buttonBar) {
+    if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
+        IconButton::click(buttonBar);
+    }
+}
+
+const char* StepButton::description(const ButtonBar& buttonBar) const {
+    if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
+        return IconButton::description(buttonBar);
+    }
+    else {
+        return nullptr;
+    }
+}
+
 
 
 void PlayPauseButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {

@@ -6,6 +6,7 @@
 #include "point.hpp"
 #include "sdl_deleters.hpp"
 #include "renderable.hpp"
+#include "iconcodepoints.hpp"
 
 class ButtonBar;
 
@@ -19,7 +20,7 @@ public:
 };
 
 template <uint16_t CodePoint>
-class IconButton final : public ButtonBarItem {
+class IconButton : public ButtonBarItem {
 private:
     std::unique_ptr<SDL_Texture, TextureDeleter> textureDefault;
     std::unique_ptr<SDL_Texture, TextureDeleter> textureHover;
@@ -32,6 +33,12 @@ public:
     }
     void setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) override;
     void click(ButtonBar& buttonBar) override;
+    const char* description(const ButtonBar& buttonBar) const override;
+};
+
+class StepButton final : public IconButton<IconCodePoints::STEP> {
+    void click(ButtonBar& buttonBar) override;
+    void render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const override;
     const char* description(const ButtonBar& buttonBar) const override;
 };
 
