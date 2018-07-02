@@ -111,7 +111,7 @@ bool PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
                 }
                 else if (event.clicks == 2) {
                     // if double click, center viewport at clicked position
-                    translation += (ext::div_floor(ext::point{ renderArea.w/2, renderArea.h/2 }, scale) - ext::div_floor(physicalOffset, scale)) * scale;
+                    translation += ext::point{ renderArea.w / 2, renderArea.h / 2 } - physicalOffset;
                 }
             }
         });
