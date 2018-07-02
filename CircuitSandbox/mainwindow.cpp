@@ -57,12 +57,6 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
 
-    #ifdef _WIN32
-    // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
-    // This tries to fix this
-    SDL_AddEventWatch(resizeEventForwarder, static_cast<void*>(this));
-    #endif // _WIN32
-
     // Create the renderer.  SDL_RENDERER_PRESENTVSYNC turns on the monitor refresh rate synchronization.
     // For some reason my SDL2 doesn't have any software renderer, so I can't do "SDL_RENDERER_SOFTWARE | SDL_RENDERER_ACCELERATED"
     // So we try creating hardware renderer, and if it doesn't work then we try creating software renderer.
@@ -85,6 +79,13 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
 
     // do the layout
     layoutComponents(true);
+
+#ifdef _WIN32
+    // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
+    // This tries to fix this
+    // Note that this has to come *after* layoutComponents(true), so that all layout-specific stuff (e.g. fonts) has been initialized.
+    SDL_AddEventWatch(resizeEventForwarder, static_cast<void*>(this));
+#endif // _WIN32
 }
 
 
