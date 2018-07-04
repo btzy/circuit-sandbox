@@ -312,13 +312,22 @@ public:
         // move non-monostate elements from second to newstate
         for (int32_t y = 0; y < second.height(); ++y) {
             for (int32_t x = 0; x < second.width(); ++x) {
-                if (!std::holds_alternative<std::monostate>(second.dataMatrix[{x, y}])) {
-                    ext::point pt{ x, y };
+                ext::point pt{ x, y };
+                if (!std::holds_alternative<std::monostate>(second.dataMatrix[pt])) {
                     newState[pt + secondTrans - newMin] = std::move(second[pt]);
                 }
             }
         }
 
         return { std::move(newState), -newMin };
+    }
+
+    /**
+     * Reset the transient state to the starting state
+     */
+    void resetTransientStates() {
+        for (element_variant_t& element : dataMatrix) {
+            resetLogicLevel(element);
+        }
     }
 };

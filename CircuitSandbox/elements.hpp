@@ -115,6 +115,14 @@ constexpr inline bool isSignalReceiver(const ElementVariant& v) {
         else return false;
     }, v);
 }
+template <typename ElementVariant>
+constexpr inline void resetLogicLevel(ElementVariant& v) {
+    std::visit([](auto& element) {
+        if constexpr(std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
+            element.resetLogicLevel();
+        }
+    }, v);
+}
 
 
 // display colour functions

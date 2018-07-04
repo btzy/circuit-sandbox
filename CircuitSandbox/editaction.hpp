@@ -34,7 +34,7 @@ public:
         // update window title
         mainWindow.setUnsaved(stateManager().historyManager.changedSinceLastSave());
         // recompile the simulator
-        stateManager().simulator.compile(canvas(), false);
+        stateManager().simulator.compile(canvas());
         // start the simulator if its supposed to be running
         if (simulatorRunning) stateManager().startSimulator();
     }

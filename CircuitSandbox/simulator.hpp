@@ -61,7 +61,7 @@ public:
      * If resetLogicLevel is true, the default logic levels will be used.
      * @pre simulation is currently stopped.
      */
-    void compile(const CanvasState& gameState, bool useDefaultLogicLevel);
+    void compile(const CanvasState& gameState);
 
     /**
      * Start running the simulation.

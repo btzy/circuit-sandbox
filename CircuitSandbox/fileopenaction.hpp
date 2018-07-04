@@ -110,7 +110,7 @@ public:
                     mainWindow.setUnsaved(false);
                     mainWindow.setFilePath(filePath);
                     // recompile the simulator
-                    mainWindow.stateManager.simulator.compile(mainWindow.stateManager.defaultState, false);
+                    mainWindow.stateManager.simulator.compile(mainWindow.stateManager.defaultState);
                     simulatorRunning = false; // don't restart the simulator
                     break;
                 case ReadResult::OUTDATED:

@@ -8,7 +8,7 @@
 
 StateManager::StateManager(Simulator::period_t period) {
     // compile the empty stateManager, so that simulator won't be empty
-    simulator.compile(defaultState, false);
+    simulator.compile(defaultState);
     simulator.setPeriod(period);
 }
 
@@ -69,7 +69,7 @@ void StateManager::reloadSimulator() {
     if (simulator.holdsSimulation()) {
         bool simulatorRunning = simulator.running();
         if (simulatorRunning) simulator.stop();
-        simulator.compile(defaultState, false);
+        simulator.compile(defaultState);
         if (simulatorRunning) simulator.start();
     }
 }
@@ -136,8 +136,8 @@ bool StateManager::simulatorRunning() const {
 void StateManager::resetSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) simulator.stop();
-    simulator.compile(defaultState, true);
-    simulator.takeSnapshot(defaultState);
+    defaultState.resetTransientStates();
+    simulator.compile(defaultState);
     if (simulatorRunning) simulator.start();
 }
 

@@ -162,6 +162,22 @@ namespace ext {
             }
         }
 
+        T* begin() noexcept {
+            return buffer;
+        }
+
+        const T* begin() const noexcept {
+            return buffer;
+        }
+
+        T* end() noexcept {
+            return buffer + _width * _height;
+        }
+
+        const T* end() const noexcept {
+            return buffer + _width * _height;
+        }
+
         template <typename TSrc, typename TDest>
         friend inline void copy_range(const heap_matrix<TSrc>& src, heap_matrix<TDest>& dest, int32_t src_x, int32_t src_y, int32_t dest_x, int32_t dest_y, int32_t width, int32_t height);
 
