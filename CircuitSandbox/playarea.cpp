@@ -111,10 +111,13 @@ void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
 
     // store the new mouseover point
     mouseoverPoint = physicalOffset;
+
+    currentAction.processPlayAreaMouseHover(event);
 }
 
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
+    currentAction.processPlayAreaMouseLeave();
 }
 
 bool PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {

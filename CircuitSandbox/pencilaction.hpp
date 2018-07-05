@@ -3,6 +3,8 @@
 #include <cmath>
 #include <type_traits>
 #include <variant>
+#include <vector>
+#include <numeric>
 
 #include <SDL.h>
 #include "point.hpp"
@@ -21,37 +23,50 @@
 
 // anonymous namespace to put helper functions that won't leak out to other translation units
 namespace {
-    // calls callback(pt) for every point between `from` and `to`, excluding `from` but including `to`.
+    // calls callback(pt) for every point between `from` and `to`, excluding `from` and excluding `to`.
+    // @pre: (from.x == to.x || from.y == to.y)
     template <typename Callback>
-    void interpolate(const ext::point& from, const ext::point& to, Callback&& callback) {
+    inline void interpolate_orthogonal(const ext::point& from, const ext::point& to, Callback&& callback) {
         int32_t dx = to.x - from.x;
         int32_t dy = to.y - from.y;
+        if (dx != 0) {
+            if (dx > 0) {
+                for (int32_t x = from.x + 1; x < to.x; ++x) {
+                    callback(ext::point{ x, from.y });
+                }
+            }
+            else {
+                for (int32_t x = from.x - 1; x > to.x; --x) {
+                    callback(ext::point{ x, from.y });
+                }
+            }
+        }
+        else if (dy != 0) {
+            if (dy > 0) {
+                for (int32_t y = from.y + 1; y < to.y; ++y) {
+                    callback(ext::point{ from.x, y });
+                }
+            }
+            else {
+                for (int32_t y = from.y - 1; y > to.y; --y) {
+                    callback(ext::point{ from.x, y });
+                }
+            }
+        }
+    }
+
+    // Finds the closest point to mousePt that is either horizontal or vertical from targetPt.
+    inline ext::point find_orthogonal_keypoint(const ext::point& mousePt, const ext::point& targetPt) {
+        int32_t dx = std::abs(targetPt.x - mousePt.x);
+        int32_t dy = std::abs(targetPt.y - mousePt.y);
         if (dx == 0 && dy == 0) {
-            return;
+            return targetPt;
         }
-        else if (dx >= std::abs(dy)) {
-            for (int32_t x = from.x + 1; x <= to.x; ++x) {
-                int32_t y = ext::div_round(dy * (x - from.x), dx) + from.y;
-                callback(ext::point{ x, y });
-            }
+        else if (dx >= dy) {
+            return { mousePt.x, targetPt.y };
         }
-        else if (-dx >= std::abs(dy)) {
-            for (int32_t x = from.x - 1; x >= to.x; --x) {
-                int32_t y = ext::div_round(dy * (from.x - x), -dx) + from.y;
-                callback(ext::point{ x, y });
-            }
-        }
-        else if (dy >= std::abs(dx)) {
-            for (int32_t y = from.y + 1; y <= to.y; ++y) {
-                int32_t x = ext::div_round(dx * (y - from.y), dy) + from.x;
-                callback(ext::point{ x, y });
-            }
-        }
-        else if (-dy >= std::abs(dx)) {
-            for (int32_t y = from.y - 1; y >= to.y; --y) {
-                int32_t x = ext::div_round(dx * (from.y - y), -dy) + from.x;
-                callback(ext::point{ x, y });
-            }
+        else {
+            return { targetPt.x, mousePt.y };
         }
     }
 
@@ -73,61 +88,78 @@ namespace {
 }
 
 template <typename PencilType>
-class PencilAction final : public SaveableAction {
+class PencilAction final : public SaveableAction, public KeyboardEventHook {
 
 private:
 
-    // previous mouse position in canvas units (used to do interpolation for dragging)
+    // previous mouse position in canvas units (used to know mouseup point)
     ext::point mousePos;
-// storage for the things drawn by the current action, and the transformation relative to defaultState
-    ext::expandable_bool_matrix actionState;
-    ext::point actionTrans;
+    // mouse position last clicked in canvas units; used to de-duplicate mousedown with mouseup on the same pixel
+    ext::point clickPos;
+    // storage for the key points in the current pencil action
+    std::vector<ext::point> keyPoints;
 
-    /**
-     * Use a drawing tool on (x, y) (in defaultState coordinates)
-     */
-    void changePixelState(const ext::point& pt, bool newValue) {
-        ext::point translation = actionState.changePixelState(pt - actionTrans, newValue).second;
-        actionTrans -= translation;
+    template <typename NewPencilType = PencilType, typename ElementVariant>
+    bool change(ElementVariant& element) {
+        if (!std::holds_alternative<CanvasStateVariantElement_t<NewPencilType>>(element)) {
+            element = CanvasStateVariantElement_t<NewPencilType>{};
+            return true;
+        }
+        return false;
     }
-
 
 public:
 
-    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), actionTrans({ 0, 0 }) {}
+    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow) {}
 
 
     ~PencilAction() override {
         // commit the state
         CanvasState& outputState = this->canvas();
-        this->deltaTrans = outputState.extend(actionTrans, actionTrans + actionState.size()); // this is okay because actionState is guaranteed to be non-empty
+        ext::point minPt = std::reduce(keyPoints.begin(), keyPoints.end(), ext::point::max(), [](const ext::point& pt1, const ext::point& pt2) {
+            return min(pt1, pt2);
+        });
+        ext::point maxPt = std::reduce(keyPoints.begin(), keyPoints.end(), ext::point::min(), [](const ext::point& pt1, const ext::point& pt2) {
+            return max(pt1, pt2);
+        }) + ext::point(1, 1); // extra (1, 1) for past-the-end required by outputState.extend()
+        this->deltaTrans = outputState.extend(minPt, maxPt); // this is okay because actionState is guaranteed to be non-empty
 
         // whether we actually changed anything
         bool hasChanges = false;
 
         // check if the PencilAction was a single click instead of a drag
         // clicking on a gate/relay with the same tool draws a signal instead
-        if (actionState.width() == 1 && actionState.height() == 1) {
-            auto& element = outputState[actionTrans + this->deltaTrans];
-            if (!std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
-                element = CanvasStateVariantElement_t<PencilType>{};
-                hasChanges = true;
-            } else if constexpr (std::is_same_v<PencilType, AndGate> || std::is_same_v<PencilType, OrGate> || std::is_same_v<PencilType, NandGate> || std::is_same_v<PencilType, NorGate> || std::is_same_v<PencilType, PositiveRelay> || std::is_same_v<PencilType, NegativeRelay>) {
-                if (std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
+        if (keyPoints.size() == 1) {
+            auto& element = outputState[this->deltaTrans + keyPoints.front()];
+            if constexpr (std::is_base_of_v<SignalReceivingElement, PencilType>) {
+                if (!(hasChanges = change(element))) {
                     element = Signal{};
                     hasChanges = true;
                 }
             }
-        } else {
+            else {
+                hasChanges = change(element);
+            }
+        }
+        else {
             // note: eraser can be optimized to not extend the canvas first
-            for (int32_t y = 0; y < actionState.height(); ++y) {
-                for (int32_t x = 0; x < actionState.width(); ++x) {
-                    ext::point pt{ x, y };
-                    auto& element = outputState[actionTrans + this->deltaTrans + pt];
-                    if (actionState[pt] && !std::holds_alternative<CanvasStateVariantElement_t<PencilType>>(element)) {
-                        element = CanvasStateVariantElement_t<PencilType>{};
-                        hasChanges = true;
+            auto prev = keyPoints.begin();
+            hasChanges = change(outputState[this->deltaTrans + *prev]);
+            auto curr = prev;
+            for (++curr; curr != keyPoints.end(); prev = curr++) {
+                interpolate_orthogonal(*prev, *curr, [&](const ext::point& pt) {
+                    hasChanges = change(outputState[this->deltaTrans + pt]) || hasChanges;
+                });
+                if constexpr (std::is_same_v<InsulatedWire, PencilType>) {
+                    if (curr + 1 != keyPoints.end()) {
+                        hasChanges = change<ConductiveWire>(outputState[this->deltaTrans + *curr]) || hasChanges;
                     }
+                    else {
+                        hasChanges = change(outputState[this->deltaTrans + *curr]) || hasChanges;
+                    }
+                }
+                else {
+                    hasChanges = change(outputState[this->deltaTrans + *curr]) || hasChanges;
                 }
             }
         }
@@ -153,9 +185,9 @@ public:
                 auto& action = starter.start<PencilAction>(mainWindow);
 
                 // draw the element at the current location
-                ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
-                action.changePixelState(canvasOffset, true);
-                action.mousePos = canvasOffset;
+                action.mousePos = playArea.canvasFromWindowOffset(event);
+                action.clickPos = action.mousePos;
+                action.keyPoints.emplace_back(action.mousePos);
                 return ActionEventResult::PROCESSED;
             }
             else {
@@ -164,25 +196,84 @@ public:
         }, ActionEventResult::UNPROCESSED);
     }
 
-    ActionEventResult processPlayAreaMouseDrag(const SDL_MouseMotionEvent& event) {
-        // note: probably can be optimized to don't keep doing expansion/contraction checking when interpolating, but this is probably not going to be noticeably slow
-        ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
-        // interpolate by drawing a straight line from the previous point to the current point
-        interpolate(mousePos, canvasOffset, [&](const ext::point& pt) {
-            if (ext::point_in_rect(event, this->playArea().renderArea)) {
-                // the if-statement here ensures that the pencil does not draw outside the visible part of the canvas
-                changePixelState(pt, true);
+    ActionEventResult processPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event) override {
+
+        size_t inputHandleIndex = resolveInputHandleIndex(event);
+        size_t currentToolIndex = mainWindow.selectedToolIndices[inputHandleIndex];
+
+        if (!tool_tags_t::get(currentToolIndex, [&](const auto tool_tag) {
+            // 'Tool' is the type of tool (e.g. Selector)
+            using Tool = typename decltype(tool_tag)::type;
+
+            if constexpr (std::is_same_v<PencilType, Tool>) {
+                return true;
             }
-        });
-        mousePos = canvasOffset;
-        // we claim to have processed the event, even if the mouse was outside the visible area
-        // because if the user drags the mouse back into the visible area, we want to continue drawing
+            else {
+                return false;
+            }
+        }, false)) {
+            // some other mouse button got pressed, so tell the playarea to destroy this action (destruction will automatically commit)
+            return ActionEventResult::COMPLETED;
+        }
+
+        mousePos = playArea().canvasFromWindowOffset(event);
+        clickPos = mousePos;
+
+        // add new keypoint, if it isn't the same as the last point
+        ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
+        if (keyPoints.back() != keyPoint) {
+            keyPoints.emplace_back(keyPoint);
+        }
+
         return ActionEventResult::PROCESSED;
     }
 
-    ActionEventResult processPlayAreaMouseButtonUp() {
-        // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
-        return ActionEventResult::COMPLETED;
+    ActionEventResult processPlayAreaMouseButtonUp() override {
+        if (mousePos != clickPos) { // ignore clicks at the same canvas point, because not doing so might be unintuitive
+            clickPos = mousePos;
+
+            // add new keypoint, if it isn't the same as the last point
+            ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
+            if (keyPoints.back() != keyPoint) {
+                keyPoints.emplace_back(keyPoint);
+            }
+        }
+
+        SDL_Keymod modifiers = SDL_GetModState();
+        if (modifiers & KMOD_SHIFT) {
+            // user pressed SHIFT, so don't end action yet
+            return ActionEventResult::PROCESSED;
+        }
+        else {
+            // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
+            return ActionEventResult::COMPLETED;
+        }
+    }
+
+    ActionEventResult processPlayAreaMouseHover(const SDL_MouseMotionEvent& event) override {
+        // save the mouse position
+        mousePos = playArea().canvasFromWindowOffset(event);
+        return ActionEventResult::PROCESSED;
+    }
+
+
+    ActionEventResult processWindowKeyboard(const SDL_KeyboardEvent& event) override {
+        if (event.type == SDL_KEYDOWN) {
+            SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
+            if (!(modifiers & KMOD_CTRL)) {
+                switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+                case SDL_SCANCODE_BACKSPACE: [[fallthrough]];
+                case SDL_SCANCODE_KP_BACKSPACE: // Remove last point
+                    if (keyPoints.size() > 1) {
+                        keyPoints.pop_back();
+                    }
+                    return ActionEventResult::PROCESSED;
+                default:
+                    break;
+                }
+            }
+        }
+        return ActionEventResult::UNPROCESSED;
     }
 
 
@@ -190,16 +281,44 @@ public:
     void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const override {
         invoke_RGB_format(pixelFormat, [&](const auto format) {
             using FormatType = decltype(format);
-            for (int32_t y = 0; y != actionState.height(); ++y) {
-                for (int32_t x = 0; x != actionState.width(); ++x) {
-                    ext::point actionPt{ x, y };
-                    ext::point canvasPt = actionPt + actionTrans;
-                    if (actionState[actionPt] && point_in_rect(canvasPt, renderRect)) {
-                        pixelBuffer[(canvasPt.y - renderRect.y) * pitch + (canvasPt.x - renderRect.x)] = fast_MapRGB<FormatType::value>(PencilType::displayColor);
+            auto prev = keyPoints.begin();
+            uint32_t displayColor = fast_MapRGB<FormatType::value>(PencilType::displayColor);
+            if (point_in_rect(*prev, renderRect)) {
+                pixelBuffer[(prev->y - renderRect.y) * pitch + (prev->x - renderRect.x)] = displayColor;
+            }
+            auto curr = prev;
+            for (++curr; curr != keyPoints.end(); prev = curr++) {
+                interpolate_orthogonal(*prev, *curr, [&](const ext::point& pt) {
+                    if (point_in_rect(pt, renderRect)) {
+                        pixelBuffer[(pt.y - renderRect.y) * pitch + (pt.x - renderRect.x)] = displayColor;
                     }
+                });
+                if (point_in_rect(*curr, renderRect)) {
+                    pixelBuffer[(curr->y - renderRect.y) * pitch + (curr->x - renderRect.x)] = displayColor;
                 }
             }
         });
     }
 
+    void renderPlayAreaDirect(SDL_Renderer* renderer) const override {
+        ext::point newPos = find_orthogonal_keypoint(mousePos, keyPoints.back());
+
+        ext::point topLeft = ext::min(keyPoints.back(), newPos);
+        ext::point bottomRight = ext::max(keyPoints.back(), newPos) + ext::point{ 1, 1 };
+
+        ext::point windowTopLeft = playArea().windowFromCanvasOffset(topLeft);
+        ext::point windowBottomRight = playArea().windowFromCanvasOffset(bottomRight);
+        
+        SDL_Rect selectionArea{
+            windowTopLeft.x,
+            windowTopLeft.y,
+            windowBottomRight.x - windowTopLeft.x,
+            windowBottomRight.y - windowTopLeft.y
+        };
+
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 0xFF - (0xFF - PencilType::displayColor.r) / 2, 0xFF - (0xFF - PencilType::displayColor.g) / 2, 0xFF - (0xFF - PencilType::displayColor.b) / 2, 0x66);
+        SDL_RenderFillRect(renderer, &selectionArea);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    }
 };

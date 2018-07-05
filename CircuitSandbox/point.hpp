@@ -79,6 +79,17 @@ namespace ext {
             return !(*this == other);
         }
 
+        // min/max points
+        constexpr static point min() noexcept {
+            return { std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::min() };
+        }
+        constexpr static point zero() noexcept {
+            return { 0, 0 };
+        }
+        constexpr static point max() noexcept {
+            return { std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max() };
+        }
+
 #ifdef SDL_h_ // additional convenience conversion functions if we are using SDL
         point(const SDL_Point& pt) noexcept : x(pt.x), y(pt.y) {}
         point(const SDL_MouseButtonEvent& ev) noexcept : x(ev.x), y(ev.y) {}

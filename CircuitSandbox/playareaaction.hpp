@@ -30,13 +30,20 @@ public:
     virtual inline ActionEventResult processPlayAreaMouseDrag(const SDL_MouseMotionEvent&) {
         return ActionEventResult::UNPROCESSED;
     }
-    // might be outside the playarea if the mouse was dragged out
     virtual inline ActionEventResult processPlayAreaMouseButtonUp() {
         return ActionEventResult::UNPROCESSED;
     }
 
     // expects the mouse to be in the playarea
     virtual inline ActionEventResult processPlayAreaMouseWheel(const SDL_MouseWheelEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }
+
+    // expects the mouse to be in the playarea
+    virtual inline ActionEventResult processPlayAreaMouseHover(const SDL_MouseMotionEvent&) {
+        return ActionEventResult::UNPROCESSED;
+    }
+    virtual inline ActionEventResult processPlayAreaMouseLeave() {
         return ActionEventResult::UNPROCESSED;
     }
 

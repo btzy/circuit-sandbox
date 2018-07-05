@@ -87,6 +87,9 @@ public:
 
     bool processPlayAreaMouseWheel(const SDL_MouseWheelEvent&);
 
+    bool processPlayAreaMouseHover(const SDL_MouseMotionEvent& event);
+    bool processPlayAreaMouseLeave();
+
     // renderer
     bool disablePlayAreaDefaultRender() const;
     void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const;

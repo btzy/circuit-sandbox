@@ -39,6 +39,18 @@ bool PlayAreaActionManager::processPlayAreaMouseWheel(const SDL_MouseWheelEvent&
     });
 }
 
+bool PlayAreaActionManager::processPlayAreaMouseHover(const SDL_MouseMotionEvent& event) {
+    return forwardEvent(data, [&, this]() {
+        return data->processPlayAreaMouseHover(event);
+    });
+}
+
+bool PlayAreaActionManager::processPlayAreaMouseLeave() {
+    return forwardEvent(data, [&, this]() {
+        return data->processPlayAreaMouseLeave();
+    });
+}
+
 bool PlayAreaActionManager::disablePlayAreaDefaultRender() const {
     return data ? data->disablePlayAreaDefaultRender() : false;
 }
