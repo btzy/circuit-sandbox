@@ -1,6 +1,7 @@
 #include <type_traits>
 #include <tuple>
 #include <cstdint>
+#include <stdexcept>
 
 #include <SDL.h>
 
@@ -10,6 +11,7 @@
 #include "integral_division.hpp"
 #include "point.hpp"
 #include "playareaaction.hpp"
+#include "sdl_fast_maprgb.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {};
 
@@ -92,8 +94,10 @@ void PlayArea::prepareTexture(SDL_Renderer* renderer) {
     pixelTextureSize.x = (renderArea.w - 2) / scale + 2;
     pixelTextureSize.y = (renderArea.h - 2) / scale + 2;
     
-    pixelTexture.reset(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, pixelTextureSize.x, pixelTextureSize.y));
-    SDL_QueryTexture(pixelTexture.get(), &pixelFormat, nullptr, nullptr, nullptr);
+    pixelTexture.reset(create_fast_texture(renderer, SDL_TEXTUREACCESS_STREAMING, pixelTextureSize, pixelFormat));
+    if (pixelTexture == nullptr) {
+        throw std::runtime_error("Renderer does not support any 32-bit ARGB textures!");
+    }
 }
 
 void PlayArea::layoutComponents(SDL_Renderer* renderer) {

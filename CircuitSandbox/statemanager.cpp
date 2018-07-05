@@ -5,6 +5,7 @@
 
 #include "statemanager.hpp"
 #include "visitor.hpp"
+#include "sdl_fast_maprgb.hpp"
 
 StateManager::StateManager(Simulator::period_t period) {
     // compile the empty stateManager, so that simulator won't be empty
@@ -20,34 +21,32 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, uint3
         updateDefaultState();
     }
 
-    SDL_PixelFormat* pixelFormatStruct = SDL_AllocFormat(pixelFormat);
-
     // this function has been optimized, as it is a bottleneck for large screens when zoomed out
-    uint32_t* row = pixelBuffer;
-    for (int32_t y = surfaceRect.y; y != surfaceRect.y + surfaceRect.h; ++y, row += pitch) {
-        uint32_t* pixel = row;
-        for (int32_t x = surfaceRect.x; x != surfaceRect.x + surfaceRect.w; ++x, ++pixel) {
-            const ext::point canvasPt{ x, y };
+    invoke_RGB_format(pixelFormat, [&](const auto format) {
+        using FormatType = decltype(format);
+        uint32_t* row = pixelBuffer;
+        for (int32_t y = surfaceRect.y; y != surfaceRect.y + surfaceRect.h; ++y, row += pitch) {
+            uint32_t* pixel = row;
+            for (int32_t x = surfaceRect.x; x != surfaceRect.x + surfaceRect.w; ++x, ++pixel) {
+                const ext::point canvasPt{ x, y };
 
-            // check if the requested pixel is inside the buffer
-            if (defaultState.contains(canvasPt)) {
-                std::visit(visitor{
-                    [pixel](std::monostate) {
+                // check if the requested pixel is inside the buffer
+                if (defaultState.contains(canvasPt)) {
+                    std::visit(visitor{
+                        [pixel](std::monostate) {
                         *pixel = 0;
                     },
-                    [pixel, useDefaultView, pixelFormatStruct](const auto& element) {
-                        // This is be okay, because the texture format allows it:
-                        SDL_Color color = computeDisplayColor(element, useDefaultView);
-                        *pixel = SDL_MapRGB(pixelFormatStruct, color.r, color.g, color.b);
+                        [pixel, useDefaultView](const auto& element) {
+                        *pixel = fast_MapRGB<FormatType::value>(computeDisplayColor(element, useDefaultView));
                     },
-                }, defaultState.dataMatrix[canvasPt]);
-            }
-            else {
-                *pixel = 0;
+                        }, defaultState.dataMatrix[canvasPt]);
+                }
+                else {
+                    *pixel = 0;
+                }
             }
         }
-    }
-    SDL_FreeFormat(pixelFormatStruct);
+    });
 }
 
 bool StateManager::evaluateChangedState() {

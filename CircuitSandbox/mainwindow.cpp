@@ -296,6 +296,8 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
         visible = false;
         break;
     case SDL_WINDOWEVENT_MAXIMIZED:
+        // this is to fix a Windows issue where double click to maximize will trigger a mousedown.
+        suppressMouseUntilNextDown();
         visible = true;
         break;
     case SDL_WINDOWEVENT_RESTORED:

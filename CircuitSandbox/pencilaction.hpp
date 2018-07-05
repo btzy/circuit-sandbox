@@ -188,19 +188,18 @@ public:
 
     // rendering function, render the elements that are being drawn in this action
     void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const override {
-        SDL_PixelFormat* pixelFormatStruct = SDL_AllocFormat(pixelFormat);
-        
-        for (int32_t y = 0; y != actionState.height(); ++y) {
-            for (int32_t x = 0; x != actionState.width(); ++x) {
-                ext::point actionPt{ x, y };
-                ext::point canvasPt = actionPt + actionTrans;
-                if (actionState[actionPt] && point_in_rect(canvasPt, renderRect)) {
-                    pixelBuffer[(canvasPt.y - renderRect.y) * pitch + (canvasPt.x - renderRect.x)] = SDL_MapRGB(pixelFormatStruct, PencilType::displayColor.r, PencilType::displayColor.g, PencilType::displayColor.b);
+        invoke_RGB_format(pixelFormat, [&](const auto format) {
+            using FormatType = decltype(format);
+            for (int32_t y = 0; y != actionState.height(); ++y) {
+                for (int32_t x = 0; x != actionState.width(); ++x) {
+                    ext::point actionPt{ x, y };
+                    ext::point canvasPt = actionPt + actionTrans;
+                    if (actionState[actionPt] && point_in_rect(canvasPt, renderRect)) {
+                        pixelBuffer[(canvasPt.y - renderRect.y) * pitch + (canvasPt.x - renderRect.x)] = fast_MapRGB<FormatType::value>(PencilType::displayColor);
+                    }
                 }
             }
-        }
-
-        SDL_FreeFormat(pixelFormatStruct);
+        });
     }
 
 };
