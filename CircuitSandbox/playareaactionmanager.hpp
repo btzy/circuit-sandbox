@@ -89,6 +89,6 @@ public:
 
     // renderer
     bool disablePlayAreaDefaultRender() const;
-    void renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const;
+    void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const;
     void renderPlayAreaDirect(SDL_Renderer* renderer) const;
 };

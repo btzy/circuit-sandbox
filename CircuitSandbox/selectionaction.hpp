@@ -269,40 +269,44 @@ public:
     }
 
     // rendering function, render the selection (since base will already be rendered)
-    void renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const override {
+    void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const override {
         if (state != State::SELECTING) {
             bool defaultView = playArea().isDefaultView();
 
-            for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y) {
-                for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x) {
-                    SDL_Color computedColor{ 0, 0, 0, 0 };
-                    const ext::point canvasPt{ x, y };
+            SDL_PixelFormat* pixelFormatStruct = SDL_AllocFormat(pixelFormat);
 
+            for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y, pixelBuffer += pitch) {
+                uint32_t* pixel = pixelBuffer;
+                for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x, ++pixel) {
+                    const ext::point canvasPt{ x, y };
+                    uint32_t color = 0;
                     // draw base, check if the requested pixel inside the buffer
                     if (canvas().contains(canvasPt - baseTrans)) {
                         std::visit(visitor{
                             [](std::monostate) {},
-                            [&](const auto& element) {
-                                computedColor = computeDisplayColor(element, defaultView);
+                            [&color, defaultView, pixelFormatStruct](const auto& element) {
+                                SDL_Color tmpColor = computeDisplayColor(element, defaultView);
+                                color = SDL_MapRGB(pixelFormatStruct, tmpColor.r, tmpColor.b, tmpColor.a);
                             },
-                            }, canvas()[canvasPt - baseTrans]);
+                        }, canvas()[canvasPt - baseTrans]);
                     }
 
                     // draw selection, check if the requested pixel inside the buffer
                     if (selection.contains(canvasPt - selectionTrans)) {
                         std::visit(visitor{
                             [](std::monostate) {},
-                            [&](const auto& element) {
-                                computedColor = computeDisplayColor(element, defaultView);
+                            [&color, defaultView, pixelFormatStruct](const auto& element) {
+                                SDL_Color computedColor = computeDisplayColor(element, defaultView);
                                 computedColor.b = 0xFF; // colour the selection blue
+                                color = SDL_MapRGB(pixelFormatStruct, computedColor.r, computedColor.b, computedColor.a);
                             },
-                            }, selection[canvasPt - selectionTrans]);
+                        }, selection[canvasPt - selectionTrans]);
                     }
-
-                    uint32_t color = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
-                    *pixelBuffer++ = color;
+                    *pixel = color;
                 }
             }
+
+            SDL_FreeFormat(pixelFormatStruct);
         }
     }
 

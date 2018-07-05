@@ -57,7 +57,7 @@ public:
      * Pixel format: pixel = R | (G << 8) | (B << 16)
      * useDefaultView: whether we want to render the default view (instead of live view)
      */
-    void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, int32_t x, int32_t y, int32_t width, int32_t height);
+    void fillSurface(bool useDefaultView, uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& surfaceRect, int32_t pitch);
 
     /**
      * Take a snapshot of the gamestate and save it in the history.

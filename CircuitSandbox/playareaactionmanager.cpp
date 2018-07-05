@@ -42,8 +42,8 @@ bool PlayAreaActionManager::processPlayAreaMouseWheel(const SDL_MouseWheelEvent&
 bool PlayAreaActionManager::disablePlayAreaDefaultRender() const {
     return data ? data->disablePlayAreaDefaultRender() : false;
 }
-void PlayAreaActionManager::renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {
-    if (data) data->renderPlayAreaSurface(pixelBuffer, renderRect);
+void PlayAreaActionManager::renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const {
+    if (data) data->renderPlayAreaSurface(pixelBuffer, pixelFormat, renderRect, pitch);
 }
 void PlayAreaActionManager::renderPlayAreaDirect(SDL_Renderer* renderer) const {
     if (data) data->renderPlayAreaDirect(renderer);

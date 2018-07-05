@@ -54,7 +54,7 @@ public:
      * Render on a surface (in canvas units) using its pixel buffer.
      * `renderRect` is the part of the canvas that should be drawn onto this surface.
      */
-    virtual void renderPlayAreaSurface(uint32_t* pixelBuffer, const SDL_Rect& renderRect) const {}
+    virtual void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const {}
     /**
      * Render directly using the SDL_Renderer (it is in window coordinates).
      */

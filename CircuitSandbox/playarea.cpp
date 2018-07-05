@@ -18,22 +18,29 @@ void PlayArea::render(SDL_Renderer* renderer) {
     render(renderer, mainWindow.stateManager);
 }
 void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
-    // calculate the rectangle (in gamestate coordinates) that we will be drawing:
+    // calculate the rectangle (in canvas coordinates) that we will be drawing:
     SDL_Rect surfaceRect;
     surfaceRect.x = ext::div_floor(-translation.x, scale);
     surfaceRect.y = ext::div_floor(-translation.y, scale);
-    surfaceRect.w = ext::div_ceil(renderArea.w - translation.x, scale) - surfaceRect.x;
-    surfaceRect.h = ext::div_ceil(renderArea.h - translation.y, scale) - surfaceRect.y;
+    surfaceRect.w = pixelTextureSize.x;
+    surfaceRect.h = pixelTextureSize.y;
+
+    // lock the texture so we can start drawing onto it
+    uint32_t* pixelData;
+    int32_t pitch;
+    SDL_LockTexture(pixelTexture.get(), nullptr, &reinterpret_cast<void*&>(pixelData), &pitch);
+    pitch >>= 2; // divide by 4, because uint32_t is 4 bytes
 
     // render the gamestate
-    SDL_Surface* surface = SDL_CreateRGBSurface(0, surfaceRect.w, surfaceRect.h, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0);
     if (!currentAction.disablePlayAreaDefaultRender()) {
-        stateManager.fillSurface(defaultView, reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect.x, surfaceRect.y, surfaceRect.w, surfaceRect.h);
+        stateManager.fillSurface(defaultView, pixelData, pixelFormat, surfaceRect, pitch);
     }
     // ask current action to render pixels to the surface if necessary
-    currentAction.renderPlayAreaSurface(reinterpret_cast<uint32_t*>(surface->pixels), surfaceRect);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
+    currentAction.renderPlayAreaSurface(pixelData, pixelFormat, surfaceRect, pitch);
+
+    // unlock the texture
+    SDL_UnlockTexture(pixelTexture.get());
+
     // scale and translate the surface according to the the pan and zoom level
     // the section of the surface enclosed within surfaceRect is mapped to dstRect
     const SDL_Rect dstRect {
@@ -42,8 +49,7 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
         surfaceRect.w * scale,
         surfaceRect.h * scale
     };
-    SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
-    SDL_DestroyTexture(texture);
+    SDL_RenderCopy(renderer, pixelTexture.get(), nullptr, &dstRect);
 
     // render a mouseover rectangle (if the mouseoverPoint is non-empty)
     if (mouseoverPoint) {
@@ -76,6 +82,22 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
         };
         SDL_RenderFillRect(renderer, &squareBox);
     }
+}
+
+void PlayArea::prepareTexture(SDL_Renderer* renderer) {
+    // free the old texture first (if any)
+    pixelTexture.reset(nullptr);
+    
+    // calculate the required texture size - the maximum size necessary for *any* possible translation.
+    pixelTextureSize.x = (renderArea.w - 2) / scale + 2;
+    pixelTextureSize.y = (renderArea.h - 2) / scale + 2;
+    
+    pixelTexture.reset(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, pixelTextureSize.x, pixelTextureSize.y));
+    SDL_QueryTexture(pixelTexture.get(), &pixelFormat, nullptr, nullptr, nullptr);
+}
+
+void PlayArea::layoutComponents(SDL_Renderer* renderer) {
+    prepareTexture(renderer);
 }
 
 
@@ -165,10 +187,12 @@ bool PlayArea::processMouseWheel(const SDL_MouseWheelEvent& event) {
             if (scrollAmount > 0) {
                 scale++;
                 translation -= offset;
+                prepareTexture(mainWindow.renderer);
             }
             else if (scrollAmount < 0 && scale > 1) {
                 scale--;
                 translation += offset;
+                prepareTexture(mainWindow.renderer);
             }
         }
 
