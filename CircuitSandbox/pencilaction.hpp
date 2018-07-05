@@ -8,6 +8,7 @@
 
 #include <SDL.h>
 #include "point.hpp"
+#include "reduce.hpp"
 #include "saveableaction.hpp"
 #include "statemanager.hpp"
 #include "playarea.hpp"
