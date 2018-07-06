@@ -117,10 +117,10 @@ public:
     ~PencilAction() override {
         // commit the state
         CanvasState& outputState = this->canvas();
-        ext::point minPt = std::reduce(keyPoints.begin(), keyPoints.end(), ext::point::max(), [](const ext::point& pt1, const ext::point& pt2) {
+        ext::point minPt = ext::reduce(keyPoints.begin(), keyPoints.end(), ext::point::max(), [](const ext::point& pt1, const ext::point& pt2) {
             return min(pt1, pt2);
         });
-        ext::point maxPt = std::reduce(keyPoints.begin(), keyPoints.end(), ext::point::min(), [](const ext::point& pt1, const ext::point& pt2) {
+        ext::point maxPt = ext::reduce(keyPoints.begin(), keyPoints.end(), ext::point::min(), [](const ext::point& pt1, const ext::point& pt2) {
             return max(pt1, pt2);
         }) + ext::point(1, 1); // extra (1, 1) for past-the-end required by outputState.extend()
         this->deltaTrans = outputState.extend(minPt, maxPt); // this is okay because actionState is guaranteed to be non-empty
