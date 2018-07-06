@@ -93,12 +93,12 @@ class PencilAction final : public SaveableAction, public KeyboardEventHook {
 
 private:
 
-    // previous mouse position in canvas units (used to know mouseup point)
+    // previous mousedown position in canvas units
     ext::point mousePos;
-    // mouse position last clicked in canvas units; used to de-duplicate mousedown with mouseup on the same pixel
-    ext::point clickPos;
     // storage for the key points in the current pencil action
     std::vector<ext::point> keyPoints;
+
+    bool polylineMode;
 
     template <typename NewPencilType = PencilType, typename ElementVariant>
     bool change(ElementVariant& element) {
@@ -111,7 +111,7 @@ private:
 
 public:
 
-    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow) {}
+    PencilAction(MainWindow& mainWindow, bool polylineMode) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), polylineMode(polylineMode) {}
 
 
     ~PencilAction() override {
@@ -132,14 +132,12 @@ public:
         // clicking on a gate/relay with the same tool draws a signal instead
         if (keyPoints.size() == 1) {
             auto& element = outputState[this->deltaTrans + keyPoints.front()];
+            hasChanges = change(element);
             if constexpr (std::is_base_of_v<SignalReceivingElement, PencilType>) {
-                if (!(hasChanges = change(element))) {
+                if (!hasChanges) {
                     element = Signal{};
                     hasChanges = true;
                 }
-            }
-            else {
-                hasChanges = change(element);
             }
         }
         else {
@@ -147,19 +145,24 @@ public:
             auto prev = keyPoints.begin();
             hasChanges = change(outputState[this->deltaTrans + *prev]);
             auto curr = prev;
-            for (++curr; curr != keyPoints.end(); prev = curr++) {
-                interpolate_orthogonal(*prev, *curr, [&](const ext::point& pt) {
-                    hasChanges = change(outputState[this->deltaTrans + pt]) || hasChanges;
-                });
-                if constexpr (std::is_same_v<InsulatedWire, PencilType>) {
-                    if (curr + 1 != keyPoints.end()) {
-                        hasChanges = change<ConductiveWire>(outputState[this->deltaTrans + *curr]) || hasChanges;
-                    }
-                    else {
-                        hasChanges = change(outputState[this->deltaTrans + *curr]) || hasChanges;
-                    }
+            // when drawing insulated wires, draw conductive wire at intermediate keypoints
+            if constexpr (std::is_same_v<InsulatedWire, PencilType>) {
+                for (++curr; curr != keyPoints.end(); prev = curr++) {
+                    interpolate_orthogonal(*prev, *curr, [&](const ext::point& pt) {
+                        hasChanges = change(outputState[this->deltaTrans + pt]) || hasChanges;
+                    });
                 }
-                else {
+                curr = prev = keyPoints.begin();
+                for (++curr; curr + 1 != keyPoints.end(); prev = curr++) {
+                    hasChanges = change<ConductiveWire>(outputState[this->deltaTrans + *curr]) || hasChanges;
+                }
+                hasChanges = change(outputState[this->deltaTrans + *curr]) || hasChanges;
+            }
+            else {
+                for (++curr; curr != keyPoints.end(); prev = curr++) {
+                    interpolate_orthogonal(*prev, *curr, [&](const ext::point& pt) {
+                        hasChanges = change(outputState[this->deltaTrans + pt]) || hasChanges;
+                    });
                     hasChanges = change(outputState[this->deltaTrans + *curr]) || hasChanges;
                 }
             }
@@ -182,12 +185,12 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_same_v<PencilType, Tool>) {
+                bool polylineMode = SDL_GetModState() & KMOD_SHIFT;
                 // create the new action
-                auto& action = starter.start<PencilAction>(mainWindow);
+                auto& action = starter.start<PencilAction>(mainWindow, polylineMode);
 
                 // draw the element at the current location
                 action.mousePos = playArea.canvasFromWindowOffset(event);
-                action.clickPos = action.mousePos;
                 action.keyPoints.emplace_back(action.mousePos);
                 return ActionEventResult::PROCESSED;
             }
@@ -218,26 +221,11 @@ public:
         }
 
         mousePos = playArea().canvasFromWindowOffset(event);
-        clickPos = mousePos;
 
         // add new keypoint, if it isn't the same as the last point
         ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
         if (keyPoints.back() != keyPoint) {
             keyPoints.emplace_back(keyPoint);
-        }
-
-        return ActionEventResult::PROCESSED;
-    }
-
-    ActionEventResult processPlayAreaMouseButtonUp() override {
-        if (mousePos != clickPos) { // ignore clicks at the same canvas point, because not doing so might be unintuitive
-            clickPos = mousePos;
-
-            // add new keypoint, if it isn't the same as the last point
-            ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
-            if (keyPoints.back() != keyPoint) {
-                keyPoints.emplace_back(keyPoint);
-            }
         }
 
         SDL_Keymod modifiers = SDL_GetModState();
@@ -249,6 +237,18 @@ public:
             // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
             return ActionEventResult::COMPLETED;
         }
+    }
+
+    ActionEventResult processPlayAreaMouseButtonUp() override {
+        // if not drawing a polyline, mouseup creates the second keypoint and ends the action
+        if (!polylineMode) {
+            ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
+            if (keyPoints.back() != keyPoint) {
+                keyPoints.emplace_back(keyPoint);
+            }
+            return ActionEventResult::COMPLETED;
+        }
+        return ActionEventResult::PROCESSED;
     }
 
     ActionEventResult processPlayAreaMouseHover(const SDL_MouseMotionEvent& event) override {
@@ -269,6 +269,8 @@ public:
                         keyPoints.pop_back();
                     }
                     return ActionEventResult::PROCESSED;
+                case SDL_SCANCODE_ESCAPE:
+                    return ActionEventResult::COMPLETED;
                 default:
                     break;
                 }
