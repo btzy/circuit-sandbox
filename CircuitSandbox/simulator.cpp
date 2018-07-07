@@ -19,7 +19,7 @@ Simulator::~Simulator() {
 }
 
 
-void Simulator::compile(const CanvasState& gameState) {
+void Simulator::compile(CanvasState& gameState) {
     // temporary compiler data (unpacked representation)
     CompilerStaticData compilerStaticData;
     compilerStaticData.pixels = ext::heap_matrix<Simulator::StaticData::DisplayedPixel>(gameState.size());
@@ -304,6 +304,9 @@ void Simulator::compile(const CanvasState& gameState) {
 
     // Note: no atomics required here because the simulation thread has not started, and starting the thread automatically does synchronization.
     latestCompleteState = std::make_shared<DynamicData>(std::move(dynamicData));
+
+    // take a snapshot (with the immediate propagation done)
+    takeSnapshot(gameState);
 }
 
 

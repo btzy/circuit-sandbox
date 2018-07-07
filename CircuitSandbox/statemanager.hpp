@@ -35,6 +35,7 @@ private:
 
     /**
      * If a current simulator exists, stop and recompiles the simulator.
+     * Note: this function is not used at all.
      */
     void reloadSimulator();
 

@@ -4,7 +4,6 @@
  * Simulator class, which runs the simulation (on a different thread)
  * StateManager class should invoke this class with the heap_matrix of underlying data (?)
  * All communication with the simulation engine should use this class
- * TODO: For now, no compilation actually happens, but we intend to compile to a graph before running the simulation.
  */
 
 #include <thread>
@@ -267,11 +266,11 @@ public:
     /**
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
      * If resetLogicLevel is true, the default logic levels will be used.
-     * Even though the simulator is stopped, those things that propagate immediately will be updated immediately.
+     * Even though the simulator is stopped, those things that propagate immediately will be updated immediately (back to the CanvasState parameter).
      * Call takeSnapshot() if the caller wants to retrieve the immediate propagation state.
      * @pre simulation is currently stopped.
      */
-    void compile(const CanvasState& gameState);
+    void compile(CanvasState& gameState);
 
     /**
      * Start running the simulation.
