@@ -17,6 +17,7 @@
 #include "elements.hpp"
 #include "point.hpp"
 #include "tag_tuple.hpp"
+#include "expandable_matrix.hpp"
 
 class CanvasState {
 private:
@@ -255,6 +256,25 @@ public:
         return newState;
     }
 
+    /**
+     * Moves elements from an area of dataMatrix given by a mask to a new CanvasState and returns them.
+     * The area becomes empty on the current dataMatrix.
+     * Returned matrix will be of the exact width and height; it will not be shrinked.
+     * @pre Assumes that the translated mask lies within the bounds of this canvas state
+     */
+    CanvasState spliceMask(ext::point offset, ext::expandable_bool_matrix mask) {
+        CanvasState newState;
+        newState.dataMatrix = matrix_t(mask.width(), mask.height());
+        for (int32_t y = 0; y < mask.height(); ++y) {
+            for (int32_t x = 0; x < mask.width(); ++x) {
+                ext::point pt = offset + ext::point{ x, y };
+                if (mask[pt]) {
+                    std::swap(dataMatrix[pt], newState.dataMatrix[pt]);
+                }
+            }
+        }
+        return newState;
+    }
 
     void flipHorizontal() {
         dataMatrix.flipHorizontal();

@@ -9,6 +9,7 @@
 #include "mainwindow.hpp"
 #include "eventhook.hpp"
 #include "sdl_fast_maprgb.hpp"
+#include "expandable_matrix.hpp"
 
 
 /**
@@ -21,7 +22,8 @@ private:
     enum class State {
         SELECTING,
         SELECTED,
-        MOVING
+        MOVING,
+        MOVED
     };
 
     State state;
@@ -34,8 +36,8 @@ private:
     CanvasState selection; // stores the selection
 
     // in State::SELECTED and State::MOVING, these are the translations of selection and base, relative to defaultState
-    ext::point selectionTrans; // in canvas coordinates
-    ext::point baseTrans; // in canvas coordinates
+    ext::point selectionTrans = { 0, 0 }; // in canvas coordinates
+    ext::point baseTrans = { 0, 0 }; // in canvas coordinates
 
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
@@ -44,36 +46,59 @@ private:
 
     /**
      * Prepare base, selection, baseTrans, selectionTrans from selectionOrigin and selectionEnd. Returns true if the selection is not empty.
+     * If subtract is true, elements in the selection rect are removed from selection.
      */
-    bool selectRect() {
+    bool selectRect(bool subtract) {
         CanvasState& base = canvas();
 
         // normalize supplied points
-        ext::point topLeft = ext::min(selectionOrigin, selectionEnd);
-        ext::point bottomRight = ext::max(selectionOrigin, selectionEnd) + ext::point{ 1, 1 };
+        ext::point topLeft = ext::min(selectionOrigin, selectionEnd); // inclusive
+        ext::point bottomRight = ext::max(selectionOrigin, selectionEnd) + ext::point{ 1, 1 }; // exclusive
 
-        // restrict selectionRect to the area within base
-        topLeft = ext::max(topLeft, { 0, 0 });
-        bottomRight = ext::min(bottomRight, base.size());
-        ext::point selectionSize = bottomRight - topLeft;
+        if (subtract) {
+            if (selection.empty()) return false;
 
-        // no elements in the selection rect
-        if (selectionSize.x <= 0 || selectionSize.y <= 0) return false;
+            // restrict selectionRect to the area within working selection
+            topLeft = ext::max(topLeft, selectionTrans);
+            bottomRight = ext::min(bottomRight, selectionTrans + selection.size());
+            ext::point selectionSize = bottomRight - topLeft;
 
-        // splice out the selection from the base
-        selection = base.splice(topLeft.x, topLeft.y, selectionSize.x, selectionSize.y);
+            // no elements in the selection rect
+            if (selectionSize.x <= 0 || selectionSize.y <= 0) return !selection.empty();
 
-        // shrink the selection
-        ext::point selectionShrinkTrans = selection.shrinkDataMatrix();
+            // splice out a part of the working selection
+            CanvasState unselected = selection.splice(topLeft.x - selectionTrans.x, topLeft.y - selectionTrans.y, selectionSize.x, selectionSize.y);
+            selectionTrans -= selection.shrinkDataMatrix();
 
-        // no elements in the selection rect
-        if (selection.empty()) return false;
+            // shrink the unselected part
+            ext::point unselectedShrinkTrans = unselected.shrinkDataMatrix();
 
-        selectionTrans = topLeft - selectionShrinkTrans;
+            // merge the unselected part with base
+            auto tmpBase = CanvasState::merge(std::move(unselected), topLeft - unselectedShrinkTrans, std::move(base), baseTrans).first;
+            base = std::move(tmpBase);
+        }
+        else {
+            // restrict selectionRect to the area within base
+            topLeft = ext::max(topLeft, { 0, 0 });
+            bottomRight = ext::min(bottomRight, base.size());
+            ext::point selectionSize = bottomRight - topLeft;
 
-        baseTrans = -base.shrinkDataMatrix();
+            // no elements in the selection rect
+            if (selectionSize.x <= 0 || selectionSize.y <= 0) return !selection.empty();
 
-        return true;
+            // splice out the newest selection from the base
+            CanvasState newSelection = base.splice(topLeft.x, topLeft.y, selectionSize.x, selectionSize.y);
+
+            // shrink the newest selection
+            ext::point selectionShrinkTrans = newSelection.shrinkDataMatrix();
+
+            // merge the newest selection by stacking the working selection on top of it
+            auto [tmpSelection, translation] = CanvasState::merge(std::move(newSelection), topLeft - selectionShrinkTrans, std::move(selection), selectionTrans);
+            selection = std::move(tmpSelection);
+            selectionTrans = -std::move(translation);
+        }
+
+        return !selection.empty();
     }
 
 public:
@@ -81,6 +106,8 @@ public:
 
     // destructor, called to finish the action immediately
     ~SelectionAction() override {
+        // note that base is only shrunk on destruction
+        baseTrans -= canvas().shrinkDataMatrix();
         if (state != State::SELECTING) {
             auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), baseTrans, std::move(selection), selectionTrans);
             canvas() = std::move(tmpDefaultState);
@@ -117,15 +144,16 @@ public:
         if (mainWindow.stateManager.defaultState.empty()) return;
 
         auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
-        action.selection = std::move(action.canvas());
+        action.selection = std::move(action.canvas().splice(0, 0, action.canvas().width(), action.canvas().height()));
         action.selectionTrans = action.baseTrans = { 0, 0 };
-        action.canvas() = CanvasState(); // clear defaultState
+        // action.selectionOrigin = { 0, 0 };
+        // action.selectionEnd = action.selection.size() - ext::point{ 1, 1 };
     }
 
     static inline void startByPasting(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
         if (clipboard.empty()) return;
-        
-        auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
+
+        auto& action = starter.start<SelectionAction>(mainWindow, State::MOVED);
 
         ext::point windowOffset;
         SDL_GetMouseState(&windowOffset.x, &windowOffset.y);
@@ -151,7 +179,8 @@ public:
             selectionEnd = canvasOffset;
             return ActionEventResult::PROCESSED;
         case State::SELECTED:
-            // something's wrong -- if the mouse is being held down, we shouldn't be in SELECTED state
+        case State::MOVED:
+            // something's wrong -- if the mouse is being held down, we shouldn't be in SELECTED or MOVED state
             // hopefully PlayArea can resolve this
             return ActionEventResult::UNPROCESSED;
         case State::MOVING:
@@ -178,6 +207,17 @@ public:
             if constexpr (std::is_base_of_v<Selector, Tool>) {
                 switch (state) {
                 case State::SELECTED:
+                {
+                    SDL_Keymod modifiers = SDL_GetModState();
+                    // check if only one of shift or alt is held down
+                    if (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT)) {
+                        state = State::SELECTING;
+                        selectionEnd = selectionOrigin = canvasOffset;
+                        return ActionEventResult::PROCESSED;
+                    }
+                }
+                    [[fallthrough]];
+                case State::MOVED:
                     if (!selection.contains(canvasOffset - selectionTrans)) {
                         // end selection
                         return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
@@ -205,14 +245,14 @@ public:
         switch (state) {
             case State::SELECTING:
                 state = State::SELECTED;
-                if (selectRect()) {
+                if (selectRect(SDL_GetModState() & KMOD_ALT)) {
                     return ActionEventResult::PROCESSED;
                 } else {
                     selectionTrans = baseTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
                     return ActionEventResult::COMPLETED;
                 }
             case State::MOVING:
-                state = State::SELECTED;
+                state = State::MOVED;
                 return ActionEventResult::PROCESSED;
             default:
                 return ActionEventResult::UNPROCESSED;
@@ -224,18 +264,22 @@ public:
             SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
             switch (event.keysym.scancode) {
             case SDL_SCANCODE_H:
+                state = State::MOVED;
                 selection.flipHorizontal();
                 return ActionEventResult::PROCESSED;
             case SDL_SCANCODE_V:
                 if (!(modifiers & KMOD_CTRL)) {
+                    state = State::MOVED;
                     selection.flipVertical();
                     return ActionEventResult::PROCESSED;
                 }
                 return ActionEventResult::UNPROCESSED;
             case SDL_SCANCODE_LEFTBRACKET: // [
+                state = State::MOVED;
                 selection.rotateCounterClockwise();
                 return ActionEventResult::PROCESSED;
             case SDL_SCANCODE_RIGHTBRACKET: // ]
+                state = State::MOVED;
                 selection.rotateClockwise();
                 return ActionEventResult::PROCESSED;
             case SDL_SCANCODE_D:
@@ -266,12 +310,12 @@ public:
 
     // disable default rendering when not SELECTING
     bool disablePlayAreaDefaultRender() const override {
-        return state != State::SELECTING;
+        return !selection.empty();
     }
 
     // rendering function, render the selection (since base will already be rendered)
     void renderPlayAreaSurface(uint32_t* pixelBuffer, uint32_t pixelFormat, const SDL_Rect& renderRect, int32_t pitch) const override {
-        if (state != State::SELECTING) {
+        if (!selection.empty()) {
             bool defaultView = playArea().isDefaultView();
 
             invoke_RGB_format(pixelFormat, [&](const auto format) {
@@ -295,9 +339,13 @@ public:
                         if (selection.contains(canvasPt - selectionTrans)) {
                             std::visit(visitor{
                                 [](std::monostate) {},
-                                [&color, defaultView](const auto& element) {
+                                [this, &color, defaultView](const auto& element) {
                                     alignas(uint32_t) SDL_Color computedColor = computeDisplayColor(element, defaultView);
-                                    computedColor.b = 0xFF; // colour the selection blue
+                                    if (state == State::SELECTING || state == State::SELECTED) {
+                                        computedColor.b = 0xFF; // colour the selection blue if it can still be modified
+                                    } else {
+                                        computedColor.r = 0xFF; // otherwise colour the selection red
+                                    }
                                     color = fast_MapRGB<FormatType::value>(computedColor);
                                 },
                             }, selection[canvasPt - selectionTrans]);
@@ -320,7 +368,7 @@ public:
 
                 ext::point windowTopLeft = playArea().windowFromCanvasOffset(topLeft);
                 ext::point windowBottomRight = playArea().windowFromCanvasOffset(bottomRight);
-                
+
                 SDL_Rect selectionArea{
                     windowTopLeft.x,
                     windowTopLeft.y,
@@ -333,13 +381,15 @@ public:
                 SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 ext::renderDrawDashedRect(renderer, &selectionArea);
             }
-            break;
+            [[fallthrough]];
         case State::SELECTED:
             [[fallthrough]];
         case State::MOVING:
-            {
+            [[fallthrough]];
+        case State::MOVED:
+            if (!selection.empty()) {
                 ext::point windowTopLeft = playArea().windowFromCanvasOffset(selectionTrans);
-            
+
                 SDL_Rect selectionArea{
                     windowTopLeft.x,
                     windowTopLeft.y,

@@ -145,8 +145,59 @@ namespace ext {
                 }
                 else {
                     // note: if we reach here, `translation` is guaranteed to be {0,0} as well
-                    return { false,{ 0, 0 } };
+                    return { false, { 0, 0 } };
                 }
+            }
+        }
+
+        /**
+        * Change the state of a rectangle of pixels.
+        * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
+        * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
+        */
+        std::pair<bool, ext::point> changeRectState(ext::point topLeft, ext::point bottomRight, bool newValue) {
+            bool changed = false;
+
+            if (!newValue) {
+                if (topLeft.x < 0 && bottomRight.x < 0 || topLeft.x >= dataMatrix.width() && bottomRight.x >= dataMatrix.width() ||
+                    topLeft.y < 0 && bottomRight.y < 0 || topLeft.y >= dataMatrix.height() && bottomRight.y >= dataMatrix.height()) {
+                    return { false, { 0, 0 } };
+                }
+
+                topLeft = { std::max(topLeft.x, 0), std::max(topLeft.y, 0) };
+                bottomRight = { std::max(bottomRight.x, dataMatrix.width() - 1), std::max(bottomRight.y, dataMatrix.height() - 1) };
+                int32_t width = bottomRight.x - topLeft.x + 1;
+                int32_t height = topLeft.y - bottomRight.y + 1;
+
+                for (int32_t y = 0; y < height; ++y) {
+                    for (int32_t x = 0; x < width; ++x) {
+                        ext::point pt = topLeft + ext::point{ x, y };
+                        if (dataMatrix[pt] != newValue) {
+                            dataMatrix[pt] = newValue;
+                            changed = true;
+                        }
+                    }
+                }
+                return { changed, shrinkDataMatrix() };
+            }
+            else {
+                ext::point translation = prepareDataMatrixForAddition(topLeft);
+                bottomRight += translation;
+                translation += prepareDataMatrixForAddition(bottomRight);
+                topLeft += translation;
+                int32_t width = bottomRight.x - topLeft.x + 1;
+                int32_t height = topLeft.y - bottomRight.y + 1;
+
+                for (int32_t y = 0; y < height; ++y) {
+                    for (int32_t x = 0; x < width; ++x) {
+                        ext::point pt = topLeft + ext::point{ x, y };
+                        if (dataMatrix[pt] != newValue) {
+                            dataMatrix[pt] = newValue;
+                            changed = true;
+                        }
+                    }
+                }
+                return { changed, changed ? translation : ext::point{ 0, 0 } };
             }
         }
 

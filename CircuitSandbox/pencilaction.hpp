@@ -15,7 +15,6 @@
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "elements.hpp"
-#include "expandable_matrix.hpp"
 
 
 /**
