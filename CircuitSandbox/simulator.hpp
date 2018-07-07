@@ -13,19 +13,225 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+#include <array>
+#include <tuple>
+#include <vector>
+#include <algorithm>
 
 #include "canvasstate.hpp"
+#include "heap_matrix.hpp"
 
 
 class Simulator {
 public:
     using period_t = std::chrono::steady_clock::duration;
 private:
+    template <typename T>
+    struct SizedArray {
+        T* data;
+        int32_t size;
+        SizedArray() noexcept : size(0) {}
+        SizedArray(const SizedArray&) = delete;
+        SizedArray& operator=(const SizedArray&) = delete;
+        SizedArray(SizedArray&&) = delete;
+        SizedArray& operator=(SizedArray&&) = delete;
+        ~SizedArray() noexcept {
+            if (size > 0) {
+                delete[] data;
+            }
+        }
+        void resize(int32_t newSize) {
+            if (size > 0) {
+                delete[] data;
+            }
+            size = newSize;
+            if (size > 0) {
+                data = new T[size];
+            }
+        }
+        void update(const std::vector<T>& newData) {
+            resize(static_cast<int32_t>(newData.size()));
+            std::copy(newData.begin(), newData.end(), data);
+        }
+        T* begin() noexcept {
+            return data;
+        }
+        T* end() noexcept {
+            return data + size;
+        }
+        const T* begin() const noexcept {
+            return data;
+        }
+        const T* end() const noexcept {
+            return data + size;
+        }
+    };
+    struct DynamicData;
+    struct StaticData;
+    struct SimulatorSource {
+        int32_t outputComponent;
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    struct Sources {
+        SizedArray<SimulatorSource> data;
+    };
+    template <size_t NumInputs>
+    struct SimulatorLogicGate {
+        std::array<int32_t, NumInputs> inputComponents;
+        int32_t outputComponent;
+    };
+    template <size_t NumInputs>
+    struct SimulatorAndGate : public SimulatorLogicGate<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <size_t NumInputs>
+    struct SimulatorOrGate : public SimulatorLogicGate<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <size_t NumInputs>
+    struct SimulatorNandGate : public SimulatorLogicGate<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <size_t NumInputs>
+    struct SimulatorNorGate : public SimulatorLogicGate<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <template <size_t> typename Gate>
+    struct GatePack {
+        std::tuple<SizedArray<Gate<0>>, SizedArray<Gate<1>>, SizedArray<Gate<2>>, SizedArray<Gate<3>>, SizedArray<Gate<4>>> data;
+        template <typename Callback>
+        void forEach(Callback callback) const noexcept {
+            callback(std::get<0>(data));
+            callback(std::get<1>(data));
+            callback(std::get<2>(data));
+            callback(std::get<3>(data));
+            callback(std::get<4>(data));
+        }
+    };
+    struct Gates {
+        GatePack<SimulatorAndGate> andGate;
+        GatePack<SimulatorOrGate> orGate;
+        GatePack<SimulatorNandGate> nandGate;
+        GatePack<SimulatorNorGate> norGate;
+        template <typename Callback>
+        void forEach(Callback callback) const noexcept {
+            callback(andGate);
+            callback(orGate);
+            callback(nandGate);
+            callback(norGate);
+        }
+    };
+    template <size_t NumInputs>
+    struct SimulatorRelay {
+        std::array<int32_t, NumInputs> inputComponents;
+        int32_t outputRelayPixel;
+    };
+    template <size_t NumInputs>
+    struct SimulatorPositiveRelay : public SimulatorRelay<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <size_t NumInputs>
+    struct SimulatorNegativeRelay : public SimulatorRelay<NumInputs> {
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
+    template <template <size_t> typename Relay>
+    struct RelayPack {
+        std::tuple<SizedArray<Relay<0>>, SizedArray<Relay<1>>, SizedArray<Relay<2>>, SizedArray<Relay<3>>, SizedArray<Relay<4>>> data;
+        template <typename Callback>
+        void forEach(Callback callback) const noexcept {
+            callback(std::get<0>(data));
+            callback(std::get<1>(data));
+            callback(std::get<2>(data));
+            callback(std::get<3>(data));
+            callback(std::get<4>(data));
+        }
+    };
+    struct Relays {
+        RelayPack<SimulatorPositiveRelay> positiveRelay;
+        RelayPack<SimulatorNegativeRelay> negativeRelay;
+        template <typename Callback>
+        void forEach(Callback callback) const noexcept {
+            callback(positiveRelay);
+            callback(negativeRelay);
+        }
+    };
+    struct RelayPixel {
+        std::array<int32_t, 4> adjComponents;
+        uint8_t numAdjComponents;
+    };
+    struct Component {
+        int32_t adjRelayPixelsBegin;
+        int32_t adjRelayPixelsEnd;
+    };
+    struct StaticData {
+        // for all data that does not change after compilation
+
+        // data about sources
+        Sources sources;
+
+        // data about which component each gate maps to
+        Gates logicGates;
+
+        // data about which RelayPixel each relay maps to
+        Relays relays;
+
+        // list of components
+        SizedArray<Component> components;
+        // list of relay pixels (relay pixels have one-to-one correspondence to relays)
+        SizedArray<RelayPixel> relayPixels;
+        // adj component list
+        SizedArray<int32_t> adjComponentList;
+
+        struct DisplayedPixel {
+            bool isRelay;
+            int32_t index[2]; // index[1] used only if it is an insulated wire with two directions
+            inline bool logicLevel(const DynamicData&) const noexcept;
+        };
+        
+        // state mapping
+        ext::heap_matrix<DisplayedPixel> pixels;
+
+        // sizes
+        /*int32_t numComponents;
+        int32_t numRelayPixels;*/
+    };
+    struct DynamicData {
+        // for things that change at every simulation step
+
+        // array of logic level of each connected component
+        std::unique_ptr<bool[]> componentLogicLevels;
+        // array of logic level of each relay pixel
+        std::unique_ptr<bool[]> relayPixelLogicLevels;
+        // array of whether each relay pixel is conductive (uninitialized)
+        std::unique_ptr<bool[]> relayPixelIsConductive;
+
+
+        DynamicData() = delete;
+        DynamicData(const DynamicData&) = delete;
+        DynamicData& operator=(const DynamicData&) = delete;
+        DynamicData(DynamicData&&) = default;
+        DynamicData& operator=(DynamicData&&) = default;
+        DynamicData(int32_t numComponents, int32_t numRelayPixels) {
+            componentLogicLevels = std::make_unique<bool[]>(numComponents);
+            std::fill_n(componentLogicLevels.get(), numComponents, false);
+            relayPixelLogicLevels = std::make_unique<bool[]>(numRelayPixels);
+            std::fill_n(relayPixelLogicLevels.get(), numRelayPixels, false);
+            relayPixelIsConductive = std::make_unique<bool[]>(numRelayPixels);
+        }
+    };
+    friend struct CompilerSources;
+    friend struct CompilerGates;
+    friend struct CompilerRelays;
+    friend struct CompilerStaticData;
+
     // The thread on which the simulation will run.
     std::thread simThread;
 
+    // the static data
+    StaticData staticData;
+
     // The last CanvasState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
-    std::shared_ptr<CanvasState> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<CanvasState>>.
+    std::shared_ptr<DynamicData> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<CanvasState>>.
     std::atomic<bool> simStopping; // flag for the UI thread to tell the simulation thread to stop.
 
     // synchronization stuff to wake the simulator thread if its sleeping
@@ -50,7 +256,9 @@ private:
     * This method is static, and hence is safe be called concurrently from multiple threads.
     * @pre simulation has been compiled.
     */
-    static void calculate(const CanvasState& oldState, CanvasState& newState);
+    static void calculate(const StaticData& staticData, const DynamicData& oldState, DynamicData& newState);
+
+    static void floodFill(const StaticData& staticData, DynamicData& dynamicData);
 
 public:
 
@@ -59,6 +267,8 @@ public:
     /**
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
      * If resetLogicLevel is true, the default logic levels will be used.
+     * Even though the simulator is stopped, those things that propagate immediately will be updated immediately.
+     * Call takeSnapshot() if the caller wants to retrieve the immediate propagation state.
      * @pre simulation is currently stopped.
      */
     void compile(const CanvasState& gameState);
@@ -94,7 +304,7 @@ public:
      * Returns true is the simulator currently holds a compiled simulation.
      */
     bool holdsSimulation() const {
-        std::shared_ptr<CanvasState> tmpState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
+        std::shared_ptr<DynamicData> tmpState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
         return tmpState != nullptr;
     }
 

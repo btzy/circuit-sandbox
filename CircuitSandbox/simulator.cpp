@@ -1,4 +1,5 @@
 #include "simulator.hpp"
+#include "simulator_compile.hpp"
 #include "elements.hpp"
 #include "tag_tuple.hpp"
 #include "visitor.hpp"
@@ -9,6 +10,8 @@
 #include <chrono>
 #include <type_traits>
 #include <stack>
+#include <numeric>
+#include <cassert>
 
 
 Simulator::~Simulator() {
@@ -17,17 +20,290 @@ Simulator::~Simulator() {
 
 
 void Simulator::compile(const CanvasState& gameState) {
-    // Note: (TODO) for now it seems that we are modifying the innards of tmpState, but when we do proper compilation we will need another data structure instead, not just plain CanvasState.
-    CanvasState tmpState;
-    tmpState.dataMatrix = typename CanvasState::matrix_t(gameState.dataMatrix.width(), gameState.dataMatrix.height());
-    for (int32_t y = 0; y != gameState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != gameState.dataMatrix.width(); ++x) {
-            tmpState.dataMatrix[{x, y}] = gameState.dataMatrix[{x, y}];
+    // temporary compiler data (unpacked representation)
+    CompilerStaticData compilerStaticData;
+    compilerStaticData.pixels = ext::heap_matrix<Simulator::StaticData::DisplayedPixel>(gameState.size());
+
+    // flags to tell us whether each pixel has been processed (originally everything is unprocessed)
+    // horizontal followed by vertical
+    ext::heap_matrix<std::array<bool, 2>> visited(gameState.size());
+    visited.fill({ false, false });
+
+    // store whether each point is a relay
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            compilerStaticData.pixels[pt].isRelay = isRelayElement(gameState[pt]);
+            compilerStaticData.pixels[pt].index[0] = compilerStaticData.pixels[pt].index[1] = -1;
         }
     }
 
+    // populate all the components first
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+
+            if (isFloodfillableElement(gameState[pt])) {
+                for (int dir = 0; dir < 2; ++dir) {
+                    if (!visited[pt][dir]) {
+                        // since we have not visited this pixel yet, we do a flood fill algorithm to find all pixels that are connected
+
+                        // whether it might be useful to process this element (an optimization to remove useless components)
+                        bool componentIsUseful = false;
+
+                        std::vector<std::pair<ext::point, int>> updatedPixels;
+
+                        // flood fill
+                        {
+                            std::stack<std::pair<ext::point, int>> floodStack;
+                            floodStack.emplace(pt, dir);
+
+                            while (!floodStack.empty()) {
+                                // retrieve topmost point
+                                auto[currPt, currDir] = floodStack.top();
+                                floodStack.pop();
+
+                                // ignore if already processed
+                                if (visited[currPt][currDir]) continue;
+
+                                // set visited
+                                visited[currPt][currDir] = true;
+
+                                // set its component index
+                                updatedPixels.emplace_back(currPt, currDir);
+
+                                // check if component is useful
+                                if (!componentIsUseful && isFloodfillableSourceOrSignalElement(gameState[currPt])) {
+                                    componentIsUseful = true;
+                                }
+
+                                // if its not insulated wire, push the opposite direction
+                                if (!std::holds_alternative<InsulatedWire>(gameState[currPt]) && !visited[currPt][1 - currDir]) {
+                                    floodStack.emplace(currPt, 1 - currDir);
+                                }
+
+                                // visit the adjacent pixels
+                                using positive_one_t = std::integral_constant<int32_t, 1>;
+                                using negative_one_t = std::integral_constant<int32_t, -1>;
+                                using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
+                                directions_t::for_each([&](auto direction_tag_t, auto) {
+                                    ext::point newPt = currPt;
+                                    if (currDir == 0) {
+                                        newPt.x += decltype(direction_tag_t)::type::value;
+                                    }
+                                    else {
+                                        newPt.y += decltype(direction_tag_t)::type::value;
+                                    }
+                                    if (gameState.contains(newPt) && !visited[newPt][currDir] &&
+                                        isFloodfillableElement(gameState[newPt]) &&
+                                        !(isSignalReceiver(gameState[newPt]) && isSignal(gameState[currPt])) &&
+                                        !(isSignal(gameState[newPt]) && isSignalReceiver(gameState[currPt]))) {
+                                        floodStack.emplace(newPt, currDir);
+                                    }
+                                    if (!componentIsUseful && gameState.contains(newPt) && isRelayElement(gameState[newPt])) {
+                                        componentIsUseful = true;
+                                    }
+                                });
+                                
+                            }
+                        }
+
+                        if (componentIsUseful) {
+                            // assign it the next component index
+                            int32_t componentIndex = compilerStaticData.components.size();
+                            // commit the changes
+                            for (auto [currPt, currDir] : updatedPixels) {
+                                compilerStaticData.pixels[currPt].index[currDir] = componentIndex;
+                            }
+                            // register this component
+                            compilerStaticData.components.emplace_back();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // next, we populate the sources
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            if (std::holds_alternative<Source>(gameState[pt])) {
+                auto& source = compilerStaticData.sources.data.emplace_back();
+                source.outputComponent = compilerStaticData.pixels[pt].index[0]; // for sources, index 0 and 1 should be the same
+                assert(source.outputComponent >= 0 && source.outputComponent < compilerStaticData.components.size());
+            }
+        }
+    }
+
+    // next, we populate the logic gates
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            std::visit([&](const auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
+                    int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
+                    assert(outputComponent >= 0 && outputComponent < compilerStaticData.components.size());
+                    // Note: can optimize if heap allocation for the std::vector is slow
+                    std::vector<int32_t> inputComponents;
+                    using up = integral_pair<int32_t, 0, -1>;
+                    using down = integral_pair<int32_t, 0, 1>;
+                    using left = integral_pair<int32_t, -1, 0>;
+                    using right = integral_pair<int32_t, 1, 0>;
+                    using directions_t = ext::tag_tuple<up, down, left, right>;
+                    directions_t::for_each([&](auto direction_tag_t, auto) {
+                        ext::point newPt = pt;
+                        newPt.x += decltype(direction_tag_t)::type::first;
+                        newPt.y += decltype(direction_tag_t)::type::second;
+                        if (gameState.contains(newPt) && isSignal(gameState[newPt])) {
+                            assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < compilerStaticData.components.size());
+                            inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                        }
+                    });
+                    compilerStaticData.logicGates.emplace<ElementType>(inputComponents, outputComponent);
+                }
+            }, gameState[pt]);
+        }
+    }
+
+    // next, we populate the relays (and spawn new components if two relays are adjacent)
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            visited[pt] = { true, true };
+            std::visit([&](const auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr (std::is_base_of_v<Relay, ElementType>) {
+                    int32_t outputRelayPixelIndex = compilerStaticData.relayPixels.size();
+                    auto& relayPixel = compilerStaticData.relayPixels.emplace_back();
+                    relayPixel.numAdjComponents = 0;
+                    // TODO: optimize if heap allocation is slow
+                    std::vector<int32_t> inputComponents;
+                    using up = integral_pair<int32_t, 0, -1>;
+                    using down = integral_pair<int32_t, 0, 1>;
+                    using left = integral_pair<int32_t, -1, 0>;
+                    using right = integral_pair<int32_t, 1, 0>;
+                    using directions_t = ext::tag_tuple<up, down, left, right>;
+                    directions_t::for_each([&](auto direction_tag_t, auto) {
+                        ext::point newPt = pt;
+                        int32_t dir = (decltype(direction_tag_t)::type::second != 0);
+                        newPt.x += decltype(direction_tag_t)::type::first;
+                        newPt.y += decltype(direction_tag_t)::type::second;
+                        if (gameState.contains(newPt)) {
+                            auto& element = gameState[newPt];
+                            if (isSignal(element)) {
+                                inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                            }
+                            else if (isFloodfillableElement(element)) {
+                                assert(compilerStaticData.pixels[newPt].index[dir] >= 0 && compilerStaticData.pixels[newPt].index[dir] < compilerStaticData.components.size());
+                                relayPixel.adjComponents[relayPixel.numAdjComponents++] = compilerStaticData.pixels[newPt].index[dir];
+                                compilerStaticData.components[compilerStaticData.pixels[newPt].index[dir]].adjRelayPixels.emplace_back(outputRelayPixelIndex);
+                            }
+                            else if (isRelayElement(element)) {
+                                // special case where two relays are adjacent
+                                // spawn a new component between them, if the other component is already processed
+                                if (visited[newPt][0]) { // this ensures that we only spawn the new component once per pair of adjacent relays
+                                    assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] <= compilerStaticData.relayPixels.size());
+                                    int32_t componentIndex = compilerStaticData.components.size();
+                                    auto& newComponent = compilerStaticData.components.emplace_back();
+                                    newComponent.adjRelayPixels.emplace_back(outputRelayPixelIndex);
+                                    relayPixel.adjComponents[relayPixel.numAdjComponents++] = componentIndex;
+                                    newComponent.adjRelayPixels.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                                    auto& otherRelayPixel = compilerStaticData.relayPixels[compilerStaticData.pixels[newPt].index[0]];
+                                    otherRelayPixel.adjComponents[otherRelayPixel.numAdjComponents++] = componentIndex;
+                                }
+                            }
+                        }
+                    });
+                    compilerStaticData.relays.emplace<ElementType>(inputComponents, outputRelayPixelIndex);
+                    compilerStaticData.pixels[pt].index[0] = compilerStaticData.pixels[pt].index[1] = outputRelayPixelIndex;
+                }
+            }, gameState[pt]);
+        }
+    }
+
+
+    // === generate the fixed (packed) representation from the unpacked representation ===
+    staticData.sources.data.update(compilerStaticData.sources.data);
+
+    compilerStaticData.logicGates.forEachGate(staticData.logicGates, [&](auto& gate, const auto& compilerGate) {
+        using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
+        indices_t::for_each([&](const auto index_tag, auto) {
+            constexpr int32_t Index = decltype(index_tag)::type::value;
+            std::get<Index>(gate.data).update(std::get<Index>(compilerGate.data));
+        });
+    });
+    
+    compilerStaticData.relays.forEachRelay(staticData.relays, [&](auto& relay, const auto& compilerRelay) {
+        using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
+        indices_t::for_each([&](const auto index_tag, auto) {
+            constexpr int32_t Index = decltype(index_tag)::type::value;
+            std::get<Index>(relay.data).update(std::get<Index>(compilerRelay.data));
+        });
+    });
+
+    int32_t adjComponentListSize = std::accumulate(compilerStaticData.components.begin(), compilerStaticData.components.end(), 0, [](const int32_t& prev, const CompilerComponent& curr) {
+        return prev + static_cast<int32_t>(curr.adjRelayPixels.size());
+    });
+
+    staticData.adjComponentList.resize(adjComponentListSize);
+
+    staticData.components.resize(compilerStaticData.components.size());
+    int32_t offset = 0;
+    std::transform(compilerStaticData.components.begin(), compilerStaticData.components.end(), staticData.components.begin(), [&](const CompilerComponent& old) {
+        int32_t newBegin = offset;
+        std::copy(old.adjRelayPixels.begin(), old.adjRelayPixels.end(), staticData.adjComponentList.begin() + newBegin);
+        offset += static_cast<int32_t>(old.adjRelayPixels.size());
+        return Simulator::Component{ newBegin, offset };
+    });
+
+    staticData.relayPixels.update(compilerStaticData.relayPixels);
+
+    staticData.pixels = std::move(compilerStaticData.pixels);
+
+
+    // === dynamic state ===
+    // sets everything to false by default
+    DynamicData dynamicData(staticData.components.size, staticData.relayPixels.size);
+
+    // fill from all the currently sources and logic gates,
+    // and fill the conductive state from the relays
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            std::visit([&](const auto& element) {
+                // TODO: Have to fix save format to store whether *relays* are conductive
+                // Other elements should not store any transient state
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr (std::is_same_v<Source, ElementType>) {
+                    int32_t outputComponent = staticData.pixels[pt].index[0];
+                    assert(outputComponent >= 0 && outputComponent < staticData.components.size);
+                    dynamicData.componentLogicLevels[outputComponent] = true;
+                }
+                else if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
+                    if (element.getLogicLevel()) {
+                        int32_t outputComponent = staticData.pixels[pt].index[0];
+                        assert(outputComponent >= 0 && outputComponent < staticData.components.size);
+                        dynamicData.componentLogicLevels[outputComponent] = true;
+                    }
+                }
+                else if constexpr(std::is_base_of_v<Relay, ElementType>) {
+                    if (element.getLogicLevel()) {
+                        int32_t outputRelayPixel = staticData.pixels[pt].index[0];
+                        assert(outputRelayPixel >= 0 && outputRelayPixel < staticData.relayPixels.size);
+                        dynamicData.relayPixelIsConductive[outputRelayPixel] = true;
+                    }
+                }
+            }, gameState[pt]);
+        }
+    }
+
+    // flood fill to ensure that the current state is a valid simulation state
+    floodFill(staticData, dynamicData);
+
     // Note: no atomics required here because the simulation thread has not started, and starting the thread automatically does synchronization.
-    latestCompleteState = std::make_shared<CanvasState>(std::move(tmpState));
+    latestCompleteState = std::make_shared<DynamicData>(std::move(dynamicData));
 }
 
 
@@ -62,24 +338,30 @@ void Simulator::stop() {
 void Simulator::step() {
     // this runs the simulator in the main thread, since we want to block until the step is complete.
     // since the simulator is stopped, we can read from latestCompleteState without synchronization.
-    const CanvasState& oldState = *latestCompleteState;
-    CanvasState newState;
+    const DynamicData& oldState = *latestCompleteState;
+    DynamicData newState(staticData.components.size, staticData.relayPixels.size);
 
     // calculate the new state
-    calculate(oldState, newState);
+    calculate(staticData, oldState, newState);
 
     // save the new state (again without synchronization because simulator thread is not running).
-    latestCompleteState = std::make_shared<CanvasState>(std::move(newState));
+    latestCompleteState = std::make_shared<DynamicData>(std::move(newState));
 }
 
 
 
 void Simulator::takeSnapshot(CanvasState& returnState) const {
     // Note (TODO): will be replaced with the proper compiled graph representation
-    const std::shared_ptr<CanvasState> gameState = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
-    for (int32_t y = 0; y != gameState->dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != gameState->dataMatrix.width(); ++x) {
-            returnState[{x, y}] = gameState->dataMatrix[{x, y}];
+    const std::shared_ptr<DynamicData> dynamicData = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
+    for (int32_t y = 0; y != returnState.dataMatrix.height(); ++y) {
+        for (int32_t x = 0; x != returnState.dataMatrix.width(); ++x) {
+            ext::point pt{ x, y };
+            std::visit(visitor{
+                [](std::monostate) {},
+                [&](auto& element) {
+                    element.setLogicLevel(staticData.pixels[pt].logicLevel(*dynamicData));
+                }
+            }, returnState[pt]);
         }
     }
 }
@@ -94,11 +376,11 @@ void Simulator::run() {
     while (true) {
         // note: we just use the member field 'latestCompleteState' directly without any synchronization,
         // because when the simulator thread is running, no other thread will modify 'latestCompleteState'.
-        const CanvasState& oldState = *latestCompleteState;
-        CanvasState newState;
+        const DynamicData& oldState = *latestCompleteState;
+        DynamicData newState(staticData.components.size, staticData.relayPixels.size);
 
         // calculate the new state
-        calculate(oldState, newState);
+        calculate(staticData, oldState, newState);
 
         // now we are done with the simulation, check if we are being asked to stop
         // if we are being asked to stop, we should discared this step,
@@ -110,7 +392,7 @@ void Simulator::run() {
         // we aren't asked to stop.
         // so commit the new state (i.e. replace 'latestCompleteState' with the new state).
         // also, std::memory_order_release to flush the changes so that the main thread can see them
-        std::atomic_store_explicit(&latestCompleteState, std::make_shared<CanvasState>(std::move(newState)), std::memory_order_release);
+        std::atomic_store_explicit(&latestCompleteState, std::make_shared<DynamicData>(std::move(newState)), std::memory_order_release);
 
         // sleep for an amount of time given by `period`, if the time is not already used up
         // this code will account for the time spent calculating the simulation, as long as it is less than `period`
@@ -136,153 +418,175 @@ void Simulator::run() {
 }
 
 
-void Simulator::calculate(const CanvasState& oldState, CanvasState& newState) {
+void Simulator::calculate(const StaticData& staticData, const DynamicData& oldState, DynamicData& newState) {
 
-    // holds the new state after simulating this step
-    ext::heap_matrix<ElementState> intermediateState(oldState.dataMatrix.width(), oldState.dataMatrix.height());
-
-    // TODO: consider having an actual element type represent an 'Empty' element, so we don't need to keep checking for std::monostate everywhere
-    for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
-
-            using positive_one_t = std::integral_constant<int32_t, 1>;
-            using zero_t = std::integral_constant<int32_t, 0>;
-            using negative_one_t = std::integral_constant<int32_t, -1>;
-            using directions_t = ext::tag_tuple<std::pair<zero_t, negative_one_t>, std::pair<positive_one_t, zero_t>, std::pair<zero_t, positive_one_t>, std::pair<negative_one_t, zero_t>>;
-            // populate the adjacent environment for this pixel
-            AdjacentEnvironment env;
-            directions_t::for_each([&oldState, &env, x, y](auto direction_tag_t, auto index_t) {
-                int32_t adjX = x + decltype(direction_tag_t)::type::first_type::value;
-                int32_t adjY = y + decltype(direction_tag_t)::type::second_type::value;
-                auto& adjInput = env.inputs[decltype(index_t)::value];
-                adjInput = AdjacentInput{ AdjacentElementType::EMPTY, false };
-                if (0 <= adjX && adjX < oldState.dataMatrix.width() && 0 <= adjY && adjY < oldState.dataMatrix.height()) {
-                    const auto& adjacentElement = oldState.dataMatrix[{adjX, adjY}];
-                    std::visit(visitor{
-                        [](std::monostate) {},
-                        [&adjInput](auto element) {
-                            adjInput.type = element.isSignal() ? AdjacentElementType::SIGNAL : AdjacentElementType::WIRE;
-                            adjInput.logicLevel = element.getLogicLevel();
-                        }
-                    }, adjacentElement);
-                }
-            });
-            intermediateState[{x, y}] = std::visit(visitor{
-                [](std::monostate) {
-                    return ElementState::INSULATOR;
-                },
-                [&env](auto element) {
-                    return element.processStep(env);
-                }
-            }, oldState.dataMatrix[{x, y}]);
-        }
+    // invoke all the sources
+    for (const SimulatorSource& source : staticData.sources.data) {
+        source(oldState, newState);
     }
 
-    // holds the new state after simulating this step
-    newState.dataMatrix = typename CanvasState::matrix_t(oldState.dataMatrix.width(), oldState.dataMatrix.height());
+    // invoke all the logic gates
+    staticData.logicGates.forEach([&](const auto& x) {
+        x.forEach([&](const auto& y) {
+            for (const auto& gate : y) {
+                gate(oldState, newState);
+            }
+        });
+    });
+    
+    // invoke all the relays
+    staticData.relays.forEach([&](const auto& x) {
+        x.forEach([&](const auto& y) {
+            for (const auto& relay : y) {
+                relay(oldState, newState);
+            }
+        });
+    });
 
-    // clone all the element types, but set them all to LOW
-    for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
-            newState.dataMatrix[{x, y}] = std::visit(visitor{
-                [](std::monostate) {
-                    return CanvasState::element_variant_t{};
-                },
-                [](auto element) {
-                    using Element = decltype(element);
-                    return CanvasState::element_variant_t{ Element(false, element.getDefaultLogicLevel()) };
-                }
-            }, oldState.dataMatrix[{x, y}]);
+    // flood fill all the components
+    floodFill(staticData, newState);
+}
+
+
+void Simulator::floodFill(const StaticData& staticData, DynamicData& dynamicData) {
+    // first field of pair is true if it is a relay instead of a component
+    std::stack<std::pair<bool, int32_t>> componentStack;
+    for (int32_t i = 0; i != staticData.components.size; ++i) {
+        if (dynamicData.componentLogicLevels[i]) {
+            componentStack.emplace(false, i);
+            dynamicData.componentLogicLevels[i] = false; // will be turned on again in the flood fill algorithm
         }
     }
+    while (!componentStack.empty()) {
+        auto [isRelay, i] = componentStack.top();
+        componentStack.pop();
 
+        if (!isRelay) {
+            // ignore if already on
+            if (dynamicData.componentLogicLevels[i]) continue;
 
+            // turn the component on
+            dynamicData.componentLogicLevels[i] = true;
 
-    struct Visited {
-        bool dir[2] = { false, false }; // {horizontal, vertical}
-    };
-
-    ext::heap_matrix<Visited> visitedMatrix(oldState.dataMatrix.width(), oldState.dataMatrix.height());
-
-
-    // run a flood fill algorithm
-    {
-
-        // reset the visitedMatrix
-        for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
-            for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
-                if (intermediateState[{x, y}] == ElementState::SOURCE) {
-                    visitedMatrix[{x, y}] = { false,false };
+            // flood to neighbours
+            Component& component = staticData.components.data[i];
+            for (int32_t j = component.adjRelayPixelsBegin; j != component.adjRelayPixelsEnd; ++j) {
+                int32_t relayIndex = staticData.adjComponentList.data[j];
+                if (dynamicData.relayPixelIsConductive[relayIndex] && !dynamicData.relayPixelLogicLevels[relayIndex]) {
+                    componentStack.emplace(true, relayIndex);
                 }
             }
         }
+        else {
+            // ignore if already on
+            if (dynamicData.relayPixelLogicLevels[i]) continue;
 
-        std::stack<std::pair<ext::point, int>> pendingVisit;
+            // turn the component on
+            dynamicData.relayPixelLogicLevels[i] = true;
 
-        // insert all the sources into the stack
-        for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
-            for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
-                if (intermediateState[{x, y}] == ElementState::SOURCE) {
-                    pendingVisit.emplace(std::pair<ext::point, int>{ {x, y}, 0});
-                    pendingVisit.emplace(std::pair<ext::point, int>{ {x, y}, 1});
+            // flood to neighbours
+            RelayPixel& relayPixel = staticData.relayPixels.data[i];
+            for (int32_t j = 0; j != relayPixel.numAdjComponents; ++j) {
+                if (!dynamicData.componentLogicLevels[relayPixel.adjComponents[j]]) {
+                    componentStack.emplace(false, relayPixel.adjComponents[j]);
                 }
             }
-        }
-
-        // flood fill
-        while (!pendingVisit.empty()) {
-            auto[currentPoint, axis] = pendingVisit.top();
-            pendingVisit.pop();
-
-            // check if we have already processed this location
-            if (visitedMatrix[currentPoint].dir[axis]) {
-                continue; // if it's already set to HIGH, it means we already processed it
-            }
-
-            // set the logic level to HIGH
-            visitedMatrix[currentPoint].dir[axis] = true;
-
-            // if its conductive wire, push the same location with the complementary axis into the stack (if it's still not yet visited)
-            if (intermediateState[currentPoint] == ElementState::CONDUCTIVE_WIRE && !visitedMatrix[currentPoint].dir[1 - axis]) {
-                pendingVisit.emplace(currentPoint, 1 - axis);
-            }
-
-            // put all the unvisited neighbours into the stack
-            using positive_one_t = std::integral_constant<int32_t, 1>;
-            using negative_one_t = std::integral_constant<int32_t, -1>;
-            using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
-            directions_t::for_each([&pendingVisit, &oldState, &intermediateState, &visitedMatrix, currentPoint, axis](auto direction_tag_t, auto) {
-                int32_t adjX = currentPoint.x;
-                int32_t adjY = currentPoint.y;
-                if (axis == 0) {
-                    adjX += decltype(direction_tag_t)::type::value;
-                }
-                else {
-                    adjY += decltype(direction_tag_t)::type::value;
-                }
-
-                ext::point newPoint{ adjX, adjY };
-
-                if (oldState.contains(newPoint) &&
-                    intermediateState[newPoint] != ElementState::INSULATOR &&
-                    !(isSignal(oldState.dataMatrix[currentPoint]) && isSignalReceiver(oldState.dataMatrix[newPoint])) &&
-                    !(isSignalReceiver(oldState.dataMatrix[currentPoint]) && isSignal(oldState.dataMatrix[newPoint])) &&
-                    !visitedMatrix[newPoint].dir[axis]) {
-                    pendingVisit.emplace(newPoint, axis);
-                }
-            });
         }
     }
+}
 
-    // set the logic state of the new elements
-    for (int32_t y = 0; y != oldState.dataMatrix.height(); ++y) {
-        for (int32_t x = 0; x != oldState.dataMatrix.width(); ++x) {
-            std::visit(visitor{
-                [](std::monostate) {},
-                [&vis = visitedMatrix[{x,y}]](auto& element) {
-                    element.setLogicLevel(vis.dir[0] || vis.dir[1]);
-                }
-            }, newState.dataMatrix[{x, y}]);
+
+// simulator sepecific stuff
+inline void Simulator::SimulatorSource::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    newData.componentLogicLevels[this->outputComponent] = true;
+}
+template <size_t NumInputs>
+inline void Simulator::SimulatorAndGate<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.componentLogicLevels[this->outputComponent];
+    if (!output) {
+        bool ans = true;
+        // hopefully compilers will unroll the loop
+        for (size_t i = 0; i != NumInputs; ++i) {
+            if (!oldData.componentLogicLevels[this->inputComponents[i]]) {
+                ans = false;
+                break;
+            }
         }
+        output = ans;
+    }
+}
+template <size_t NumInputs>
+inline void Simulator::SimulatorOrGate<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.componentLogicLevels[this->outputComponent];
+    if (!output) {
+        // hopefully compilers will unroll the loop
+        for (size_t i = 0; i != NumInputs; ++i) {
+            if (oldData.componentLogicLevels[this->inputComponents[i]]) {
+                output = true;
+                break;
+            }
+        }
+    }
+}
+template <size_t NumInputs>
+inline void Simulator::SimulatorNandGate<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.componentLogicLevels[this->outputComponent];
+    if (!output) {
+        // hopefully compilers will unroll the loop
+        for (size_t i = 0; i != NumInputs; ++i) {
+            if (!oldData.componentLogicLevels[this->inputComponents[i]]) {
+                output = true;
+                break;
+            }
+        }
+    }
+}
+template <size_t NumInputs>
+inline void Simulator::SimulatorNorGate<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.componentLogicLevels[this->outputComponent];
+    if (!output) {
+        bool ans = true;
+        // hopefully compilers will unroll the loop
+        for (size_t i = 0; i != NumInputs; ++i) {
+            if (oldData.componentLogicLevels[this->inputComponents[i]]) {
+                ans = false;
+                break;
+            }
+        }
+        output = ans;
+    }
+}
+
+template <size_t NumInputs>
+inline void Simulator::SimulatorPositiveRelay<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.relayPixelIsConductive[this->outputRelayPixel];
+    // hopefully compilers will unroll the loop
+    for (size_t i = 0; i != NumInputs; ++i) {
+        if (oldData.componentLogicLevels[this->inputComponents[i]]) {
+            output = true;
+            return;
+        }
+    }
+    output = false;
+}
+template <size_t NumInputs>
+inline void Simulator::SimulatorNegativeRelay<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool& output = newData.relayPixelIsConductive[this->outputRelayPixel];
+    // hopefully compilers will unroll the loop
+    for (size_t i = 0; i != NumInputs; ++i) {
+        if (!oldData.componentLogicLevels[this->inputComponents[i]]) {
+            output = true;
+            return;
+        }
+    }
+    output = false;
+}
+inline bool Simulator::StaticData::DisplayedPixel::logicLevel(const DynamicData& execData) const noexcept {
+    if (!isRelay) {
+        return (index[0] != -1 ? execData.componentLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.componentLogicLevels[index[1]] : false);
+        
+    }
+    else {
+        return (index[0] != -1 ? execData.relayPixelLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.relayPixelLogicLevels[index[1]] : false);
     }
 }
