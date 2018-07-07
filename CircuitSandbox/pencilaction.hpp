@@ -168,7 +168,7 @@ public:
             }
         }
 
-        if (std::is_same_v<PencilType, Eraser>) {
+        if constexpr (std::is_same_v<PencilType, Eraser>) {
             this->deltaTrans += outputState.shrinkDataMatrix();
         }
 

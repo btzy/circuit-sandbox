@@ -129,7 +129,7 @@ void Simulator::compile(CanvasState& gameState) {
         for (int32_t x = 0; x != gameState.width(); ++x) {
             ext::point pt{ x, y };
             if (std::holds_alternative<Source>(gameState[pt])) {
-                auto& source = compilerStaticData.sources.data.emplace_back();
+                auto& source = compilerStaticData.sources.emplace_back();
                 source.outputComponent = compilerStaticData.pixels[pt].index[0]; // for sources, index 0 and 1 should be the same
                 assert(source.outputComponent >= 0 && source.outputComponent < compilerStaticData.components.size());
             }
@@ -225,7 +225,7 @@ void Simulator::compile(CanvasState& gameState) {
 
 
     // === generate the fixed (packed) representation from the unpacked representation ===
-    staticData.sources.data.update(compilerStaticData.sources.data);
+    staticData.sources.update(compilerStaticData.sources);
 
     compilerStaticData.logicGates.forEachGate(staticData.logicGates, [&](auto& gate, const auto& compilerGate) {
         using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
@@ -424,7 +424,7 @@ void Simulator::run() {
 void Simulator::calculate(const StaticData& staticData, const DynamicData& oldState, DynamicData& newState) {
 
     // invoke all the sources
-    for (const SimulatorSource& source : staticData.sources.data) {
+    for (const SimulatorSource& source : staticData.sources) {
         source(oldState, newState);
     }
 

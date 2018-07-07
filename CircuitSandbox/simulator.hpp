@@ -71,9 +71,6 @@ private:
         int32_t outputComponent;
         inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
     };
-    struct Sources {
-        SizedArray<SimulatorSource> data;
-    };
     template <size_t NumInputs>
     struct SimulatorLogicGate {
         std::array<int32_t, NumInputs> inputComponents;
@@ -166,7 +163,7 @@ private:
         // for all data that does not change after compilation
 
         // data about sources
-        Sources sources;
+        SizedArray<SimulatorSource> sources;
 
         // data about which component each gate maps to
         Gates logicGates;

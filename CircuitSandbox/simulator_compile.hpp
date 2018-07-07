@@ -25,9 +25,6 @@ inline auto callback_as_template(int32_t x, Callback&& callback) {
     }
 }
 
-struct CompilerSources {
-    std::vector<Simulator::SimulatorSource> data;
-};
 template <template <size_t> typename Gate>
 struct CompilerGatePack {
     std::tuple<std::vector<Gate<0>>, std::vector<Gate<1>>, std::vector<Gate<2>>, std::vector<Gate<3>>, std::vector<Gate<4>>> data;
@@ -101,7 +98,7 @@ struct CompilerStaticData {
     // for all data that does not change after compilation
 
     // data about sources
-    CompilerSources sources;
+    std::vector<Simulator::SimulatorSource> sources;
 
     // data about which component each gate maps to
     CompilerGates logicGates;
