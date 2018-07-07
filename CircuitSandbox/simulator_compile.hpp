@@ -44,18 +44,19 @@ struct CompilerGates {
     CompilerGatePack<Simulator::SimulatorOrGate> orGate;
     CompilerGatePack<Simulator::SimulatorNandGate> nandGate;
     CompilerGatePack<Simulator::SimulatorNorGate> norGate;
-    template <typename Element> void emplace(const std::vector<int32_t>& inputComponents, int32_t outputComponent);
-    template <> void emplace<AndGate>(const std::vector<int32_t>& inputComponents, int32_t outputComponent) {
-        andGate.emplace(inputComponents, outputComponent);
-    }
-    template <> void emplace<OrGate>(const std::vector<int32_t>& inputComponents, int32_t outputComponent) {
-        orGate.emplace(inputComponents, outputComponent);
-    }
-    template <> void emplace<NandGate>(const std::vector<int32_t>& inputComponents, int32_t outputComponent) {
-        nandGate.emplace(inputComponents, outputComponent);
-    }
-    template <> void emplace<NorGate>(const std::vector<int32_t>& inputComponents, int32_t outputComponent) {
-        norGate.emplace(inputComponents, outputComponent);
+    template <typename Element> void emplace(const std::vector<int32_t>& inputComponents, int32_t outputComponent) {
+        if (std::is_same_v<AndGate, Element>) {
+            andGate.emplace(inputComponents, outputComponent);
+        }
+        else if (std::is_same_v<OrGate, Element>) {
+            orGate.emplace(inputComponents, outputComponent);
+        }
+        else if (std::is_same_v<NandGate, Element>) {
+            nandGate.emplace(inputComponents, outputComponent);
+        }
+        else if (std::is_same_v<NorGate, Element>) {
+            norGate.emplace(inputComponents, outputComponent);
+        }
     }
     template <typename Callback>
     void forEachGate(Simulator::Gates& gates, Callback callback) {
@@ -79,12 +80,13 @@ struct CompilerRelayPack {
 struct CompilerRelays {
     CompilerRelayPack<Simulator::SimulatorPositiveRelay> positiveRelay;
     CompilerRelayPack<Simulator::SimulatorNegativeRelay> negativeRelay;
-    template <typename Element> void emplace(const std::vector<int32_t>& inputComponents, int32_t outputRelayPixel);
-    template <> void emplace<PositiveRelay>(const std::vector<int32_t>& inputComponents, int32_t outputRelayPixel) {
-        positiveRelay.emplace(inputComponents, outputRelayPixel);
-    }
-    template <> void emplace<NegativeRelay>(const std::vector<int32_t>& inputComponents, int32_t outputRelayPixel) {
-        negativeRelay.emplace(inputComponents, outputRelayPixel);
+    template <typename Element> void emplace(const std::vector<int32_t>& inputComponents, int32_t outputRelayPixel) {
+        if (std::is_same_v<PositiveRelay, Element>) {
+            positiveRelay.emplace(inputComponents, outputRelayPixel);
+        }
+        else if (std::is_same_v<NegativeRelay, Element>) {
+            negativeRelay.emplace(inputComponents, outputRelayPixel);
+        }
     }
     template <typename Callback>
     void forEachRelay(Simulator::Relays& relays, Callback callback) {
