@@ -3,6 +3,7 @@
 #include <cmath>
 #include <type_traits>
 #include <variant>
+#include <optional>
 #include <vector>
 #include <numeric>
 
@@ -97,7 +98,7 @@ private:
     // storage for the key points in the current pencil action
     std::vector<ext::point> keyPoints;
 
-    bool polylineMode;
+    std::optional<bool> polylineMode;
 
     template <typename NewPencilType = PencilType, typename ElementVariant>
     bool change(ElementVariant& element) {
@@ -110,7 +111,7 @@ private:
 
 public:
 
-    PencilAction(MainWindow& mainWindow, bool polylineMode) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), polylineMode(polylineMode) {}
+    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow) {}
 
 
     ~PencilAction() override {
@@ -184,9 +185,8 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_same_v<PencilType, Tool>) {
-                bool polylineMode = SDL_GetModState() & KMOD_SHIFT;
                 // create the new action
-                auto& action = starter.start<PencilAction>(mainWindow, polylineMode);
+                auto& action = starter.start<PencilAction>(mainWindow);
 
                 // draw the element at the current location
                 action.mousePos = playArea.canvasFromWindowOffset(event);
@@ -218,36 +218,24 @@ public:
             // some other mouse button got pressed, so tell the playarea to destroy this action (destruction will automatically commit)
             return ActionEventResult::COMPLETED;
         }
+        return ActionEventResult::PROCESSED;
+    }
 
-        mousePos = playArea().canvasFromWindowOffset(event);
+    ActionEventResult processPlayAreaMouseButtonUp() override {
+        // check if the user is drawing a polyline on the first mouseup
+        SDL_Keymod modifiers = SDL_GetModState();
+        if (!polylineMode) polylineMode = modifiers & KMOD_SHIFT;
 
-        // add new keypoint, if it isn't the same as the last point
+        // create a keypoint on mouseup so dragging works for normal lines
         ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
         if (keyPoints.back() != keyPoint) {
             keyPoints.emplace_back(keyPoint);
         }
-
-        SDL_Keymod modifiers = SDL_GetModState();
-        if (modifiers & KMOD_SHIFT) {
-            // user pressed SHIFT, so don't end action yet
+        // if drawing a polyline and holding shift, don't end the action yet
+        if (*polylineMode && modifiers & KMOD_SHIFT) {
             return ActionEventResult::PROCESSED;
         }
-        else {
-            // we are done with this action, so tell the playarea to destroy this action (destruction will automatically commit)
-            return ActionEventResult::COMPLETED;
-        }
-    }
-
-    ActionEventResult processPlayAreaMouseButtonUp() override {
-        // if not drawing a polyline, mouseup creates the second keypoint and ends the action
-        if (!polylineMode) {
-            ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
-            if (keyPoints.back() != keyPoint) {
-                keyPoints.emplace_back(keyPoint);
-            }
-            return ActionEventResult::COMPLETED;
-        }
-        return ActionEventResult::PROCESSED;
+        return ActionEventResult::COMPLETED;
     }
 
     ActionEventResult processPlayAreaMouseHover(const SDL_MouseMotionEvent& event) override {
