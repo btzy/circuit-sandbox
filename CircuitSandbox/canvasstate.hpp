@@ -9,6 +9,7 @@
 #include <utility> // for std::pair
 #include <variant> // for std::variant
 #include <type_traits>
+#include <stack>
 #include <algorithm> // for std::min and std::max
 #include <cstdint> // for int32_t and uint32_t
 #include <limits>
@@ -16,6 +17,7 @@
 #include "heap_matrix.hpp"
 #include "elements.hpp"
 #include "point.hpp"
+#include "visitor.hpp"
 #include "tag_tuple.hpp"
 #include "expandable_matrix.hpp"
 
@@ -242,7 +244,6 @@ public:
         }
     }
 
-
     /**
      * Moves elements from an area of dataMatrix to a new CanvasState and returns them.
      * The area becomes empty on the current dataMatrix.
@@ -274,6 +275,111 @@ public:
             }
         }
         return newState;
+    }
+
+    /**
+     * Moves logically connected elements from dataMatrix to a new CanvasState and returns them.
+     * Returns the new CanvasState and the translation relative to this CanvasState.
+     */
+    std::pair<CanvasState, ext::point> spliceConnectedComponent(ext::point origin) {
+        CanvasState newState;
+
+        if (std::holds_alternative<std::monostate>(dataMatrix[origin])) return { newState, { 0, 0 } };
+
+        newState.dataMatrix = matrix_t(dataMatrix.width(), dataMatrix.height());
+
+        struct Visited {
+            bool dir[2] = { false, false }; // { 0: horizontal, 1: vertical }
+        };
+        ext::heap_matrix<Visited> visitedMatrix(dataMatrix.width(), dataMatrix.height());
+
+        std::stack<std::pair<ext::point, int>> pendingVisit;
+        // flood fill from origin along both axes; guaranteed to never visit monostate
+        pendingVisit.emplace(origin, 0);
+        pendingVisit.emplace(origin, 1);
+
+        while (!pendingVisit.empty()) {
+            auto [pt, axis] = pendingVisit.top();
+            pendingVisit.pop();
+
+            if (visitedMatrix[pt].dir[axis]) continue;
+            visitedMatrix[pt].dir[axis] = true;
+
+            // visit other axis unless this is an insulated wire
+            if (!visitedMatrix[pt].dir[axis ^ 1] && !std::holds_alternative<InsulatedWire>(dataMatrix[pt])) {
+                pendingVisit.emplace(pt, axis ^ 1);
+            }
+
+            using positive_one_t = std::integral_constant<int32_t, 1>;
+            using negative_one_t = std::integral_constant<int32_t, -1>;
+            using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
+            directions_t::for_each([this, pt, axis, visitedMatrix, &pendingVisit](auto direction_tag_t, auto) {
+                auto [x, y] = pt;
+                if (axis == 0) {
+                    x += decltype(direction_tag_t)::type::value;
+                }
+                else {
+                    y += decltype(direction_tag_t)::type::value;
+                }
+                ext::point nextPt{ x, y };
+
+                if (dataMatrix.contains(nextPt) && !visitedMatrix[nextPt].dir[axis]) {
+                    if (std::holds_alternative<std::monostate>(dataMatrix[pt])) {
+                        throw std::runtime_error("Something went wrong"); // this should never happen
+                    }
+                    if ((std::holds_alternative<ConductiveWire>(dataMatrix[pt]) || std::holds_alternative<InsulatedWire>(dataMatrix[pt])) &&
+                        (std::holds_alternative<ConductiveWire>(dataMatrix[nextPt]) || std::holds_alternative<InsulatedWire>(dataMatrix[nextPt]))) {
+                        pendingVisit.emplace(nextPt, axis);
+                    }
+                    if (std::holds_alternative<Signal>(dataMatrix[pt]) &&
+                        (std::holds_alternative<AndGate>(dataMatrix[nextPt]) || std::holds_alternative<OrGate>(dataMatrix[nextPt]) || std::holds_alternative<NandGate>(dataMatrix[nextPt]) ||
+                         std::holds_alternative<NorGate>(dataMatrix[nextPt]) || std::holds_alternative<PositiveRelay>(dataMatrix[nextPt]) || std::holds_alternative<NegativeRelay>(dataMatrix[nextPt]))) {
+                        pendingVisit.emplace(nextPt, axis);
+                    }
+                    if ((std::holds_alternative<AndGate>(dataMatrix[pt]) || std::holds_alternative<OrGate>(dataMatrix[pt]) || std::holds_alternative<NandGate>(dataMatrix[pt]) ||
+                         std::holds_alternative<NorGate>(dataMatrix[pt]) || std::holds_alternative<PositiveRelay>(dataMatrix[pt]) || std::holds_alternative<NegativeRelay>(dataMatrix[pt])) &&
+                         std::holds_alternative<Signal>(dataMatrix[nextPt])) {
+                        pendingVisit.emplace(nextPt, axis);
+                    }
+                }
+            });
+        }
+        int32_t x_min = std::numeric_limits<int32_t>::max();
+        int32_t x_max = std::numeric_limits<int32_t>::min();
+        int32_t y_min = std::numeric_limits<int32_t>::max();
+        int32_t y_max = std::numeric_limits<int32_t>::min();
+
+        pendingVisit.emplace(origin, 0); // reuse pendingVisit, but ignore axis
+        while (!pendingVisit.empty()) {
+            auto pt = pendingVisit.top().first;
+            pendingVisit.pop();
+
+            if (!(visitedMatrix[pt].dir[0] || visitedMatrix[pt].dir[1])) continue;
+            visitedMatrix[pt].dir[0] = visitedMatrix[pt].dir[1] = false;
+
+            x_min = std::min(pt.x, x_min);
+            x_max = std::max(pt.x, x_max);
+            y_min = std::min(pt.y, y_min);
+            y_max = std::max(pt.y, y_max);
+            std::swap(dataMatrix[pt], newState.dataMatrix[pt]);
+
+            using positive_one_t = std::integral_constant<int32_t, 1>;
+            using zero_t = std::integral_constant<int32_t, 0>;
+            using negative_one_t = std::integral_constant<int32_t, -1>;
+            using directions_t = ext::tag_tuple<std::pair<zero_t, negative_one_t>, std::pair<positive_one_t, zero_t>, std::pair<zero_t, positive_one_t>, std::pair<negative_one_t, zero_t>>;
+            directions_t::for_each([&](auto direction_tag_t, auto) {
+                ext::point nextPt = pt;
+                nextPt.x += decltype(direction_tag_t)::type::first_type::value;
+                nextPt.y += decltype(direction_tag_t)::type::second_type::value;
+                if (dataMatrix.contains(nextPt) && (visitedMatrix[nextPt].dir[0] || visitedMatrix[nextPt].dir[1])) {
+                    pendingVisit.emplace(nextPt, 0);
+                }
+            });
+        }
+
+        int32_t width = x_max - x_min + 1;
+        int32_t height = y_max - y_min + 1;
+        return { newState.splice(x_min, y_min, width, height), { x_min, y_min } };
     }
 
     void flipHorizontal() {

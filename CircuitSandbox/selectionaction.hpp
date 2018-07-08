@@ -46,6 +46,7 @@ private:
 
     /**
      * Prepare base, selection, baseTrans, selectionTrans from selectionOrigin and selectionEnd. Returns true if the selection is not empty.
+     * When this method is called, selection is guaranteed to lie within base since base is only shrunk on destruction.
      * If subtract is true, elements in the selection rect are removed from selection.
      */
     bool selectRect(bool subtract) {
@@ -92,12 +93,57 @@ private:
             // shrink the newest selection
             ext::point selectionShrinkTrans = newSelection.shrinkDataMatrix();
 
-            // merge the newest selection by stacking the working selection on top of it
+            // merge the newest selection with selection
             auto [tmpSelection, translation] = CanvasState::merge(std::move(newSelection), topLeft - selectionShrinkTrans, std::move(selection), selectionTrans);
             selection = std::move(tmpSelection);
             selectionTrans = -std::move(translation);
         }
 
+        return !selection.empty();
+    }
+
+    /**
+     * Select all elements that are logically connected to the element at pt.
+     * When this method is called, selection is guaranteed to lie within base since base is only shrunk on destruction.
+     * If subtract is true, elements in the selection rect are removed from selection.
+     */
+    bool selectConnectedComponent(ext::point pt, bool subtract) {
+        CanvasState& base = canvas();
+
+        if (subtract) {
+            // if pt contains an element, it is guaranteed to be in base from the first click
+            // move the origin of selection back to selection - it will be moved back later
+            // it is ok if there is no element at pt
+            if (!base.contains(pt)) return !selection.empty();
+            CanvasState origin = base.splice(pt.x, pt.y, 1, 1);
+            auto [newSelection, translation] = CanvasState::merge(std::move(origin), pt, std::move(selection), selectionTrans);
+            selection = std::move(newSelection);
+            selectionTrans = -translation;
+            printf("%d %d\n", selection.size().x, selection.size().y);
+
+            auto [unselected, unselectedTrans] = selection.spliceConnectedComponent(pt - selectionTrans);
+            unselectedTrans += selectionTrans;
+            selectionTrans -= selection.shrinkDataMatrix();
+
+            // merge the unselected part with base
+            auto tmpBase = CanvasState::merge(std::move(unselected), unselectedTrans, std::move(base), baseTrans).first;
+            base = std::move(tmpBase);
+        }
+        else {
+            // if pt contains an element, it is guaranteed to be in selection from the first click
+            // move the origin of selection back to base - it will be moved back later
+            // it is ok if there is no element at pt
+            if (!selection.contains(pt - selectionTrans)) return !selection.empty();
+            CanvasState origin = selection.splice(pt.x - selectionTrans.x, pt.y - selectionTrans.y, 1, 1);
+            base = std::move(CanvasState::merge(std::move(origin), pt, std::move(base), baseTrans).first);
+
+            auto [newSelection, newSelectionTrans] = base.spliceConnectedComponent(pt);
+
+            // merge the newest selection with selection
+            auto [tmpSelection, translation] = CanvasState::merge(std::move(newSelection), newSelectionTrans, std::move(selection), selectionTrans);
+            selection = std::move(tmpSelection);
+            selectionTrans = -std::move(translation);
+        }
         return !selection.empty();
     }
 
@@ -179,8 +225,16 @@ public:
             selectionEnd = canvasOffset;
             return ActionEventResult::PROCESSED;
         case State::SELECTED:
+            // this situation only happens if the mouse is held down but not dragged past moveOrigin
+            // once it is dragged past moveOrigin, the selection can no longer be modified
+            if (moveOrigin != canvasOffset) {
+                selectionTrans += canvasOffset - moveOrigin;
+                moveOrigin = canvasOffset;
+                state = State::MOVING;
+            }
+            return ActionEventResult::PROCESSED;
         case State::MOVED:
-            // something's wrong -- if the mouse is being held down, we shouldn't be in SELECTED or MOVED state
+            // something's wrong -- if the mouse is being held down, we shouldn't be in MOVED state
             // hopefully PlayArea can resolve this
             return ActionEventResult::UNPROCESSED;
         case State::MOVING:
@@ -200,7 +254,7 @@ public:
 
         ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
 
-        return tool_tags_t::get(currentToolIndex, [this, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this, event, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -209,14 +263,28 @@ public:
                 case State::SELECTED:
                 {
                     SDL_Keymod modifiers = SDL_GetModState();
-                    // check if only one of shift or alt is held down
-                    if (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT)) {
-                        state = State::SELECTING;
-                        selectionEnd = selectionOrigin = canvasOffset;
-                        return ActionEventResult::PROCESSED;
+                    if (event.clicks == 1) {
+                        // check if only one of shift or alt is held down
+                        if (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT)) {
+                            state = State::SELECTING;
+                            selectionEnd = selectionOrigin = canvasOffset;
+                            return ActionEventResult::PROCESSED;
+                        }
+                        if (!selection.contains(canvasOffset - selectionTrans)) {
+                            // end selection
+                            return ActionEventResult::CANCELLED; // this is on purpose, so that we can enter a new selection action with the same event.
+                        }
+                        // do not transition to MOVING yet because we want to check for double clicks
                     }
+                    else if (event.clicks == 2) {
+                        // select connected components if clicking outside the current selection or if shift/alt is held
+                        if ((selection.width() == 1 && selection.height() == 1) || (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT))) {
+                            selectConnectedComponent(canvasOffset, modifiers & KMOD_ALT);
+                        }
+                    }
+                    moveOrigin = canvasOffset;
+                    return ActionEventResult::PROCESSED;
                 }
-                    [[fallthrough]];
                 case State::MOVED:
                     if (!selection.contains(canvasOffset - selectionTrans)) {
                         // end selection
