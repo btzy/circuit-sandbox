@@ -2,7 +2,6 @@
 
 #include <SDL.h>
 #include "point.hpp"
-#include "visitor.hpp"
 #include "drawing.hpp"
 #include "saveableaction.hpp"
 #include "playarea.hpp"
@@ -119,7 +118,6 @@ private:
             auto [newSelection, translation] = CanvasState::merge(std::move(origin), pt, std::move(selection), selectionTrans);
             selection = std::move(newSelection);
             selectionTrans = -translation;
-            printf("%d %d\n", selection.size().x, selection.size().y);
 
             auto [unselected, unselectedTrans] = selection.spliceConnectedComponent(pt - selectionTrans);
             unselectedTrans += selectionTrans;

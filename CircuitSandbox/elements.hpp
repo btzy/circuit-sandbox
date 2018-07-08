@@ -111,6 +111,28 @@ protected:
     CommunicatorElement(bool logicLevel, bool defaultLogicLevel) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 };
 
+struct ScreenCommunicatorElement : public CommunicatorElement {
+    static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
+    static constexpr const char* displayName = "Screen I/O";
+
+    using communicator_t = ScreenCommunicator;
+
+    // shared communicator instance
+    // after action is ended, this should point to a valid communicator instance
+    std::shared_ptr<ScreenCommunicator> communicator;
+
+    ScreenCommunicatorElement(bool logicLevel = false, bool defaultLogicLevel = false) :CommunicatorElement(logicLevel, defaultLogicLevel) {}
+
+    SDL_Color computeDisplayColor() const noexcept {
+        if (communicator && communicator->_transmit.load(std::memory_order_acquire)) {
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.r) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.g) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.b) * 1 / 3), ScreenCommunicatorElement::displayColor.a };
+        }
+        else {
+            return SDL_Color{ static_cast<Uint8>(ScreenCommunicatorElement::displayColor.r * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.g * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.b * 1 / 3), ScreenCommunicatorElement::displayColor.a };
+        }
+    }
+};
+
 
 // convenience functions
 template <typename ElementVariant>
@@ -315,28 +337,5 @@ struct NegativeRelay : public Relay {
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
         return getLowSignalCounts(env) != 0 ? ElementState::CONDUCTIVE_WIRE : ElementState::INSULATOR;
-    }
-};
-
-
-struct ScreenCommunicatorElement : public CommunicatorElement {
-    static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
-    static constexpr const char* displayName = "Screen I/O";
-
-    using communicator_t = ScreenCommunicator;
-
-    // shared communicator instance
-    // after action is ended, this should point to a valid communicator instance
-    std::shared_ptr<ScreenCommunicator> communicator;
-
-    ScreenCommunicatorElement(bool logicLevel = false, bool defaultLogicLevel = false) :CommunicatorElement(logicLevel, defaultLogicLevel) {}
-
-    SDL_Color computeDisplayColor() const noexcept {
-        if (communicator && communicator->_transmit.load(std::memory_order_acquire)) {
-            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.r) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.g) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.b) * 1 / 3), ScreenCommunicatorElement::displayColor.a };
-        }
-        else {
-            return SDL_Color{ static_cast<Uint8>(ScreenCommunicatorElement::displayColor.r * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.g * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.b * 1 / 3), ScreenCommunicatorElement::displayColor.a };
-        }
     }
 };

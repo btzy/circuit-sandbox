@@ -13,6 +13,7 @@
 #include <algorithm> // for std::min and std::max
 #include <cstdint> // for int32_t and uint32_t
 #include <limits>
+#include <cassert>
 
 #include "heap_matrix.hpp"
 #include "elements.hpp"
@@ -324,21 +325,23 @@ public:
                 ext::point nextPt{ x, y };
 
                 if (dataMatrix.contains(nextPt) && !visitedMatrix[nextPt].dir[axis]) {
-                    if (std::holds_alternative<std::monostate>(dataMatrix[pt])) {
-                        throw std::runtime_error("Something went wrong"); // this should never happen
-                    }
+                    assert(!std::holds_alternative<std::monostate>(dataMatrix[pt]));
                     if ((std::holds_alternative<ConductiveWire>(dataMatrix[pt]) || std::holds_alternative<InsulatedWire>(dataMatrix[pt])) &&
                         (std::holds_alternative<ConductiveWire>(dataMatrix[nextPt]) || std::holds_alternative<InsulatedWire>(dataMatrix[nextPt]))) {
                         pendingVisit.emplace(nextPt, axis);
                     }
-                    if (std::holds_alternative<Signal>(dataMatrix[pt]) &&
+                    else if (std::holds_alternative<Signal>(dataMatrix[pt]) &&
                         (std::holds_alternative<AndGate>(dataMatrix[nextPt]) || std::holds_alternative<OrGate>(dataMatrix[nextPt]) || std::holds_alternative<NandGate>(dataMatrix[nextPt]) ||
                          std::holds_alternative<NorGate>(dataMatrix[nextPt]) || std::holds_alternative<PositiveRelay>(dataMatrix[nextPt]) || std::holds_alternative<NegativeRelay>(dataMatrix[nextPt]))) {
                         pendingVisit.emplace(nextPt, axis);
                     }
-                    if ((std::holds_alternative<AndGate>(dataMatrix[pt]) || std::holds_alternative<OrGate>(dataMatrix[pt]) || std::holds_alternative<NandGate>(dataMatrix[pt]) ||
+                    else if ((std::holds_alternative<AndGate>(dataMatrix[pt]) || std::holds_alternative<OrGate>(dataMatrix[pt]) || std::holds_alternative<NandGate>(dataMatrix[pt]) ||
                          std::holds_alternative<NorGate>(dataMatrix[pt]) || std::holds_alternative<PositiveRelay>(dataMatrix[pt]) || std::holds_alternative<NegativeRelay>(dataMatrix[pt])) &&
                          std::holds_alternative<Signal>(dataMatrix[nextPt])) {
+                        pendingVisit.emplace(nextPt, axis);
+                    }
+                    else if (std::holds_alternative<ScreenCommunicatorElement>(dataMatrix[pt]) &&
+                        std::holds_alternative<ScreenCommunicatorElement>(dataMatrix[nextPt])) {
                         pendingVisit.emplace(nextPt, axis);
                     }
                 }
