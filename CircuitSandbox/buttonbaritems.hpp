@@ -42,6 +42,18 @@ class StepButton final : public IconButton<IconCodePoints::STEP> {
     const char* description(const ButtonBar& buttonBar) const override;
 };
 
+class UndoButton final : public IconButton<IconCodePoints::UNDO> {
+    void click(ButtonBar& buttonBar) override;
+    void render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const override;
+    const char* description(const ButtonBar& buttonBar) const override;
+};
+
+class RedoButton final : public IconButton<IconCodePoints::REDO> {
+    void click(ButtonBar& buttonBar) override;
+    void render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const override;
+    const char* description(const ButtonBar& buttonBar) const override;
+};
+
 class PlayPauseButton final : public ButtonBarItem {
 private:
     std::unique_ptr<SDL_Texture, TextureDeleter> textureDefault[2];

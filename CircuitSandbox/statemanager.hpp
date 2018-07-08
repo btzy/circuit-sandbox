@@ -47,6 +47,8 @@ private:
     friend class FileSaveAction;
     friend class SelectionAction;
     friend class ChangeSimulationSpeedAction;
+    friend class UndoButton;
+    friend class RedoButton;
 
 public:
 

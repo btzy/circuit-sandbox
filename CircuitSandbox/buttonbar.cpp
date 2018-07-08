@@ -179,7 +179,6 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
 }
 
 
-
 void StepButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
     if (!buttonBar.mainWindow.stateManager.simulatorRunning()) {
         IconButton::render(renderer, buttonBar, offset, style);
@@ -201,6 +200,49 @@ const char* StepButton::description(const ButtonBar& buttonBar) const {
     }
 }
 
+
+void UndoButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
+    if (buttonBar.mainWindow.stateManager.historyManager.canUndo()) {
+        IconButton::render(renderer, buttonBar, offset, style);
+    }
+}
+
+void UndoButton::click(ButtonBar& buttonBar) {
+    if (buttonBar.mainWindow.stateManager.historyManager.canUndo()) {
+        IconButton::click(buttonBar);
+    }
+}
+
+const char* UndoButton::description(const ButtonBar& buttonBar) const {
+    if (buttonBar.mainWindow.stateManager.historyManager.canUndo()) {
+        return IconButton::description(buttonBar);
+    }
+    else {
+        return nullptr;
+    }
+}
+
+
+void RedoButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {
+    if (buttonBar.mainWindow.stateManager.historyManager.canRedo()) {
+        IconButton::render(renderer, buttonBar, offset, style);
+    }
+}
+
+void RedoButton::click(ButtonBar& buttonBar) {
+    if (buttonBar.mainWindow.stateManager.historyManager.canRedo()) {
+        IconButton::click(buttonBar);
+    }
+}
+
+const char* RedoButton::description(const ButtonBar& buttonBar) const {
+    if (buttonBar.mainWindow.stateManager.historyManager.canRedo()) {
+        return IconButton::description(buttonBar);
+    }
+    else {
+        return nullptr;
+    }
+}
 
 
 void PlayPauseButton::render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const {

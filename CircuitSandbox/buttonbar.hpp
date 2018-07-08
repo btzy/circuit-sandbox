@@ -44,8 +44,8 @@ private:
         std::make_unique<ButtonBarSpace>(),
         std::make_unique<IconButton<IconCodePoints::SPEED>>(),
         std::make_unique<ButtonBarSpace>(),
-        std::make_unique<IconButton<IconCodePoints::UNDO>>(),
-        std::make_unique<IconButton<IconCodePoints::REDO>>()
+        std::make_unique<UndoButton>(),
+        std::make_unique<RedoButton>()
     };
 
     ButtonBarItem* hoveredItem = nullptr;
@@ -54,6 +54,8 @@ private:
     template <uint16_t>
     friend class IconButton;
     friend class StepButton;
+    friend class UndoButton;
+    friend class RedoButton;
     friend class PlayPauseButton;
 
 public:
