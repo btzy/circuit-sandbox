@@ -33,7 +33,7 @@ private:
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
 
-    const std::array<std::unique_ptr<ButtonBarItem>, 9> items{
+    const std::array<std::unique_ptr<ButtonBarItem>, 12> items{
         std::make_unique<IconButton<IconCodePoints::NEW>>(),
         std::make_unique<IconButton<IconCodePoints::OPEN>>(),
         std::make_unique<IconButton<IconCodePoints::SAVE>>(),
@@ -42,7 +42,10 @@ private:
         std::make_unique<IconButton<IconCodePoints::RESET>>(),
         std::make_unique<StepButton>(),
         std::make_unique<ButtonBarSpace>(),
-        std::make_unique<IconButton<IconCodePoints::SPEED>>()
+        std::make_unique<IconButton<IconCodePoints::SPEED>>(),
+        std::make_unique<ButtonBarSpace>(),
+        std::make_unique<IconButton<IconCodePoints::UNDO>>(),
+        std::make_unique<IconButton<IconCodePoints::REDO>>()
     };
 
     ButtonBarItem* hoveredItem = nullptr;

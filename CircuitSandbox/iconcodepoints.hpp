@@ -9,6 +9,8 @@ namespace IconCodePoints {
         PAUSE = 0xE011,
         STEP = 0xE012,
         RESET = 0xE013,
-        SPEED = 0xE018
+        SPEED = 0xE018,
+        UNDO = 0xE020,
+        REDO = 0xE021
     };
 }

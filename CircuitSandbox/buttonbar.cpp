@@ -10,6 +10,7 @@
 #include "filenewaction.hpp"
 #include "fileopenaction.hpp"
 #include "filesaveaction.hpp"
+#include "historyaction.hpp"
 #include "changesimulationspeedaction.hpp"
 
 ButtonBar::ButtonBar(MainWindow& mainWindow, PlayArea& playArea) : mainWindow(mainWindow), playArea(playArea), iconFont("ButtonIcons.ttf", MainWindow::LOGICAL_BUTTONBAR_HEIGHT) {}
@@ -140,6 +141,12 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         ChangeSimulationSpeedAction::start(buttonBar.mainWindow, buttonBar.mainWindow.renderer, buttonBar.mainWindow.currentAction.getStarter());
     }
+    else if constexpr (CodePoint == IconCodePoints::UNDO) {
+        HistoryAction::startByUndoing(buttonBar.mainWindow, buttonBar.mainWindow.currentAction.getStarter());
+    }
+    else if constexpr (CodePoint == IconCodePoints::REDO) {
+        HistoryAction::startByRedoing(buttonBar.mainWindow, buttonBar.mainWindow.currentAction.getStarter());
+    }
 }
 
 
@@ -162,6 +169,12 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         return "Set simulation speed (Ctrl-Space)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::UNDO) {
+        return "Undo the last action (Ctrl-Z)";
+    }
+    else if constexpr (CodePoint == IconCodePoints::REDO) {
+        return "Redo the last action (Ctrl-Y)";
     }
 }
 
