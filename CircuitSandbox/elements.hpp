@@ -3,6 +3,9 @@
 #include <SDL.h>
 #include <algorithm>
 #include <variant>
+#include <memory>
+#include <atomic>
+#include "communicator.hpp"
 
 /**
  * This header file contains the definitions for all the elements in the game.
@@ -103,6 +106,10 @@ struct Relay : public SignalReceivingElement {
 protected:
     Relay(bool logicLevel, bool defaultLogicLevel) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
 };
+struct CommunicatorElement : public SignalReceivingElement {
+protected:
+    CommunicatorElement(bool logicLevel, bool defaultLogicLevel) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
+};
 
 
 // convenience functions
@@ -137,11 +144,16 @@ constexpr inline void resetLogicLevel(ElementVariant& v) {
 // display colour functions
 template <typename Element>
 constexpr inline SDL_Color computeDisplayColor(const Element& element, bool useDefaultLogicLevel) {
-    if (useDefaultLogicLevel ? element.getDefaultLogicLevel() : element.getLogicLevel()) {
-        return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.b) * 2 / 3), Element::displayColor.a };
+    if constexpr(std::is_same_v<ScreenCommunicatorElement, Element>) {
+        return element.computeDisplayColor();
     }
     else {
-        return SDL_Color{ static_cast<Uint8>(Element::displayColor.r * 2 / 3), static_cast<Uint8>(Element::displayColor.g * 2 / 3), static_cast<Uint8>(Element::displayColor.b * 2 / 3), Element::displayColor.a };
+        if (useDefaultLogicLevel ? element.getDefaultLogicLevel() : element.getLogicLevel()) {
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.b) * 2 / 3), Element::displayColor.a };
+        }
+        else {
+            return SDL_Color{ static_cast<Uint8>(Element::displayColor.r * 2 / 3), static_cast<Uint8>(Element::displayColor.g * 2 / 3), static_cast<Uint8>(Element::displayColor.b * 2 / 3), Element::displayColor.a };
+        }
     }
 }
 
@@ -161,6 +173,11 @@ struct Selector {
 struct Panner {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     static constexpr const char* displayName = "Panner";
+};
+
+struct Interactor {
+    static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    static constexpr const char* displayName = "Interactor";
 };
 
 struct Eraser : public Pencil {
@@ -298,5 +315,28 @@ struct NegativeRelay : public Relay {
     // process a step of the simulation
     ElementState processStep(const AdjacentEnvironment& env) const {
         return getLowSignalCounts(env) != 0 ? ElementState::CONDUCTIVE_WIRE : ElementState::INSULATOR;
+    }
+};
+
+
+struct ScreenCommunicatorElement : public CommunicatorElement {
+    static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
+    static constexpr const char* displayName = "Screen I/O";
+
+    using communicator_t = ScreenCommunicator;
+
+    // shared communicator instance
+    // after action is ended, this should point to a valid communicator instance
+    std::shared_ptr<ScreenCommunicator> communicator;
+
+    ScreenCommunicatorElement(bool logicLevel = false, bool defaultLogicLevel = false) :CommunicatorElement(logicLevel, defaultLogicLevel) {}
+
+    SDL_Color computeDisplayColor() const noexcept {
+        if (communicator && communicator->_transmit.load(std::memory_order_acquire)) {
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.r) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.g) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.b) * 1 / 3), ScreenCommunicatorElement::displayColor.a };
+        }
+        else {
+            return SDL_Color{ static_cast<Uint8>(ScreenCommunicatorElement::displayColor.r * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.g * 1 / 3), static_cast<Uint8>(ScreenCommunicatorElement::displayColor.b * 1 / 3), ScreenCommunicatorElement::displayColor.a };
+        }
     }
 };

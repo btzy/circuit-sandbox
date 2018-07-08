@@ -19,6 +19,7 @@
 
 #include "canvasstate.hpp"
 #include "heap_matrix.hpp"
+#include "communicator.hpp"
 
 
 class Simulator {
@@ -32,8 +33,19 @@ private:
         SizedArray() noexcept : size(0) {}
         SizedArray(const SizedArray&) = delete;
         SizedArray& operator=(const SizedArray&) = delete;
-        SizedArray(SizedArray&&) = delete;
-        SizedArray& operator=(SizedArray&&) = delete;
+        SizedArray(SizedArray&& other) noexcept {
+            data = other.data;
+            size = other.size;
+            other.size = 0;
+        };
+        SizedArray& operator=(SizedArray&& other) noexcept {
+            if (size > 0) {
+                delete[] data;
+            }
+            data = other.data;
+            size = other.size;
+            other.size = 0;
+        }
         ~SizedArray() noexcept {
             if (size > 0) {
                 delete[] data;
@@ -151,6 +163,12 @@ private:
             callback(negativeRelay);
         }
     };
+    struct SimulatorCommunicator {
+        std::vector<int32_t> inputComponents;
+        int32_t outputComponent;
+        std::shared_ptr<Communicator> comm; // expects the pointer to always be valid after compilation
+        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+    };
     struct RelayPixel {
         std::array<int32_t, 4> adjComponents;
         uint8_t numAdjComponents;
@@ -159,6 +177,7 @@ private:
         int32_t adjRelayPixelsBegin;
         int32_t adjRelayPixelsEnd;
     };
+    
     struct StaticData {
         // for all data that does not change after compilation
 
@@ -170,6 +189,9 @@ private:
 
         // data about which RelayPixel each relay maps to
         Relays relays;
+
+        // data about communicators
+        SizedArray<SimulatorCommunicator> communicators;
 
         // list of components
         SizedArray<Component> components;

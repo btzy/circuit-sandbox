@@ -133,7 +133,7 @@ public:
         if (keyPoints.size() == 1) {
             auto& element = outputState[this->deltaTrans + keyPoints.front()];
             hasChanges = change(element);
-            if constexpr (std::is_base_of_v<LogicGate, PencilType> || std::is_base_of_v<Relay, PencilType>) {
+            if constexpr (std::is_base_of_v<LogicGate, PencilType> || std::is_base_of_v<Relay, PencilType> || std::is_base_of_v<CommunicatorElement, PencilType>) {
                 if (!hasChanges) {
                     element = Signal{};
                     hasChanges = true;

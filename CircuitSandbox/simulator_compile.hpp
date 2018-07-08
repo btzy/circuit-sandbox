@@ -106,6 +106,9 @@ struct CompilerStaticData {
     // data about which RelayPixel each relay maps to
     CompilerRelays relays;
 
+    // data about communicators
+    Simulator::SizedArray<Simulator::SimulatorCommunicator> communicators;
+
     // list of components
     std::vector<CompilerComponent> components;
     // list of relay pixels (relay pixels have one-to-one correspondence to relays)
@@ -119,7 +122,7 @@ template <typename ElementVariant>
 inline bool isFloodfillableElement(ElementVariant&& element) noexcept {
     return std::visit([&](const auto& element) {
         using ElementType = std::decay_t<decltype(element)>;
-        if constexpr (std::is_same_v<Signal, ElementType> || std::is_base_of_v<LogicGate, ElementType> || std::is_same_v<ConductiveWire, ElementType> || std::is_same_v<InsulatedWire, ElementType> || std::is_same_v<Source, ElementType>) {
+        if constexpr (std::is_same_v<Signal, ElementType> || std::is_base_of_v<LogicGate, ElementType> || std::is_base_of_v<CommunicatorElement, ElementType> || std::is_same_v<ConductiveWire, ElementType> || std::is_same_v<InsulatedWire, ElementType> || std::is_same_v<Source, ElementType>) {
             return true;
         }
         else return false;
@@ -127,10 +130,10 @@ inline bool isFloodfillableElement(ElementVariant&& element) noexcept {
 }
 
 template <typename ElementVariant>
-inline bool isFloodfillableSourceOrSignalElement(ElementVariant&& element) noexcept {
+inline bool isFloodfillableUsefulElement(ElementVariant&& element) noexcept {
     return std::visit([&](const auto& element) {
         using ElementType = std::decay_t<decltype(element)>;
-        if constexpr (std::is_same_v<Signal, ElementType> || std::is_base_of_v<LogicGate, ElementType> || std::is_same_v<Source, ElementType>) {
+        if constexpr (std::is_same_v<Signal, ElementType> || std::is_base_of_v<LogicGate, ElementType> || std::is_base_of_v<CommunicatorElement, ElementType> || std::is_same_v<Source, ElementType>) {
             return true;
         }
         else return false;

@@ -10,7 +10,7 @@ public:
         playArea().currentAction.setAction(this);
 	}
 
-    ~PlayAreaAction() {
+    ~PlayAreaAction() override {
         playArea().currentAction.setAction(nullptr);
     }
 

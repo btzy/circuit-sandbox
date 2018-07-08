@@ -10,6 +10,8 @@
 #include <chrono>
 #include <type_traits>
 #include <stack>
+#include <unordered_map>
+#include <algorithm>
 #include <numeric>
 #include <cassert>
 
@@ -73,7 +75,7 @@ void Simulator::compile(CanvasState& gameState) {
                                 updatedPixels.emplace_back(currPt, currDir);
 
                                 // check if component is useful
-                                if (!componentIsUseful && isFloodfillableSourceOrSignalElement(gameState[currPt])) {
+                                if (!componentIsUseful && isFloodfillableUsefulElement(gameState[currPt])) {
                                     componentIsUseful = true;
                                 }
 
@@ -124,34 +126,30 @@ void Simulator::compile(CanvasState& gameState) {
         }
     }
 
-    // next, we populate the sources
-    for (int32_t y = 0; y != gameState.height(); ++y) {
-        for (int32_t x = 0; x != gameState.width(); ++x) {
-            ext::point pt{ x, y };
-            if (std::holds_alternative<Source>(gameState[pt])) {
-                auto& source = compilerStaticData.sources.emplace_back();
-                source.outputComponent = compilerStaticData.pixels[pt].index[0]; // for sources, index 0 and 1 should be the same
-                assert(source.outputComponent >= 0 && source.outputComponent < compilerStaticData.components.size());
-            }
-        }
-    }
+    // directions for flood fill
+    using up = integral_pair<int32_t, 0, -1>;
+    using down = integral_pair<int32_t, 0, 1>;
+    using left = integral_pair<int32_t, -1, 0>;
+    using right = integral_pair<int32_t, 1, 0>;
+    using directions_t = ext::tag_tuple<up, down, left, right>;
 
-    // next, we populate the logic gates
+    // next, we populate the sources and logic gates
     for (int32_t y = 0; y != gameState.height(); ++y) {
         for (int32_t x = 0; x != gameState.width(); ++x) {
             ext::point pt{ x, y };
             std::visit([&](const auto& element) {
                 using ElementType = std::decay_t<decltype(element)>;
-                if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
+                if constexpr(std::is_same_v<Source, ElementType>) {
+                    auto& source = compilerStaticData.sources.emplace_back();
+                    source.outputComponent = compilerStaticData.pixels[pt].index[0]; // for sources, index 0 and 1 should be the same
+                    assert(source.outputComponent >= 0 && source.outputComponent < compilerStaticData.components.size());
+                }
+                else if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
                     int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
                     assert(outputComponent >= 0 && outputComponent < compilerStaticData.components.size());
                     // Note: can optimize if heap allocation for the std::vector is slow
                     std::vector<int32_t> inputComponents;
-                    using up = integral_pair<int32_t, 0, -1>;
-                    using down = integral_pair<int32_t, 0, 1>;
-                    using left = integral_pair<int32_t, -1, 0>;
-                    using right = integral_pair<int32_t, 1, 0>;
-                    using directions_t = ext::tag_tuple<up, down, left, right>;
+                    
                     directions_t::for_each([&](auto direction_tag_t, auto) {
                         ext::point newPt = pt;
                         newPt.x += decltype(direction_tag_t)::type::first;
@@ -180,11 +178,6 @@ void Simulator::compile(CanvasState& gameState) {
                     relayPixel.numAdjComponents = 0;
                     // TODO: optimize if heap allocation is slow
                     std::vector<int32_t> inputComponents;
-                    using up = integral_pair<int32_t, 0, -1>;
-                    using down = integral_pair<int32_t, 0, 1>;
-                    using left = integral_pair<int32_t, -1, 0>;
-                    using right = integral_pair<int32_t, 1, 0>;
-                    using directions_t = ext::tag_tuple<up, down, left, right>;
                     directions_t::for_each([&](auto direction_tag_t, auto) {
                         ext::point newPt = pt;
                         int32_t dir = (decltype(direction_tag_t)::type::second != 0);
@@ -223,10 +216,174 @@ void Simulator::compile(CanvasState& gameState) {
         }
     }
 
+    /*
+    === Filling in the communicators ===
+    Makes adjacent communicator elements share the same backing communicator object, attempting to reuse existing objects where possible.
+    Algorithm attempts to make the assignments as intuitive as possible to the user.
+
+    How the algorithm works:
+    ("communicator" refers to the actual ScreenCommunicator, not a pixel)
+    ("component" is a set of pixels that are of the same pixel type and are connected to each other)
+
+    1) For each communicator that is split between multiple components:
+    1.1) Select the component with the largest number of pixels of this communicator
+    1.2) Nullify pixels from other components that are from this communicator
+    2) For each component whose pixels are not all null (not bound to any communicator):
+    2.1) Set all pixels of that component to the communicator with the largest number of pixels in that component
+
+    Algorithm is expected to run in O(N) where N is the number of pixels on the canvas (with some constant factor for hashing).
+    */
+
+    // Describes the communicator index of each pixel (if it is a communicator)
+    ext::heap_matrix<int32_t> communicatorComponentIndices(gameState.size());
+    communicatorComponentIndices.fill(-1); // no assigned communicator for all pixels at first
+    int32_t communicatorComponentCount = 0;
+    // pair<communicator component index, count> , keep sorted by communicator component index, expected to be quite small so we use vector
+    std::unordered_map<std::shared_ptr<Communicator>, std::vector<std::pair<int32_t, int32_t>>> communicatorMapToCommunicatorComponent;
+
+    // First, we extract all the connected communicator components and assign each component a unique index
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            std::visit([&](const auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
+                    if (communicatorComponentIndices[pt] == -1) {
+                        // this is a new communicator
+
+                        // register the communicator (get an index for it)
+                        int32_t communicatorIndex = communicatorComponentCount++;
+
+                        // use flood fill to assign all adjacent communicators (of the same type) the same index
+                        std::stack<ext::point> floodStack;
+                        floodStack.emplace(pt);
+                        while (!floodStack.empty()) {
+                            // retrieve topmost point
+                            ext::point currPt = floodStack.top();
+                            floodStack.pop();
+
+                            // ignore if already processed
+                            if (communicatorComponentIndices[currPt] != -1) continue;
+
+                            // assign communicator index
+                            communicatorComponentIndices[currPt] = communicatorIndex;
+
+                            // store the communicator in the map
+                            std::vector<std::pair<int32_t, int32_t>>& mapEntry = communicatorMapToCommunicatorComponent.emplace(element.communicator, std::vector<std::pair<int32_t, int32_t>>()).first->second;
+                            auto vectorEntry = std::lower_bound(mapEntry.begin(), mapEntry.end(), communicatorIndex, [](const std::pair<int32_t, int32_t>& entry, const int32_t& searchValue) {
+                                return entry.first < searchValue;
+                            });
+                            if (vectorEntry != mapEntry.end() && vectorEntry->first == communicatorIndex) {
+                                vectorEntry->second++;
+                            }
+                            else {
+                                mapEntry.emplace(vectorEntry, communicatorIndex, 1);
+                            }
+
+                            // submit unprocessed adjacent communicators to stack
+                            directions_t::for_each([&](auto direction_tag_t, auto) {
+                                ext::point newPt = currPt;
+                                newPt.x += decltype(direction_tag_t)::type::first;
+                                newPt.y += decltype(direction_tag_t)::type::second;
+                                if (gameState.contains(newPt) && std::holds_alternative<ElementType>(gameState[newPt])) {
+                                    floodStack.emplace(newPt);
+                                }
+                            });
+                        }
+                    }
+                }
+            }, gameState[pt]);
+        }
+    }
+
+    // stores the most voted communicator for each communicator component
+    // pair<communicator, vote count>
+    std::unique_ptr<std::pair<std::shared_ptr<Communicator>, int32_t>[]> communicatorComponents = std::make_unique<std::pair<std::shared_ptr<Communicator>, int32_t>[]>(communicatorComponentCount);
+    // originally, vote count is zero
+    std::fill_n(communicatorComponents.get(), communicatorComponentCount, std::make_pair(nullptr, 0));
+
+    // Second, keep on the communicator component with maximum pixels from each communicator
+    // Third, elect a communicator for each communicator component, or create a new communicator if there are none to choose from (interleaved with second step)
+    for (auto& mapEntry : communicatorMapToCommunicatorComponent) {
+        auto& vect = mapEntry.second;
+
+        // sort by the counts
+        sort(vect.begin(), vect.end(), [](const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b) {
+            return a.second < b.second;
+        });
+
+        // can we outvote the current leader?
+        if (communicatorComponents[vect.front().first].second < vect.front().second) {
+            // outvoted! keep the new component instead
+            communicatorComponents[vect.front().first] = std::make_pair(mapEntry.first, vect.front().second);
+        }
+    }
+
+    // Fourth, save communicator data into the compiler static data
+    compilerStaticData.communicators.resize(communicatorComponentCount);
+    for (int32_t index = 0; index != communicatorComponentCount; ++index) {
+        auto& comm = compilerStaticData.communicators.data[index].comm;
+        comm = communicatorComponents[index].first; // might be nullptr
+    }
+
+    for (int32_t y = 0; y != gameState.height(); ++y) {
+        for (int32_t x = 0; x != gameState.width(); ++x) {
+            ext::point pt{ x, y };
+            std::visit([&](auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
+                    int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
+                    assert(outputComponent >= 0 && outputComponent < compilerStaticData.components.size());
+                    int32_t assignedCommunicatorIndex = communicatorComponentIndices[pt];
+                    auto& communicatorObj = compilerStaticData.communicators.data[assignedCommunicatorIndex];
+
+                    // set the output components
+                    communicatorObj.outputComponent = outputComponent; // will be overwritten many times, but it's always the same outputComponent.
+                    if (communicatorObj.comm == nullptr) {
+                        // have to create a new communicator with default settings
+                        communicatorObj.comm = std::make_shared<typename ElementType::communicator_t>();
+                    }
+                    if (element.communicator != communicatorObj.comm) {
+                        // currently the element is storing the wrong communicator, so we update it
+                        assert(std::dynamic_pointer_cast<typename ElementType::communicator_t>(communicatorObj.comm) != nullptr);
+                        element.communicator = std::static_pointer_cast<typename ElementType::communicator_t>(communicatorObj.comm);
+                    }
+                    
+                    // add all the input components for this communicator
+                    // note that there might be duplicate input components, because each communicator spans multiple pixels
+                    // we de-duplicate it later
+                    directions_t::for_each([&](auto direction_tag_t, auto) {
+                        ext::point newPt = pt;
+                        newPt.x += decltype(direction_tag_t)::type::first;
+                        newPt.y += decltype(direction_tag_t)::type::second;
+                        if (gameState.contains(newPt) && isSignal(gameState[newPt])) {
+                            assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < compilerStaticData.components.size());
+                            communicatorObj.inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                        }
+                    });
+                }
+            }, gameState[pt]);
+        }
+    }
+
+    // Fifth, de-duplicate the communicators' input components
+    for (SimulatorCommunicator& comm : compilerStaticData.communicators) {
+        auto& inputs = comm.inputComponents;
+        // sort the input components
+        std::sort(inputs.begin(), inputs.end());
+        // erase the consecutive duplicates
+        inputs.erase(std::unique(inputs.begin(), inputs.end()), inputs.end());
+        // free unnecessary memory (because this vector will be *moved* to the real static data later)
+        inputs.shrink_to_fit();
+    }
+
 
     // === generate the fixed (packed) representation from the unpacked representation ===
+
+    // sources
     staticData.sources.update(compilerStaticData.sources);
 
+    // logic gates
     compilerStaticData.logicGates.forEachGate(staticData.logicGates, [&](auto& gate, const auto& compilerGate) {
         using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
         indices_t::for_each([&](const auto index_tag, auto) {
@@ -235,6 +392,7 @@ void Simulator::compile(CanvasState& gameState) {
         });
     });
     
+    // relays
     compilerStaticData.relays.forEachRelay(staticData.relays, [&](auto& relay, const auto& compilerRelay) {
         using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
         indices_t::for_each([&](const auto index_tag, auto) {
@@ -243,6 +401,11 @@ void Simulator::compile(CanvasState& gameState) {
         });
     });
 
+    // communicators
+    staticData.communicators.resize(compilerStaticData.communicators.size);
+    std::move(compilerStaticData.communicators.begin(), compilerStaticData.communicators.end(), staticData.communicators.begin());
+
+    // components
     int32_t adjComponentListSize = std::accumulate(compilerStaticData.components.begin(), compilerStaticData.components.end(), 0, [](const int32_t& prev, const CompilerComponent& curr) {
         return prev + static_cast<int32_t>(curr.adjRelayPixels.size());
     });
@@ -298,6 +461,18 @@ void Simulator::compile(CanvasState& gameState) {
             }, gameState[pt]);
         }
     }
+
+    
+
+
+    /*for (int32_t y = 0; y != state.height(); ++y) {
+    for (int32_t x = 0; x != state.width(); ++x) {
+    ext::point pt{ x, y };
+    std::visit([&](auto& element) {
+    if constexpr(element)...
+    }, state[pt]);
+    }
+    }*/
 
     // flood fill to ensure that the current state is a valid simulation state
     floodFill(staticData, dynamicData);
@@ -446,6 +621,11 @@ void Simulator::calculate(const StaticData& staticData, const DynamicData& oldSt
         });
     });
 
+    // transmit all the communicators
+    for (const SimulatorCommunicator& communicator : staticData.communicators) {
+        communicator(oldState, newState);
+    }
+
     // flood fill all the components
     floodFill(staticData, newState);
 }
@@ -584,10 +764,25 @@ inline void Simulator::SimulatorNegativeRelay<NumInputs>::operator()(const Dynam
     }
     output = false;
 }
+inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
+    bool transmitOutput = false;
+    // hopefully compilers will unroll the loop
+    for (int32_t inputComponent : inputComponents) {
+        if (oldData.componentLogicLevels[inputComponent]) {
+            transmitOutput = true;
+            break;
+        }
+    }
+    // transmit() must always be called *exactly* once per step
+    comm->transmit(transmitOutput);
+
+    bool& receiveOutput = newData.componentLogicLevels[outputComponent];
+    // receive() must always be called *exactly* once per step, so we must not short-circuit it away by writing 'output || comm->receive()' instead.
+    receiveOutput = comm->receive() || receiveOutput;
+}
 inline bool Simulator::StaticData::DisplayedPixel::logicLevel(const DynamicData& execData) const noexcept {
     if (!isRelay) {
         return (index[0] != -1 ? execData.componentLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.componentLogicLevels[index[1]] : false);
-        
     }
     else {
         return (index[0] != -1 ? execData.relayPixelLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.relayPixelLogicLevels[index[1]] : false);

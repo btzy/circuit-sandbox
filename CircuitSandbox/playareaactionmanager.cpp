@@ -3,6 +3,7 @@
 #include "selectionaction.hpp"
 #include "historyaction.hpp"
 #include "pencilaction.hpp"
+#include "screeninputaction.hpp"
 
 
 bool PlayAreaActionManager::processPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event) {
