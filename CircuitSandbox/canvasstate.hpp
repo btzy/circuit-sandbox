@@ -314,7 +314,7 @@ public:
             using positive_one_t = std::integral_constant<int32_t, 1>;
             using negative_one_t = std::integral_constant<int32_t, -1>;
             using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
-            directions_t::for_each([this, pt, axis, visitedMatrix, &pendingVisit](auto direction_tag_t, auto) {
+            directions_t::for_each([this, &pt, &axis, &visitedMatrix, &pendingVisit](auto direction_tag_t, auto) {
                 auto [x, y] = pt;
                 if (axis == 0) {
                     x += decltype(direction_tag_t)::type::value;
