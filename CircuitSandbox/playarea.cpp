@@ -129,7 +129,7 @@ bool PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
         ext::point physicalOffset = ext::point{ event.x, event.y } -ext::point{ renderArea.x, renderArea.y };
 
         size_t inputHandleIndex = resolveInputHandleIndex(event);
-        tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, &event, &physicalOffset](const auto tool_tag) {
+        return tool_tags_t::get(mainWindow.selectedToolIndices[inputHandleIndex], [this, &event, &physicalOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -142,9 +142,12 @@ bool PlayArea::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
                     // if double click, center viewport at clicked position
                     translation += ext::point{ renderArea.w / 2, renderArea.h / 2 } - physicalOffset;
                 }
+                return true;
             }
-        });
-
+            else {
+                return false;
+            }
+        }, false);
     }
     return true;
 

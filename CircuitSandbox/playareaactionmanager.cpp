@@ -7,7 +7,7 @@
 
 
 bool PlayAreaActionManager::processPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event) {
-    return forwardEvent(data, [&, this]() {
+    return mouseDownResult = forwardEvent(data, [&, this]() {
         return data->processPlayAreaMouseButtonDown(event);
     }, [&, this]() {
         ActionEventResult res;
@@ -21,9 +21,12 @@ bool PlayAreaActionManager::processPlayAreaMouseButtonDown(const SDL_MouseButton
 }
 
 bool PlayAreaActionManager::processPlayAreaMouseDrag(const SDL_MouseMotionEvent& event) {
-    return forwardEvent(data, [&, this]() {
-        return data->processPlayAreaMouseDrag(event);
-    });
+    if (mouseDownResult) {
+        return forwardEvent(data, [&, this]() {
+            return data->processPlayAreaMouseDrag(event);
+        });
+    }
+    return false;
 }
 
 bool PlayAreaActionManager::processPlayAreaMouseButtonUp() {

@@ -69,6 +69,8 @@ private:
         data = action;
     }
 
+    bool mouseDownResult; // result of the last mousedown event processed by the current action
+
 public:
     // disable all the copy and move constructors and assignment operators, because this class is intended to be a 'policy' type class
 
