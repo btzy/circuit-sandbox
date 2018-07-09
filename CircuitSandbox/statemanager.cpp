@@ -83,17 +83,18 @@ void StateManager::reloadSimulator() {
     }
 }
 
-void StateManager::saveToHistory() {
+bool StateManager::saveToHistory() {
     // check if changed if necessary
     evaluateChangedState();
 
     // don't write to the undo stack if defaultState did not change
-    if (!changed) return;
+    if (!changed) return false;
 
     historyManager.saveToHistory(defaultState, deltaTrans);
 
     changed = false;
     deltaTrans = { 0, 0 };
+    return true;
 }
 
 void StateManager::startSimulatorUnchecked() {

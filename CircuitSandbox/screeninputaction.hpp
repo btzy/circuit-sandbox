@@ -71,7 +71,7 @@ public:
 
             if constexpr (std::is_base_of_v<Interactor, Tool>) {
                 ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
-                [[maybe_unused]] auto& action = starter.start<ScreenInputAction>(mainWindow, canvasOffset);
+                starter.start<ScreenInputAction>(mainWindow, canvasOffset);
                 return ActionEventResult::PROCESSED;
             }
             else {

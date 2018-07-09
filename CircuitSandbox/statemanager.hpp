@@ -65,8 +65,9 @@ public:
     /**
      * Take a snapshot of the gamestate and save it in the history.
      * Will check if the state is actually changed, before attempting to save.
+     * Returns true if the state was really saved (i.e. something was actually modified)
      */
-    void saveToHistory();
+    bool saveToHistory();
 
     /**
      * Starts the simulator.

@@ -106,7 +106,7 @@ private:
      * When this method is called, selection is guaranteed to lie within base since base is only shrunk on destruction.
      * If subtract is true, elements in the selection rect are removed from selection.
      */
-    bool selectConnectedComponent(ext::point pt, bool subtract) {
+    bool selectConnectedComponent(const ext::point& pt, bool subtract) {
         CanvasState& base = canvas();
 
         if (subtract) {
@@ -156,6 +156,10 @@ public:
             auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), baseTrans, std::move(selection), selectionTrans);
             canvas() = std::move(tmpDefaultState);
             deltaTrans = std::move(translation);
+        }
+        if (state != State::MOVED) {
+            // request not to recompile the canvas state, because nothing changed
+            changed() = false;
         }
     }
 
@@ -252,7 +256,7 @@ public:
 
         ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
 
-        return tool_tags_t::get(currentToolIndex, [this, event, &canvasOffset](const auto tool_tag) {
+        return tool_tags_t::get(currentToolIndex, [this, &event, &canvasOffset](const auto tool_tag) {
             // 'Tool' is the type of tool (e.g. Selector)
             using Tool = typename decltype(tool_tag)::type;
 
@@ -314,6 +318,7 @@ public:
                 if (selectRect(SDL_GetModState() & KMOD_ALT)) {
                     return ActionEventResult::PROCESSED;
                 } else {
+                    // we get here if we didn't select anything
                     selectionTrans = baseTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
                     return ActionEventResult::COMPLETED;
                 }

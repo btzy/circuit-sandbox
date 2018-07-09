@@ -18,6 +18,7 @@ class EditAction : public PlayAreaAction {
 protected:
     ext::point deltaTrans;
     bool const simulatorRunning;
+    bool needsRecompile = true;
 
 public:
 
@@ -31,10 +32,12 @@ public:
     ~EditAction() override {
         // amend the translation for playArea
         playArea().translation -= deltaTrans * playArea().scale;
-        // update window title
-        mainWindow.setUnsaved(stateManager().historyManager.changedSinceLastSave());
-        // recompile the simulator
-        stateManager().simulator.compile(canvas());
+        if (needsRecompile) {
+            // update window title
+            mainWindow.setUnsaved(stateManager().historyManager.changedSinceLastSave());
+            // recompile the simulator
+            stateManager().simulator.compile(canvas());
+        }
         // start the simulator if its supposed to be running
         if (simulatorRunning) stateManager().startSimulator();
     }

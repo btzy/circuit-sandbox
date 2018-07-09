@@ -16,6 +16,6 @@ public:
         // amend the translation for stateManager
         stateManager().deltaTrans += deltaTrans;
         // save to history when this action ends
-        stateManager().saveToHistory();
+        needsRecompile = stateManager().saveToHistory();
     }
 };
