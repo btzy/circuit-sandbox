@@ -26,13 +26,16 @@ bool PlayAreaActionManager::processPlayAreaMouseDrag(const SDL_MouseMotionEvent&
             return data->processPlayAreaMouseDrag(event);
         });
     }
-    return false;
+    else return false;
 }
 
 bool PlayAreaActionManager::processPlayAreaMouseButtonUp() {
-    return forwardEvent(data, [&, this]() {
-        return data->processPlayAreaMouseButtonUp();
-    });
+    if (mouseDownResult) {
+        return forwardEvent(data, [&, this]() {
+            return data->processPlayAreaMouseButtonUp();
+        });
+    }
+    else return false;
 }
 
 // should we expect the mouse to be in the playarea?
