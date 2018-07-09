@@ -356,10 +356,9 @@ public:
             case SDL_SCANCODE_D:
                 [[fallthrough]];
             case SDL_SCANCODE_DELETE:
-            {
+                state = State::MOVED;
                 selection = CanvasState(); // clear the selection
                 return ActionEventResult::COMPLETED; // tell playarea to end this action
-            }
             case SDL_SCANCODE_C:
                 if (modifiers & KMOD_CTRL) {
                     clipboard = selection;
@@ -367,10 +366,13 @@ public:
                 }
             case SDL_SCANCODE_X:
                 if (modifiers & KMOD_CTRL) {
+                    state = State::MOVED;
                     clipboard = std::move(selection);
                     selection = CanvasState(); // clear the selection
                     return ActionEventResult::COMPLETED; // tell playarea to end this action
                 }
+            case SDL_SCANCODE_ESCAPE:
+                return ActionEventResult::COMPLETED;
             default:
                 return ActionEventResult::UNPROCESSED;
             }

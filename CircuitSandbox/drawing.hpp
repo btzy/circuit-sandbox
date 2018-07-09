@@ -9,7 +9,7 @@ namespace ext {
         int32_t width = x2 - x1 + 1;
         int32_t segments = width / segmentLength;
         int32_t excess = width % segmentLength;
-        if (segments%2 == 0) {
+        if (segments > 0 && segments%2 == 0) {
             excess += segmentLength;
             segments--;
         }
@@ -31,7 +31,7 @@ namespace ext {
         int32_t height = y2 - y1 + 1;
         int32_t segments = height / segmentLength;
         int32_t excess = height % segmentLength;
-        if (segments%2 == 0) {
+        if (segments > 0 && segments%2 == 0) {
             excess += segmentLength;
             segments--;
         }
