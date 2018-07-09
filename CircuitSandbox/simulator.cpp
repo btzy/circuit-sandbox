@@ -35,7 +35,21 @@ void Simulator::compile(CanvasState& gameState) {
     for (int32_t y = 0; y != gameState.height(); ++y) {
         for (int32_t x = 0; x != gameState.width(); ++x) {
             ext::point pt{ x, y };
-            compilerStaticData.pixels[pt].isRelay = isRelayElement(gameState[pt]);
+            std::visit([&](const auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr(std::is_base_of_v<Relay, ElementType>) {
+                    compilerStaticData.pixels[pt].type = StaticData::DisplayedPixel::PixelType::RELAY;
+                }
+                else if constexpr(std::is_base_of_v<CommunicatorElement, ElementType>) {
+                    compilerStaticData.pixels[pt].type = StaticData::DisplayedPixel::PixelType::COMMUNICATOR;
+                }
+                else if constexpr(std::is_base_of_v<Element, ElementType>) {
+                    compilerStaticData.pixels[pt].type = StaticData::DisplayedPixel::PixelType::COMPONENT;
+                }
+                else {
+                    compilerStaticData.pixels[pt].type = StaticData::DisplayedPixel::PixelType::EMPTY;
+                }
+            }, gameState[pt]);
             compilerStaticData.pixels[pt].index[0] = compilerStaticData.pixels[pt].index[1] = -1;
         }
     }
@@ -319,13 +333,16 @@ void Simulator::compile(CanvasState& gameState) {
         }
     }
 
-    // Fourth, save communicator data into the compiler static data
-    compilerStaticData.communicators.resize(communicatorComponentCount);
+    // Fourth, create communicator objects for null communicators, and assign communicator indices
     for (int32_t index = 0; index != communicatorComponentCount; ++index) {
-        auto& comm = compilerStaticData.communicators.data[index].comm;
-        comm = communicatorComponents[index].first; // might be nullptr
+        if (communicatorComponents[index].first == nullptr) {
+            communicatorComponents[index].first = std::make_shared<ScreenCommunicator>(); // TODO: have to change this when we have file communicators
+        }
+        communicatorComponents[index].first->communicatorIndex = index;
     }
 
+    // Fifth, fill in the input and output components for the compiler static data
+    compilerStaticData.communicators.resize(communicatorComponentCount);
     for (int32_t y = 0; y != gameState.height(); ++y) {
         for (int32_t x = 0; x != gameState.width(); ++x) {
             ext::point pt{ x, y };
@@ -339,14 +356,10 @@ void Simulator::compile(CanvasState& gameState) {
 
                     // set the output components
                     communicatorObj.outputComponent = outputComponent; // will be overwritten many times, but it's always the same outputComponent.
-                    if (communicatorObj.comm == nullptr) {
-                        // have to create a new communicator with default settings
-                        communicatorObj.comm = std::make_shared<typename ElementType::communicator_t>();
-                    }
-                    if (element.communicator != communicatorObj.comm) {
+                    if (element.communicator != communicatorComponents[assignedCommunicatorIndex].first) {
                         // currently the element is storing the wrong communicator, so we update it
-                        assert(std::dynamic_pointer_cast<typename ElementType::communicator_t>(communicatorObj.comm) != nullptr);
-                        element.communicator = std::static_pointer_cast<typename ElementType::communicator_t>(communicatorObj.comm);
+                        //assert(std::dynamic_pointer_cast<typename ElementType::communicator_t>(communicatorComponents[assignedCommunicatorIndex].first) != nullptr);
+                        element.communicator = std::static_pointer_cast<typename ElementType::communicator_t>(communicatorComponents[assignedCommunicatorIndex].first);
                     }
                     
                     // add all the input components for this communicator
@@ -377,6 +390,9 @@ void Simulator::compile(CanvasState& gameState) {
         inputs.shrink_to_fit();
     }
 
+    // Sixth, prepare the received data storage and clear the input queue
+    communicatorReceivedData = std::make_unique<CommunicatorInput[]>(communicatorComponentCount);
+    screenInputQueue.clear();
 
     // === generate the fixed (packed) representation from the unpacked representation ===
 
@@ -428,7 +444,7 @@ void Simulator::compile(CanvasState& gameState) {
 
     // === dynamic state ===
     // sets everything to false by default
-    DynamicData dynamicData(staticData.components.size, staticData.relayPixels.size);
+    DynamicData dynamicData(staticData.components.size, staticData.relayPixels.size, staticData.communicators.size);
 
     // fill from all the currently sources and logic gates,
     // and fill the conductive state from the relays
@@ -462,17 +478,13 @@ void Simulator::compile(CanvasState& gameState) {
         }
     }
 
-    
-
-
-    /*for (int32_t y = 0; y != state.height(); ++y) {
-    for (int32_t x = 0; x != state.width(); ++x) {
-    ext::point pt{ x, y };
-    std::visit([&](auto& element) {
-    if constexpr(element)...
-    }, state[pt]);
+    // fill in communicator inputs (set all to false)
+    {
+        CommunicatorInput tmp;
+        tmp.state = 0;
+        tmp.count = 0;
+        std::fill_n(communicatorReceivedData.get(), staticData.communicators.size, tmp);
     }
-    }*/
 
     // flood fill to ensure that the current state is a valid simulation state
     floodFill(staticData, dynamicData);
@@ -517,7 +529,7 @@ void Simulator::step() {
     // this runs the simulator in the main thread, since we want to block until the step is complete.
     // since the simulator is stopped, we can read from latestCompleteState without synchronization.
     const DynamicData& oldState = *latestCompleteState;
-    DynamicData newState(staticData.components.size, staticData.relayPixels.size);
+    DynamicData newState(staticData.components.size, staticData.relayPixels.size, staticData.communicators.size);
 
     // calculate the new state
     calculate(staticData, oldState, newState);
@@ -529,14 +541,16 @@ void Simulator::step() {
 
 
 void Simulator::takeSnapshot(CanvasState& returnState) const {
-    // Note (TODO): will be replaced with the proper compiled graph representation
     const std::shared_ptr<DynamicData> dynamicData = std::atomic_load_explicit(&latestCompleteState, std::memory_order_acquire);
     for (int32_t y = 0; y != returnState.dataMatrix.height(); ++y) {
         for (int32_t x = 0; x != returnState.dataMatrix.width(); ++x) {
             ext::point pt{ x, y };
-            std::visit(visitor{
-                [](std::monostate) {},
-                [&](auto& element) {
+            std::visit([&](auto& element) {
+                using ElementType = std::decay_t<decltype(element)>;
+                if constexpr(std::is_base_of_v<CommunicatorElement, ElementType>) {
+                    element.transmitState = dynamicData->communicatorTransmitStates[element.communicator->communicatorIndex];
+                }
+                if constexpr(std::is_base_of_v<Element, ElementType>) {
                     element.setLogicLevel(staticData.pixels[pt].logicLevel(*dynamicData));
                 }
             }, returnState[pt]);
@@ -555,7 +569,7 @@ void Simulator::run() {
         // note: we just use the member field 'latestCompleteState' directly without any synchronization,
         // because when the simulator thread is running, no other thread will modify 'latestCompleteState'.
         const DynamicData& oldState = *latestCompleteState;
-        DynamicData newState(staticData.components.size, staticData.relayPixels.size);
+        DynamicData newState(staticData.components.size, staticData.relayPixels.size, staticData.communicators.size);
 
         // calculate the new state
         calculate(staticData, oldState, newState);
@@ -621,9 +635,11 @@ void Simulator::calculate(const StaticData& staticData, const DynamicData& oldSt
         });
     });
 
-    // transmit all the communicators
-    for (const SimulatorCommunicator& communicator : staticData.communicators) {
-        communicator(oldState, newState);
+    // receive all the communicators
+    updateCommunicatorReceivedData();
+    // invoke all the communicators
+    for (int32_t i = 0; i != staticData.communicators.size; ++i) {
+        staticData.communicators.data[i](oldState, communicatorReceivedData[i].state & 1, newState, newState.communicatorTransmitStates[i]);
     }
 
     // flood fill all the components
@@ -674,6 +690,26 @@ void Simulator::floodFill(const StaticData& staticData, DynamicData& dynamicData
                     componentStack.emplace(false, relayPixel.adjComponents[j]);
                 }
             }
+        }
+    }
+}
+
+void Simulator::updateCommunicatorReceivedData() {
+    ScreenInputCommunicatorEvent commEvent;
+    while (screenInputQueue.pop(commEvent)) {
+        const bool turnOn = commEvent.turnOn;
+        const int32_t commIndex = commEvent.communicatorIndex;
+        if (communicatorReceivedData[commIndex].count < 4) {
+            communicatorReceivedData[commIndex].state |= (turnOn << (++communicatorReceivedData[commIndex].count));
+        }
+        else {
+            communicatorReceivedData[commIndex].state |= (turnOn << 4);
+        }
+    }
+    for (int32_t i = 0; i != staticData.communicators.size; ++i) {
+        if (communicatorReceivedData[i].count > 0) {
+            communicatorReceivedData[i].state >>= 1;
+            --communicatorReceivedData[i].count;
         }
     }
 }
@@ -742,30 +778,26 @@ inline void Simulator::SimulatorNorGate<NumInputs>::operator()(const DynamicData
 
 template <size_t NumInputs>
 inline void Simulator::SimulatorPositiveRelay<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
-    bool& output = newData.relayPixelIsConductive[this->outputRelayPixel];
     // hopefully compilers will unroll the loop
     for (size_t i = 0; i != NumInputs; ++i) {
         if (oldData.componentLogicLevels[this->inputComponents[i]]) {
-            output = true;
+            newData.relayPixelIsConductive[this->outputRelayPixel] = true;
             return;
         }
     }
-    output = false;
 }
 template <size_t NumInputs>
 inline void Simulator::SimulatorNegativeRelay<NumInputs>::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
-    bool& output = newData.relayPixelIsConductive[this->outputRelayPixel];
     // hopefully compilers will unroll the loop
     for (size_t i = 0; i != NumInputs; ++i) {
         if (!oldData.componentLogicLevels[this->inputComponents[i]]) {
-            output = true;
+            newData.relayPixelIsConductive[this->outputRelayPixel] = true;
             return;
         }
     }
-    output = false;
 }
-inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldData, DynamicData& newData) const noexcept {
-    bool transmitOutput = false;
+inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldData, const bool& receivedInput, DynamicData& newData, bool& transmitOutput) const noexcept {
+    transmitOutput = false;
     // hopefully compilers will unroll the loop
     for (int32_t inputComponent : inputComponents) {
         if (oldData.componentLogicLevels[inputComponent]) {
@@ -773,18 +805,16 @@ inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldD
             break;
         }
     }
-    // transmit() must always be called *exactly* once per step
-    comm->transmit(transmitOutput);
 
     bool& receiveOutput = newData.componentLogicLevels[outputComponent];
-    // receive() must always be called *exactly* once per step, so we must not short-circuit it away by writing 'output || comm->receive()' instead.
-    receiveOutput = comm->receive() || receiveOutput;
+    receiveOutput = receiveOutput || receivedInput;
 }
 inline bool Simulator::StaticData::DisplayedPixel::logicLevel(const DynamicData& execData) const noexcept {
-    if (!isRelay) {
+    switch (type) {
+    case PixelType::COMPONENT: [[fallthrough]];
+    case PixelType::COMMUNICATOR:
         return (index[0] != -1 ? execData.componentLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.componentLogicLevels[index[1]] : false);
-    }
-    else {
-        return (index[0] != -1 ? execData.relayPixelLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.relayPixelLogicLevels[index[1]] : false);
+    case PixelType::RELAY:
+        return execData.relayPixelLogicLevels[index[0]];
     }
 }

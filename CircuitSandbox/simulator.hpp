@@ -20,6 +20,7 @@
 #include "canvasstate.hpp"
 #include "heap_matrix.hpp"
 #include "communicator.hpp"
+#include "concurrent_queue.hpp"
 
 
 class Simulator {
@@ -166,8 +167,7 @@ private:
     struct SimulatorCommunicator {
         std::vector<int32_t> inputComponents;
         int32_t outputComponent;
-        std::shared_ptr<Communicator> comm; // expects the pointer to always be valid after compilation
-        inline void operator()(const DynamicData& oldData, DynamicData& newData) const noexcept;
+        inline void operator()(const DynamicData& oldData, const bool& receivedInput, DynamicData& newData, bool& transmitOutput) const noexcept;
     };
     struct RelayPixel {
         std::array<int32_t, 4> adjComponents;
@@ -201,7 +201,12 @@ private:
         SizedArray<int32_t> adjComponentList;
 
         struct DisplayedPixel {
-            bool isRelay;
+            enum struct PixelType : unsigned char {
+                EMPTY,
+                COMPONENT,
+                RELAY,
+                COMMUNICATOR
+            } type;
             int32_t index[2]; // index[1] used only if it is an insulated wire with two directions
             inline bool logicLevel(const DynamicData&) const noexcept;
         };
@@ -220,8 +225,10 @@ private:
         std::unique_ptr<bool[]> componentLogicLevels;
         // array of logic level of each relay pixel
         std::unique_ptr<bool[]> relayPixelLogicLevels;
-        // array of whether each relay pixel is conductive (uninitialized)
+        // array of whether each relay pixel is conductive
         std::unique_ptr<bool[]> relayPixelIsConductive;
+        // array of whether each communicator is transmitting at HIGH
+        std::unique_ptr<bool[]> communicatorTransmitStates;
 
 
         DynamicData() = delete;
@@ -229,14 +236,24 @@ private:
         DynamicData& operator=(const DynamicData&) = delete;
         DynamicData(DynamicData&&) = default;
         DynamicData& operator=(DynamicData&&) = default;
-        DynamicData(int32_t numComponents, int32_t numRelayPixels) {
+        DynamicData(int32_t numComponents, int32_t numRelayPixels, int32_t numCommunicators) {
             componentLogicLevels = std::make_unique<bool[]>(numComponents);
             std::fill_n(componentLogicLevels.get(), numComponents, false);
             relayPixelLogicLevels = std::make_unique<bool[]>(numRelayPixels);
             std::fill_n(relayPixelLogicLevels.get(), numRelayPixels, false);
             relayPixelIsConductive = std::make_unique<bool[]>(numRelayPixels);
+            std::fill_n(relayPixelIsConductive.get(), numRelayPixels, false);
+            communicatorTransmitStates = std::make_unique<bool[]>(numCommunicators);
+            std::fill_n(communicatorTransmitStates.get(), numCommunicators, false);
         }
     };
+    struct CommunicatorInput {
+        // this is a bit field
+        // state : queue of states for communicator (up to 5 in queue)
+        // count : number of states in queue excluding the first (live) one
+        uint8_t state : 5, count : 3;
+    };
+    using CommunicatorReceivedData = std::unique_ptr<CommunicatorInput[]>;
     friend struct CompilerSources;
     friend struct CompilerGates;
     friend struct CompilerRelays;
@@ -247,6 +264,11 @@ private:
 
     // the static data
     StaticData staticData;
+
+    // received communicator data (array of whether each communicator is receiving HIGH)
+    // overwritten before every step
+    // prepared and initialized by Simulator::compile()
+    CommunicatorReceivedData communicatorReceivedData;
 
     // The last CanvasState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
     std::shared_ptr<DynamicData> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<CanvasState>>.
@@ -259,6 +281,9 @@ private:
     // minimum time between successive simulation steps (zero = as fast as possible)
     std::atomic<period_t::rep> period_rep; // it is stored using the underlying integer type so that we can use atomics
     std::chrono::steady_clock::time_point nextStepTime; // next time the simulator will be stepped
+
+    // screen communicator input queue
+    ext::concurrent_queue<ScreenInputCommunicatorEvent> screenInputQueue;
 
     /**
      * Method that actually runs the simulator.
@@ -274,9 +299,11 @@ private:
     * This method is static, and hence is safe be called concurrently from multiple threads.
     * @pre simulation has been compiled.
     */
-    static void calculate(const StaticData& staticData, const DynamicData& oldState, DynamicData& newState);
+    void calculate(const StaticData& staticData, const DynamicData& oldState, DynamicData& newState);
 
     static void floodFill(const StaticData& staticData, DynamicData& dynamicData);
+
+    void updateCommunicatorReceivedData();
 
 public:
 
@@ -355,5 +382,9 @@ public:
     */
     void setPeriod(const std::chrono::steady_clock::duration& period) {
         period_rep.store(period.count(), std::memory_order_release);
+    }
+
+    void sendCommunicatorEvent(int32_t communicatorIndex, bool turnOn) {
+        screenInputQueue.push(ScreenInputCommunicatorEvent{ communicatorIndex, turnOn });
     }
 };

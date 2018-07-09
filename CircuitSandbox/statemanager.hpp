@@ -49,6 +49,7 @@ private:
     friend class ChangeSimulationSpeedAction;
     friend class UndoButton;
     friend class RedoButton;
+    friend class ScreenInputAction;
 
 public:
 

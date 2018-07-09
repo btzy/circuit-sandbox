@@ -19,10 +19,10 @@ private:
     void changeTarget(ScreenCommunicator* target) {
         if (communicator != target) {
             if (communicator != nullptr) {
-                communicator->setReceiver(false);
+                mainWindow.stateManager.simulator.sendCommunicatorEvent(communicator->communicatorIndex, false);
             }
             if (target != nullptr) {
-                target->setReceiver(true);
+                mainWindow.stateManager.simulator.sendCommunicatorEvent(target->communicatorIndex, true);
             }
             communicator = target;
         }
