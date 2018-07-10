@@ -478,4 +478,8 @@ public:
             break;
         }
     }
+
+    const char* getStatus() const {
+        return !selection.empty() ? "Hold Shift to add to the selection, Alt to subtract from it" : nullptr;
+    }
 };

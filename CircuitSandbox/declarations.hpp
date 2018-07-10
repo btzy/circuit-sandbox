@@ -22,7 +22,6 @@ using tool_tags_t = ext::tag_tuple<Selector, Panner, Interactor, Eraser, Conduct
 class Action;
 class PlayAreaAction;
 template <typename> class PencilAction;
-class EyedropperAction;
 class SelectionAction;
 class HistoryAction;
 class FileNewAction;
@@ -31,7 +30,7 @@ class FileSaveAction;
 class ScreenInputAction;
 
 // list of actions that have a static startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent&, MainWindow&, PlayArea& const ActionStarter&);
-using playarea_action_tags_t = ext::tag_tuple<EyedropperAction, SelectionAction, ScreenInputAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>>;
+using playarea_action_tags_t = ext::tag_tuple<SelectionAction, ScreenInputAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>>;
 
 
 /**

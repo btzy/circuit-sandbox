@@ -16,6 +16,7 @@
 #include "fileopenaction.hpp"
 #include "filesaveaction.hpp"
 #include "historyaction.hpp"
+#include "eyedropperaction.hpp"
 #include "changesimulationspeedaction.hpp"
 
 #if defined(_WIN32)
@@ -459,6 +460,9 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
             case SDL_SCANCODE_RIGHT: // Step simulator
                 currentAction.reset();
                 stateManager.stepSimulator();
+                return;
+            case SDL_SCANCODE_E:
+                EyedropperAction::start(*this, renderer, currentAction.getStarter());
                 return;
             default:
                 break;

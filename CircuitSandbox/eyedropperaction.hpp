@@ -10,7 +10,7 @@
 #include "mainwindow.hpp"
 #include "visitor.hpp"
 
-class EyedropperAction final : public PlayAreaAction {
+class EyedropperAction final : public PlayAreaAction, public KeyboardEventHook {
 private:
 
     template <typename Element>
@@ -27,25 +27,39 @@ private:
     }
 
 public:
-    EyedropperAction(MainWindow& mainWindow) : PlayAreaAction(mainWindow) {}
+    EyedropperAction(MainWindow& mainWindow, SDL_Renderer* renderer) : PlayAreaAction(mainWindow), KeyboardEventHook(mainWindow) {}
 
     ~EyedropperAction() {}
 
-    static inline ActionEventResult startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event, MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
-        ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
+    static inline void start(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter) {
+        starter.start<EyedropperAction>(mainWindow, renderer);
+    }
+
+    ActionEventResult processPlayAreaMouseButtonDown(const SDL_MouseButtonEvent& event) {
+        ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
         size_t inputHandleIndex = resolveInputHandleIndex(event);
 
-        SDL_Keymod modifiers = SDL_GetModState();
-        if (modifiers & KMOD_CTRL) {
-            auto& action = starter.start<EyedropperAction>(mainWindow);
-            std::visit(visitor{
-                [](std::monostate) {},
-                [&](const auto& element) {
-                    action.bindToolFromElement(inputHandleIndex, element);
-                }
-            }, action.canvas()[canvasOffset]);
-            return ActionEventResult::COMPLETED;
+        return std::visit(visitor{
+            [](std::monostate) {
+                return ActionEventResult::PROCESSED;
+            },
+            [&, this](const auto& element) {
+                bindToolFromElement(inputHandleIndex, element);
+                return ActionEventResult::COMPLETED;
+            }
+        }, canvas()[canvasOffset]);
+    }
+
+    ActionEventResult processWindowKeyboard(const SDL_KeyboardEvent& event) override {
+        if (event.type == SDL_KEYUP) {
+            if (event.keysym.scancode == SDL_SCANCODE_E) {
+                return ActionEventResult::COMPLETED;
+            }
         }
-        return ActionEventResult::UNPROCESSED;
+        return ActionEventResult::PROCESSED;
+    }
+
+    const char* getStatus() const override {
+        return "Eyedropper active";
     }
 };

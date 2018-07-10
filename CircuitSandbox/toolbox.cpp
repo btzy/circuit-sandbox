@@ -28,7 +28,6 @@ void Toolbox::layoutComponents(SDL_Renderer*) {
 
 
 void Toolbox::render(SDL_Renderer* renderer) const {
-
     // draw the selection rectangles
     for (size_t i = 0; i != NUM_INPUT_HANDLES; ++i) {
         if (mainWindow.selectedToolIndices[i] != MainWindow::EMPTY_INDEX) {
@@ -72,6 +71,20 @@ void Toolbox::render(SDL_Renderer* renderer) const {
             SDL_DestroyTexture(texture);
         }
     });
+
+    // render the status of the current action if any
+    const char* status = mainWindow.currentAction.getStatus();
+    if (status) {
+        SDL_Surface* surface = TTF_RenderText_Blended_Wrapped(mainWindow.interfaceFont, status, SDL_Color{0xFF, 0xFF, 0xFF, 0xFF}, renderArea.w - 2 * PADDING_HORIZONTAL - mainWindow.logicalToPhysicalSize(8));
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+        int textureWidth, textureHeight;
+        SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
+        const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING + mainWindow.logicalToPhysicalSize(4), renderArea.y + PADDING_VERTICAL * 3 + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(tool_tags_t::size), textureWidth, textureHeight};
+        SDL_RenderCopy(renderer, texture, nullptr, &destRect);
+        SDL_DestroyTexture(texture);
+    }
+
 }
 
 

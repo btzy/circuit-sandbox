@@ -36,4 +36,8 @@ public:
     ActionStarter getStarter() {
         return ActionStarter(data);
     }
+
+    const char* getStatus() const {
+        return data ? data->getStatus() : nullptr;
+    }
 };
