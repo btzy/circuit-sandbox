@@ -152,6 +152,7 @@ namespace ext {
 
         /**
         * Change the state of a rectangle of pixels.
+        * Note that `bottomRight` is actually past-the-end, for consistency usual expectations and with CanvasState::extend()
         * 'Element' should be one of the elements in 'element_variant_t', or std::monostate for the eraser
         * Returns a pair describing whether the canvas was actually modified, and the net translation change that the viewport should apply (such that the viewport will be at the 'same' position)
         */
@@ -159,13 +160,12 @@ namespace ext {
             bool changed = false;
 
             if (!newValue) {
-                if (topLeft.x < 0 && bottomRight.x < 0 || topLeft.x >= dataMatrix.width() && bottomRight.x >= dataMatrix.width() ||
-                    topLeft.y < 0 && bottomRight.y < 0 || topLeft.y >= dataMatrix.height() && bottomRight.y >= dataMatrix.height()) {
+                if(dataMatrix.overlaps(topLeft, bottomRight)) {
                     return { false, { 0, 0 } };
                 }
 
-                topLeft = { std::max(topLeft.x, 0), std::max(topLeft.y, 0) };
-                bottomRight = { std::max(bottomRight.x, dataMatrix.width() - 1), std::max(bottomRight.y, dataMatrix.height() - 1) };
+                topLeft = max(topLeft, { 0, 0 });
+                bottomRight = min(bottomRight, dataMatrix.size());
                 int32_t width = bottomRight.x - topLeft.x + 1;
                 int32_t height = topLeft.y - bottomRight.y + 1;
 
@@ -183,10 +183,10 @@ namespace ext {
             else {
                 ext::point translation = prepareDataMatrixForAddition(topLeft);
                 bottomRight += translation;
-                translation += prepareDataMatrixForAddition(bottomRight);
+                translation += prepareDataMatrixForAddition(bottomRight - ext::point{ 1, 1 });
                 topLeft += translation;
-                int32_t width = bottomRight.x - topLeft.x + 1;
-                int32_t height = topLeft.y - bottomRight.y + 1;
+                int32_t width = bottomRight.x - topLeft.x;
+                int32_t height = topLeft.y - bottomRight.y;
 
                 for (int32_t y = 0; y < height; ++y) {
                     for (int32_t x = 0; x < width; ++x) {

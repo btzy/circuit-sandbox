@@ -263,7 +263,7 @@ public:
      * Returned matrix will be of the exact width and height; it will not be shrinked.
      * @pre Assumes that the translated mask lies within the bounds of this canvas state
      */
-    CanvasState spliceMask(ext::point offset, ext::expandable_bool_matrix mask) {
+    CanvasState spliceMask(const ext::point& offset, const ext::expandable_bool_matrix& mask) {
         CanvasState newState;
         newState.dataMatrix = matrix_t(mask.width(), mask.height());
         for (int32_t y = 0; y < mask.height(); ++y) {
@@ -281,7 +281,7 @@ public:
      * Moves logically connected elements from dataMatrix to a new CanvasState and returns them.
      * Returns the new CanvasState and the translation relative to this CanvasState.
      */
-    std::pair<CanvasState, ext::point> spliceConnectedComponent(ext::point origin) {
+    std::pair<CanvasState, ext::point> spliceConnectedComponent(const ext::point& origin) {
         CanvasState newState;
 
         if (std::holds_alternative<std::monostate>(dataMatrix[origin])) return { newState, { 0, 0 } };

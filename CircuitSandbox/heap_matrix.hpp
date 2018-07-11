@@ -3,6 +3,7 @@
 #include <utility>
 #include <algorithm> // for std::copy, std::move, std::reverse, std::swap_ranges
 
+#include "algorithm.hpp"
 #include "point.hpp"
 
 /**
@@ -122,7 +123,16 @@ namespace ext {
          * returns true if the point is within the bounds of the matrix
          */
         bool contains(const ext::point& pt) const noexcept {
-            return 0 <= pt.x&& pt.x < _width && 0 <= pt.y && pt.y < _height;
+            return ext::contains(0, _width, pt.x) && ext::contains(0, _height, pt.y);
+        }
+
+        /**
+         * returns true if rectangle overlaps with the matrix
+         * note that bottomRight is past-the-end
+         * assumes that the rectangle specified has a non-negative size
+         */
+        bool overlaps(const ext::point& topLeft, const ext::point& bottomRight) const noexcept {
+            return ext::overlaps(0, _width, topLeft.x, bottomRight.x) && ext::overlaps(0, _height, topLeft.y, bottomRight.y);
         }
 
         /**
