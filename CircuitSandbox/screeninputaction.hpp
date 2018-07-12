@@ -7,7 +7,7 @@
 #include "mainwindow.hpp"
 #include "playareaaction.hpp"
 #include "elements.hpp"
-#include "communicator.hpp"
+#include "screencommunicator.hpp"
 
 class ScreenInputAction final : public PlayAreaAction {
 private:
@@ -71,8 +71,15 @@ public:
 
             if constexpr (std::is_base_of_v<Interactor, Tool>) {
                 ext::point canvasOffset = playArea.canvasFromWindowOffset(event);
-                starter.start<ScreenInputAction>(mainWindow, canvasOffset);
-                return ActionEventResult::PROCESSED;
+                if (mainWindow.stateManager.defaultState.contains(canvasOffset) &&
+                    std::holds_alternative<ScreenCommunicatorElement>(mainWindow.stateManager.defaultState[canvasOffset])) {
+                    // Only start the screen input action if the mouse was pressed down over a Screen Communicator.
+                    starter.start<ScreenInputAction>(mainWindow, canvasOffset);
+                    return ActionEventResult::PROCESSED;
+                }
+                else {
+                    return ActionEventResult::UNPROCESSED;
+                }
             }
             else {
                 return ActionEventResult::UNPROCESSED;

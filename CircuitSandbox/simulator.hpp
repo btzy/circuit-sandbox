@@ -16,10 +16,13 @@
 #include <tuple>
 #include <vector>
 #include <algorithm>
+#include <cstddef>
 
 #include "canvasstate.hpp"
 #include "heap_matrix.hpp"
 #include "communicator.hpp"
+#include "screencommunicator.hpp"
+#include "fileinputcommunicator.hpp"
 #include "concurrent_queue.hpp"
 
 
@@ -30,7 +33,7 @@ private:
     template <typename T>
     struct SizedArray {
         T* data;
-        int32_t size;
+        size_t size;
         SizedArray() noexcept : size(0) {}
         SizedArray(const SizedArray&) = delete;
         SizedArray& operator=(const SizedArray&) = delete;
@@ -52,7 +55,7 @@ private:
                 delete[] data;
             }
         }
-        void resize(int32_t newSize) {
+        void resize(size_t newSize) {
             if (size > 0) {
                 delete[] data;
             }
@@ -62,8 +65,12 @@ private:
             }
         }
         void update(const std::vector<T>& newData) {
-            resize(static_cast<int32_t>(newData.size()));
+            resize(newData.size());
             std::copy(newData.begin(), newData.end(), data);
+        }
+        void update(std::vector<T>&& newData) {
+            resize(newData.size());
+            std::move(newData.begin(), newData.end(), data);
         }
         T* begin() noexcept {
             return data;
@@ -76,6 +83,12 @@ private:
         }
         const T* end() const noexcept {
             return data + size;
+        }
+        T& operator[](size_t size) noexcept {
+            return data[size];
+        }
+        const T& operator[](size_t size) const noexcept {
+            return data[size];
         }
     };
     struct DynamicData;
@@ -167,7 +180,8 @@ private:
     struct SimulatorCommunicator {
         std::vector<int32_t> inputComponents;
         int32_t outputComponent;
-        inline void operator()(const DynamicData& oldData, const bool& receivedInput, DynamicData& newData, bool& transmitOutput) const noexcept;
+        Communicator* communicator;
+        inline void operator()(const DynamicData& oldData, DynamicData& newData, bool& transmitOutput) const noexcept;
     };
     struct RelayPixel {
         std::array<int32_t, 4> adjComponents;
@@ -192,6 +206,8 @@ private:
 
         // data about communicators
         SizedArray<SimulatorCommunicator> communicators;
+
+        int32_t screenCommunicatorStartIndex, screenCommunicatorEndIndex;
 
         // list of components
         SizedArray<Component> components;
@@ -247,13 +263,13 @@ private:
             std::fill_n(communicatorTransmitStates.get(), numCommunicators, false);
         }
     };
-    struct CommunicatorInput {
+    /*struct CommunicatorInput {
         // this is a bit field
         // state : queue of states for communicator (up to 5 in queue)
         // count : number of states in queue excluding the first (live) one
         uint8_t state : 5, count : 3;
-    };
-    using CommunicatorReceivedData = std::unique_ptr<CommunicatorInput[]>;
+    };*/
+    //using CommunicatorReceivedData = std::unique_ptr<CommunicatorInput[]>;
     friend struct CompilerSources;
     friend struct CompilerGates;
     friend struct CompilerRelays;
@@ -268,7 +284,7 @@ private:
     // received communicator data (array of whether each communicator is receiving HIGH)
     // overwritten before every step
     // prepared and initialized by Simulator::compile()
-    CommunicatorReceivedData communicatorReceivedData;
+    //CommunicatorReceivedData communicatorReceivedData;
 
     // The last CanvasState that is completely calculated.  This object might be accessed by the UI thread (for rendering purposes), but is updated (atomically) by the simulation thread.
     std::shared_ptr<DynamicData> latestCompleteState; // note: in C++20 this should be changed to std::atomic<std::shared_ptr<CanvasState>>.
@@ -303,7 +319,7 @@ private:
 
     static void floodFill(const StaticData& staticData, DynamicData& dynamicData);
 
-    void updateCommunicatorReceivedData();
+    void pullCommunicatorReceivedData();
 
 public:
 
@@ -311,12 +327,17 @@ public:
 
     /**
      * Compiles the given gamestate and save the compiled simulation state (but does not start running the simulation).
-     * If resetLogicLevel is true, the default logic levels will be used.
      * Even though the simulator is stopped, those things that propagate immediately will be updated immediately (back to the CanvasState parameter).
-     * Call takeSnapshot() if the caller wants to retrieve the immediate propagation state.
      * @pre simulation is currently stopped.
      */
     void compile(CanvasState& gameState);
+
+    /**
+     * Resets the transient state and communicator data, and calls compile().
+     * Even though the simulator is stopped, those things that propagate immediately will be updated immediately (back to the CanvasState parameter).
+     * @pre simulation is currently stopped.
+     */
+    void reset(CanvasState& gameState);
 
     /**
      * Start running the simulation.

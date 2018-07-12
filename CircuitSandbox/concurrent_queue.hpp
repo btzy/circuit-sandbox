@@ -9,8 +9,8 @@
  */
 
 #include <atomic>
+#include <utility>
 #include <type_traits>
-#include <memory>
 #include <cassert>
 
 namespace ext {
@@ -127,7 +127,7 @@ namespace ext {
          * Gets and removes the element from the front of the queue if exists.
          * Returns true if there was an element to remove.
          */
-        bool pop(T& out) {
+        inline bool pop(T& out) {
             node* tmp_head = head->getNext();
             if (tmp_head == nullptr) {
                 return false;

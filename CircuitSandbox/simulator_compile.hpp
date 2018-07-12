@@ -107,7 +107,7 @@ struct CompilerStaticData {
     CompilerRelays relays;
 
     // data about communicators
-    Simulator::SizedArray<Simulator::SimulatorCommunicator> communicators;
+    std::vector<Simulator::SimulatorCommunicator> communicators;
 
     // list of components
     std::vector<CompilerComponent> components;

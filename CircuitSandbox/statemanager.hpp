@@ -50,6 +50,7 @@ private:
     friend class UndoButton;
     friend class RedoButton;
     friend class ScreenInputAction;
+    friend class FileCommunicatorSelectAction;
 
 public:
 

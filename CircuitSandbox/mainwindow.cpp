@@ -213,7 +213,6 @@ void MainWindow::start() {
     SDL_ShowWindow(window);
 
 #if defined(_WIN32)
-    HWND hWnd = GetActiveWindow();
     SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 

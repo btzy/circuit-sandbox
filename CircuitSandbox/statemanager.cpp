@@ -146,8 +146,7 @@ bool StateManager::simulatorRunning() const {
 void StateManager::resetSimulator() {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) simulator.stop();
-    defaultState.resetTransientStates();
-    simulator.compile(defaultState);
+    simulator.reset(defaultState);
     if (simulatorRunning) simulator.start();
 }
 

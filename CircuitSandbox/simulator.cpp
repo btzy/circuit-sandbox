@@ -1,9 +1,3 @@
-#include "simulator.hpp"
-#include "simulator_compile.hpp"
-#include "elements.hpp"
-#include "tag_tuple.hpp"
-#include "visitor.hpp"
-
 #include <memory>
 #include <utility>
 #include <thread>
@@ -15,6 +9,11 @@
 #include <numeric>
 #include <cassert>
 
+#include "simulator.hpp"
+#include "simulator_compile.hpp"
+#include "elements.hpp"
+#include "tag_tuple.hpp"
+#include "visitor.hpp"
 
 Simulator::~Simulator() {
     if (running())stop();
@@ -156,11 +155,11 @@ void Simulator::compile(CanvasState& gameState) {
                 if constexpr(std::is_same_v<Source, ElementType>) {
                     auto& source = compilerStaticData.sources.emplace_back();
                     source.outputComponent = compilerStaticData.pixels[pt].index[0]; // for sources, index 0 and 1 should be the same
-                    assert(source.outputComponent >= 0 && source.outputComponent < compilerStaticData.components.size());
+                    assert(source.outputComponent >= 0 && source.outputComponent < static_cast<int32_t>(compilerStaticData.components.size()));
                 }
                 else if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
                     int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
-                    assert(outputComponent >= 0 && outputComponent < compilerStaticData.components.size());
+                    assert(outputComponent >= 0 && outputComponent < static_cast<int32_t>(compilerStaticData.components.size()));
                     // Note: can optimize if heap allocation for the std::vector is slow
                     std::vector<int32_t> inputComponents;
                     
@@ -169,7 +168,7 @@ void Simulator::compile(CanvasState& gameState) {
                         newPt.x += decltype(direction_tag_t)::type::first;
                         newPt.y += decltype(direction_tag_t)::type::second;
                         if (gameState.contains(newPt) && isSignal(gameState[newPt])) {
-                            assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < compilerStaticData.components.size());
+                            assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < static_cast<int32_t>(compilerStaticData.components.size()));
                             inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
                         }
                     });
@@ -203,7 +202,7 @@ void Simulator::compile(CanvasState& gameState) {
                                 inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
                             }
                             else if (isFloodfillableElement(element)) {
-                                assert(compilerStaticData.pixels[newPt].index[dir] >= 0 && compilerStaticData.pixels[newPt].index[dir] < compilerStaticData.components.size());
+                                assert(compilerStaticData.pixels[newPt].index[dir] >= 0 && compilerStaticData.pixels[newPt].index[dir] < static_cast<int32_t>(compilerStaticData.components.size()));
                                 relayPixel.adjComponents[relayPixel.numAdjComponents++] = compilerStaticData.pixels[newPt].index[dir];
                                 compilerStaticData.components[compilerStaticData.pixels[newPt].index[dir]].adjRelayPixels.emplace_back(outputRelayPixelIndex);
                             }
@@ -211,7 +210,7 @@ void Simulator::compile(CanvasState& gameState) {
                                 // special case where two relays are adjacent
                                 // spawn a new component between them, if the other component is already processed
                                 if (visited[newPt][0]) { // this ensures that we only spawn the new component once per pair of adjacent relays
-                                    assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] <= compilerStaticData.relayPixels.size());
+                                    assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < static_cast<int32_t>(compilerStaticData.relayPixels.size()));
                                     int32_t componentIndex = compilerStaticData.components.size();
                                     auto& newComponent = compilerStaticData.components.emplace_back();
                                     newComponent.adjRelayPixels.emplace_back(outputRelayPixelIndex);
@@ -248,138 +247,167 @@ void Simulator::compile(CanvasState& gameState) {
     Algorithm is expected to run in O(N) where N is the number of pixels on the canvas (with some constant factor for hashing).
     */
 
+    // types of communicators that we recognize:
+    using CommunicatorTypes_t = ext::tag_tuple<ScreenCommunicator, FileInputCommunicator>;
+
     // Describes the communicator index of each pixel (if it is a communicator)
     ext::heap_matrix<int32_t> communicatorComponentIndices(gameState.size());
     communicatorComponentIndices.fill(-1); // no assigned communicator for all pixels at first
-    int32_t communicatorComponentCount = 0;
-    // pair<communicator component index, count> , keep sorted by communicator component index, expected to be quite small so we use vector
-    std::unordered_map<std::shared_ptr<Communicator>, std::vector<std::pair<int32_t, int32_t>>> communicatorMapToCommunicatorComponent;
+    
+    // the cumulative number of communicators used
+    int32_t communicatorTypeComponentOffset = 0;
 
-    // First, we extract all the connected communicator components and assign each component a unique index
-    for (int32_t y = 0; y != gameState.height(); ++y) {
-        for (int32_t x = 0; x != gameState.width(); ++x) {
-            ext::point pt{ x, y };
-            std::visit([&](const auto& element) {
-                using ElementType = std::decay_t<decltype(element)>;
-                if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
-                    if (communicatorComponentIndices[pt] == -1) {
-                        // this is a new communicator
+    CommunicatorTypes_t::for_each([&](auto CommunicatorTypeTag, auto) {
+        using CommunicatorType = typename decltype(CommunicatorTypeTag)::type;
 
-                        // register the communicator (get an index for it)
-                        int32_t communicatorIndex = communicatorComponentCount++;
+        if constexpr(std::is_same_v<ScreenCommunicator, CommunicatorType>) {
+            staticData.screenCommunicatorStartIndex = communicatorTypeComponentOffset;
+        }
 
-                        // use flood fill to assign all adjacent communicators (of the same type) the same index
-                        std::stack<ext::point> floodStack;
-                        floodStack.emplace(pt);
-                        while (!floodStack.empty()) {
-                            // retrieve topmost point
-                            ext::point currPt = floodStack.top();
-                            floodStack.pop();
+        // the number of communicators of this particular type
+        int32_t communicatorComponentCount = 0;
 
-                            // ignore if already processed
-                            if (communicatorComponentIndices[currPt] != -1) continue;
+        // pair<communicator component index, count> , keep sorted by communicator component index, expected to be quite small so we use vector
+        std::unordered_map<std::shared_ptr<CommunicatorType>, std::vector<std::pair<int32_t, int32_t>>> communicatorMapToCommunicatorComponent;
 
-                            // assign communicator index
-                            communicatorComponentIndices[currPt] = communicatorIndex;
+        // First, we extract all the connected communicator components and assign each component a unique index
+        for (int32_t y = 0; y != gameState.height(); ++y) {
+            for (int32_t x = 0; x != gameState.width(); ++x) {
+                ext::point pt{ x, y };
+                std::visit([&](const auto& element) {
+                    using ElementType = std::decay_t<decltype(element)>;
+                    if constexpr (std::is_same_v<typename CommunicatorType::element_t, ElementType>) {
+                        if (communicatorComponentIndices[pt] == -1) {
+                            // this is a new communicator
 
-                            // store the communicator in the map
-                            std::vector<std::pair<int32_t, int32_t>>& mapEntry = communicatorMapToCommunicatorComponent.emplace(element.communicator, std::vector<std::pair<int32_t, int32_t>>()).first->second;
-                            auto vectorEntry = std::lower_bound(mapEntry.begin(), mapEntry.end(), communicatorIndex, [](const std::pair<int32_t, int32_t>& entry, const int32_t& searchValue) {
-                                return entry.first < searchValue;
-                            });
-                            if (vectorEntry != mapEntry.end() && vectorEntry->first == communicatorIndex) {
-                                vectorEntry->second++;
-                            }
-                            else {
-                                mapEntry.emplace(vectorEntry, communicatorIndex, 1);
-                            }
+                            // register the communicator (get an index for it)
+                            int32_t communicatorIndex = communicatorComponentCount++;
 
-                            // submit unprocessed adjacent communicators to stack
-                            directions_t::for_each([&](auto direction_tag_t, auto) {
-                                ext::point newPt = currPt;
-                                newPt.x += decltype(direction_tag_t)::type::first;
-                                newPt.y += decltype(direction_tag_t)::type::second;
-                                if (gameState.contains(newPt) && std::holds_alternative<ElementType>(gameState[newPt])) {
-                                    floodStack.emplace(newPt);
+                            // use flood fill to assign all adjacent communicators (of the same type) the same index
+                            std::stack<ext::point> floodStack;
+                            floodStack.emplace(pt);
+                            while (!floodStack.empty()) {
+                                // retrieve topmost point
+                                ext::point currPt = floodStack.top();
+                                floodStack.pop();
+
+                                // ignore if already processed
+                                if (communicatorComponentIndices[currPt] != -1) continue;
+
+                                // assign communicator index
+                                communicatorComponentIndices[currPt] = communicatorIndex;
+
+                                // store the communicator in the map
+                                std::vector<std::pair<int32_t, int32_t>>& mapEntry = communicatorMapToCommunicatorComponent.emplace(element.communicator, std::vector<std::pair<int32_t, int32_t>>()).first->second;
+                                auto vectorEntry = std::lower_bound(mapEntry.begin(), mapEntry.end(), communicatorIndex, [](const std::pair<int32_t, int32_t>& entry, const int32_t& searchValue) {
+                                    return entry.first < searchValue;
+                                });
+                                if (vectorEntry != mapEntry.end() && vectorEntry->first == communicatorIndex) {
+                                    vectorEntry->second++;
                                 }
-                            });
+                                else {
+                                    mapEntry.emplace(vectorEntry, communicatorIndex, 1);
+                                }
+
+                                // submit unprocessed adjacent communicators to stack
+                                directions_t::for_each([&](auto direction_tag_t, auto) {
+                                    ext::point newPt = currPt;
+                                    newPt.x += decltype(direction_tag_t)::type::first;
+                                    newPt.y += decltype(direction_tag_t)::type::second;
+                                    if (gameState.contains(newPt) && std::holds_alternative<ElementType>(gameState[newPt])) {
+                                        floodStack.emplace(newPt);
+                                    }
+                                });
+                            }
                         }
                     }
-                }
-            }, gameState[pt]);
+                }, gameState[pt]);
+            }
         }
-    }
 
-    // stores the most voted communicator for each communicator component
-    // pair<communicator, vote count>
-    std::unique_ptr<std::pair<std::shared_ptr<Communicator>, int32_t>[]> communicatorComponents = std::make_unique<std::pair<std::shared_ptr<Communicator>, int32_t>[]>(communicatorComponentCount);
-    // originally, vote count is zero
-    std::fill_n(communicatorComponents.get(), communicatorComponentCount, std::make_pair(nullptr, 0));
+        // stores the most voted communicator for each communicator component
+        // pair<communicator, vote count>
+        std::unique_ptr<std::pair<std::shared_ptr<CommunicatorType>, int32_t>[]> communicatorComponents = std::make_unique<std::pair<std::shared_ptr<CommunicatorType>, int32_t>[]>(communicatorComponentCount);
+        // originally, vote count is zero
+        std::fill_n(communicatorComponents.get(), communicatorComponentCount, std::make_pair(nullptr, 0));
 
-    // Second, keep on the communicator component with maximum pixels from each communicator
-    // Third, elect a communicator for each communicator component, or create a new communicator if there are none to choose from (interleaved with second step)
-    for (auto& mapEntry : communicatorMapToCommunicatorComponent) {
-        auto& vect = mapEntry.second;
+        // Second, keep on the communicator component with maximum pixels from each communicator
+        // Third, elect a communicator for each communicator component, or create a new communicator if there are none to choose from (interleaved with second step)
+        for (auto& mapEntry : communicatorMapToCommunicatorComponent) {
+            auto& vect = mapEntry.second;
 
-        // sort by the counts
-        sort(vect.begin(), vect.end(), [](const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b) {
-            return a.second < b.second;
-        });
+            // sort by the counts
+            sort(vect.begin(), vect.end(), [](const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b) {
+                return a.second < b.second;
+            });
 
-        // can we outvote the current leader?
-        if (communicatorComponents[vect.front().first].second < vect.front().second) {
-            // outvoted! keep the new component instead
-            communicatorComponents[vect.front().first] = std::make_pair(mapEntry.first, vect.front().second);
+            // can we outvote the current leader?
+            if (communicatorComponents[vect.front().first].second < vect.front().second) {
+                // outvoted! keep the new component instead
+                communicatorComponents[vect.front().first] = std::make_pair(mapEntry.first, vect.front().second);
+            }
         }
-    }
 
-    // Fourth, create communicator objects for null communicators, and assign communicator indices
-    for (int32_t index = 0; index != communicatorComponentCount; ++index) {
-        if (communicatorComponents[index].first == nullptr) {
-            communicatorComponents[index].first = std::make_shared<ScreenCommunicator>(); // TODO: have to change this when we have file communicators
+        // Fourth, create communicator objects for null communicators, and assign communicator indices
+        compilerStaticData.communicators.reserve(communicatorTypeComponentOffset + communicatorComponentCount);
+        for (int32_t index = 0; index != communicatorComponentCount; ++index) {
+            if (communicatorComponents[index].first == nullptr) {
+                communicatorComponents[index].first = std::make_shared<CommunicatorType>();
+            }
+            communicatorComponents[index].first->communicatorIndex = communicatorTypeComponentOffset + index;
+            communicatorComponents[index].first->refresh();
+            // spawn the communicator in the static data
+            auto& comm = compilerStaticData.communicators.emplace_back();
+            comm.communicator = communicatorComponents[index].first.get();
         }
-        communicatorComponents[index].first->communicatorIndex = index;
-    }
 
-    // Fifth, fill in the input and output components for the compiler static data
-    compilerStaticData.communicators.resize(communicatorComponentCount);
-    for (int32_t y = 0; y != gameState.height(); ++y) {
-        for (int32_t x = 0; x != gameState.width(); ++x) {
-            ext::point pt{ x, y };
-            std::visit([&](auto& element) {
-                using ElementType = std::decay_t<decltype(element)>;
-                if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
-                    int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
-                    assert(outputComponent >= 0 && outputComponent < compilerStaticData.components.size());
-                    int32_t assignedCommunicatorIndex = communicatorComponentIndices[pt];
-                    auto& communicatorObj = compilerStaticData.communicators.data[assignedCommunicatorIndex];
+        // Fifth, fill in the input and output components for the compiler static data
+        for (int32_t y = 0; y != gameState.height(); ++y) {
+            for (int32_t x = 0; x != gameState.width(); ++x) {
+                ext::point pt{ x, y };
+                std::visit([&](auto& element) {
+                    using ElementType = std::decay_t<decltype(element)>;
+                    if constexpr (std::is_same_v<typename CommunicatorType::element_t, ElementType>) {
+                        int32_t outputComponent = compilerStaticData.pixels[pt].index[0];
+                        assert(outputComponent >= 0 && outputComponent < static_cast<int32_t>(compilerStaticData.components.size()));
+                        int32_t typeLocalCommunicatorIndex = communicatorComponentIndices[pt];
+                        auto& communicatorObj = compilerStaticData.communicators[communicatorTypeComponentOffset + typeLocalCommunicatorIndex];
 
-                    // set the output components
-                    communicatorObj.outputComponent = outputComponent; // will be overwritten many times, but it's always the same outputComponent.
-                    if (element.communicator != communicatorComponents[assignedCommunicatorIndex].first) {
-                        // currently the element is storing the wrong communicator, so we update it
-                        //assert(std::dynamic_pointer_cast<typename ElementType::communicator_t>(communicatorComponents[assignedCommunicatorIndex].first) != nullptr);
-                        element.communicator = std::static_pointer_cast<typename ElementType::communicator_t>(communicatorComponents[assignedCommunicatorIndex].first);
-                    }
-                    
-                    // add all the input components for this communicator
-                    // note that there might be duplicate input components, because each communicator spans multiple pixels
-                    // we de-duplicate it later
-                    directions_t::for_each([&](auto direction_tag_t, auto) {
-                        ext::point newPt = pt;
-                        newPt.x += decltype(direction_tag_t)::type::first;
-                        newPt.y += decltype(direction_tag_t)::type::second;
-                        if (gameState.contains(newPt) && isSignal(gameState[newPt])) {
-                            assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < compilerStaticData.components.size());
-                            communicatorObj.inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                        // set the output components
+                        communicatorObj.outputComponent = outputComponent; // will be overwritten many times, but it's always the same outputComponent.
+                        if (element.communicator != communicatorComponents[typeLocalCommunicatorIndex].first) {
+                            // currently the element is storing the wrong communicator, so we update it
+                            element.communicator = communicatorComponents[typeLocalCommunicatorIndex].first;
                         }
-                    });
-                }
-            }, gameState[pt]);
-        }
-    }
 
-    // Fifth, de-duplicate the communicators' input components
+                        // add all the input components for this communicator
+                        // note that there might be duplicate input components, because each communicator spans multiple pixels
+                        // we de-duplicate it later
+                        directions_t::for_each([&](auto direction_tag_t, auto) {
+                            ext::point newPt = pt;
+                            newPt.x += decltype(direction_tag_t)::type::first;
+                            newPt.y += decltype(direction_tag_t)::type::second;
+                            if (gameState.contains(newPt) && isSignal(gameState[newPt])) {
+                                assert(compilerStaticData.pixels[newPt].index[0] >= 0 && compilerStaticData.pixels[newPt].index[0] < compilerStaticData.components.size());
+                                communicatorObj.inputComponents.emplace_back(compilerStaticData.pixels[newPt].index[0]);
+                            }
+                        });
+                    }
+                }, gameState[pt]);
+            }
+        }
+
+        // Sixth, update the number of communicators of this type
+        communicatorTypeComponentOffset += communicatorComponentCount;
+
+        if constexpr(std::is_same_v<ScreenCommunicator, CommunicatorType>) {
+            staticData.screenCommunicatorEndIndex = communicatorTypeComponentOffset;
+        }
+    });
+
+    assert(communicatorTypeComponentOffset == static_cast<int32_t>(compilerStaticData.communicators.size()));
+
+    // Seventh, de-duplicate the communicators' input components
     for (SimulatorCommunicator& comm : compilerStaticData.communicators) {
         auto& inputs = comm.inputComponents;
         // sort the input components
@@ -390,21 +418,20 @@ void Simulator::compile(CanvasState& gameState) {
         inputs.shrink_to_fit();
     }
 
-    // Sixth, prepare the received data storage and clear the input queue
-    communicatorReceivedData = std::make_unique<CommunicatorInput[]>(communicatorComponentCount);
+    // Eighth, prepare the received data storage and clear the input queue
     screenInputQueue.clear();
 
     // === generate the fixed (packed) representation from the unpacked representation ===
 
     // sources
-    staticData.sources.update(compilerStaticData.sources);
+    staticData.sources.update(std::move(compilerStaticData.sources));
 
     // logic gates
     compilerStaticData.logicGates.forEachGate(staticData.logicGates, [&](auto& gate, const auto& compilerGate) {
         using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
         indices_t::for_each([&](const auto index_tag, auto) {
             constexpr int32_t Index = decltype(index_tag)::type::value;
-            std::get<Index>(gate.data).update(std::get<Index>(compilerGate.data));
+            std::get<Index>(gate.data).update(std::move(std::get<Index>(compilerGate.data)));
         });
     });
     
@@ -413,13 +440,12 @@ void Simulator::compile(CanvasState& gameState) {
         using indices_t = ext::tag_tuple<std::integral_constant<int32_t, 0>, std::integral_constant<int32_t, 1>, std::integral_constant<int32_t, 2>, std::integral_constant<int32_t, 3>, std::integral_constant<int32_t, 4>>;
         indices_t::for_each([&](const auto index_tag, auto) {
             constexpr int32_t Index = decltype(index_tag)::type::value;
-            std::get<Index>(relay.data).update(std::get<Index>(compilerRelay.data));
+            std::get<Index>(relay.data).update(std::move(std::get<Index>(compilerRelay.data)));
         });
     });
 
     // communicators
-    staticData.communicators.resize(compilerStaticData.communicators.size);
-    std::move(compilerStaticData.communicators.begin(), compilerStaticData.communicators.end(), staticData.communicators.begin());
+    staticData.communicators.update(std::move(compilerStaticData.communicators));
 
     // components
     int32_t adjComponentListSize = std::accumulate(compilerStaticData.components.begin(), compilerStaticData.components.end(), 0, [](const int32_t& prev, const CompilerComponent& curr) {
@@ -437,7 +463,7 @@ void Simulator::compile(CanvasState& gameState) {
         return Simulator::Component{ newBegin, offset };
     });
 
-    staticData.relayPixels.update(compilerStaticData.relayPixels);
+    staticData.relayPixels.update(std::move(compilerStaticData.relayPixels));
 
     staticData.pixels = std::move(compilerStaticData.pixels);
 
@@ -478,14 +504,6 @@ void Simulator::compile(CanvasState& gameState) {
         }
     }
 
-    // fill in communicator inputs (set all to false)
-    {
-        CommunicatorInput tmp;
-        tmp.state = 0;
-        tmp.count = 0;
-        std::fill_n(communicatorReceivedData.get(), staticData.communicators.size, tmp);
-    }
-
     // flood fill to ensure that the current state is a valid simulation state
     floodFill(staticData, dynamicData);
 
@@ -494,6 +512,22 @@ void Simulator::compile(CanvasState& gameState) {
 
     // take a snapshot (with the immediate propagation done)
     takeSnapshot(gameState);
+}
+
+
+void Simulator::reset(CanvasState& gameState) {
+    // Reset the transient state to the starting state
+    for (auto& element : gameState.dataMatrix) {
+        resetLogicLevel(element);
+    }
+
+    // compile
+    compile(gameState);
+
+    // reset the communicators
+    for (auto& simComm : staticData.communicators) {
+        simComm.communicator->reset();
+    }
 }
 
 
@@ -635,11 +669,12 @@ void Simulator::calculate(const StaticData& staticData, const DynamicData& oldSt
         });
     });
 
-    // receive all the communicators
-    updateCommunicatorReceivedData();
+    // receive all the data for screen communicators
+    pullCommunicatorReceivedData();
+
     // invoke all the communicators
     for (int32_t i = 0; i != staticData.communicators.size; ++i) {
-        staticData.communicators.data[i](oldState, communicatorReceivedData[i].state & 1, newState, newState.communicatorTransmitStates[i]);
+        staticData.communicators.data[i](oldState, newState, newState.communicatorTransmitStates[i]);
     }
 
     // flood fill all the components
@@ -694,23 +729,14 @@ void Simulator::floodFill(const StaticData& staticData, DynamicData& dynamicData
     }
 }
 
-void Simulator::updateCommunicatorReceivedData() {
+void Simulator::pullCommunicatorReceivedData() {
     ScreenInputCommunicatorEvent commEvent;
     while (screenInputQueue.pop(commEvent)) {
         const bool turnOn = commEvent.turnOn;
         const int32_t commIndex = commEvent.communicatorIndex;
-        if (communicatorReceivedData[commIndex].count < 4) {
-            communicatorReceivedData[commIndex].state |= (turnOn << (++communicatorReceivedData[commIndex].count));
-        }
-        else {
-            communicatorReceivedData[commIndex].state |= (turnOn << 4);
-        }
-    }
-    for (int32_t i = 0; i != staticData.communicators.size; ++i) {
-        if (communicatorReceivedData[i].count > 0) {
-            communicatorReceivedData[i].state >>= 1;
-            --communicatorReceivedData[i].count;
-        }
+        assert(dynamic_cast<ScreenCommunicator*>(staticData.communicators[commIndex].communicator) != nullptr);
+        auto& screenCommunicator = static_cast<ScreenCommunicator&>(*staticData.communicators[commIndex].communicator);
+        screenCommunicator.insertEvent(turnOn);
     }
 }
 
@@ -796,8 +822,7 @@ inline void Simulator::SimulatorNegativeRelay<NumInputs>::operator()(const Dynam
         }
     }
 }
-inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldData, const bool& receivedInput, DynamicData& newData, bool& transmitOutput) const noexcept {
-    transmitOutput = false;
+inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldData, DynamicData& newData, bool& transmitOutput) const noexcept {
     // hopefully compilers will unroll the loop
     for (int32_t inputComponent : inputComponents) {
         if (oldData.componentLogicLevels[inputComponent]) {
@@ -806,8 +831,10 @@ inline void Simulator::SimulatorCommunicator::operator()(const DynamicData& oldD
         }
     }
 
+    communicator->transmit(transmitOutput);
+
     bool& receiveOutput = newData.componentLogicLevels[outputComponent];
-    receiveOutput = receiveOutput || receivedInput;
+    receiveOutput = communicator->receive() || receiveOutput;
 }
 inline bool Simulator::StaticData::DisplayedPixel::logicLevel(const DynamicData& execData) const noexcept {
     switch (type) {
@@ -816,5 +843,16 @@ inline bool Simulator::StaticData::DisplayedPixel::logicLevel(const DynamicData&
         return (index[0] != -1 ? execData.componentLogicLevels[index[0]] : false) || (index[1] != -1 ? execData.componentLogicLevels[index[1]] : false);
     case PixelType::RELAY:
         return execData.relayPixelLogicLevels[index[0]];
+    case PixelType::EMPTY:
+        break;
     }
+    assert(false);
+#ifdef NDEBUG
+#ifdef _MSC_VER // MSVC
+    __assume(0);
+#endif
+#ifdef __GNUC__ // GCC or Clang
+    __builtin_unreachable();
+#endif
+#endif // NDEBUG
 }

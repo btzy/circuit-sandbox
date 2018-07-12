@@ -7,18 +7,13 @@
 #include <SDL.h>
 
 #include "tag_tuple.hpp"
-#include "elements.hpp"
 
+// drawables
 class MainWindow;
 class Toolbox;
 class PlayArea;
 
-
-// compile-time type tag which stores the list of available elements
-using tool_tags_t = ext::tag_tuple<Selector, Panner, Interactor, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate, ScreenCommunicatorElement>;
-
-
-// all the available action
+// all the available actions
 class Action;
 class PlayAreaAction;
 template <typename> class PencilAction;
@@ -28,10 +23,35 @@ class FileNewAction;
 class FileOpenAction;
 class FileSaveAction;
 class ScreenInputAction;
+class FileCommunicatorSelectAction;
+
+// all the tools and elements
+struct Selector;
+struct Panner;
+struct Interactor;
+struct Eraser;
+struct ConductiveWire;
+struct InsulatedWire;
+struct Signal;
+struct Source;
+struct PositiveRelay;
+struct NegativeRelay;
+struct AndGate;
+struct OrGate;
+struct NandGate;
+struct NorGate;
+struct ScreenCommunicatorElement;
+struct FileInputCommunicatorElement;
+
+// compile-time type tag which stores the list of available elements
+using tool_tags_t = ext::tag_tuple<Selector, Panner, Interactor, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate, ScreenCommunicatorElement, FileInputCommunicatorElement>;
 
 // list of actions that have a static startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent&, MainWindow&, PlayArea& const ActionStarter&);
-using playarea_action_tags_t = ext::tag_tuple<SelectionAction, ScreenInputAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>>;
+using playarea_action_tags_t = ext::tag_tuple<SelectionAction, ScreenInputAction, FileCommunicatorSelectAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>, PencilAction<FileInputCommunicatorElement>>;
 
+// communicators
+class ScreenCommunicator;
+class FileInputCommunicator;
 
 /**
  * The number of distinct "input handles": 5 (SDL2 supports this many mouse buttons) + 1 (for touch input)
