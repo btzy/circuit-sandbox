@@ -608,17 +608,16 @@ void Simulator::run() {
         // calculate the new state
         calculate(staticData, oldState, newState);
 
-        // now we are done with the simulation, check if we are being asked to stop
-        // if we are being asked to stop, we should discared this step,
-        // so the UI doesn't change from the time the user pressed the stop button.
+        // now we are done with the simulation, we save the new state.
+        // so commit the new state (i.e. replace 'latestCompleteState' with the new state).
+        // note that we need to commit this state even if we have already been asked to stop, otherwise the communicators will skip a step.
+        // also, std::memory_order_release to flush the changes so that the main thread can see them
+        std::atomic_store_explicit(&latestCompleteState, std::make_shared<DynamicData>(std::move(newState)), std::memory_order_release);
+
+        // check if we are being asked to stop.
         if (simStopping.load(std::memory_order_acquire)) {
             break;
         }
-
-        // we aren't asked to stop.
-        // so commit the new state (i.e. replace 'latestCompleteState' with the new state).
-        // also, std::memory_order_release to flush the changes so that the main thread can see them
-        std::atomic_store_explicit(&latestCompleteState, std::make_shared<DynamicData>(std::move(newState)), std::memory_order_release);
 
         // sleep for an amount of time given by `period`, if the time is not already used up
         // this code will account for the time spent calculating the simulation, as long as it is less than `period`
@@ -633,6 +632,10 @@ void Simulator::run() {
                 simSleepCV.wait_until(lock, nextStepTime, [this] {
                     return simStopping.load(std::memory_order_relaxed);
                 });
+                // break immediately if we got woken up due to simulator stopping.
+                if (simStopping.load(std::memory_order_relaxed)) {
+                    break;
+                }
             }
             else {
                 // the next step is overdue, so we don't sleep

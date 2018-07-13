@@ -24,7 +24,7 @@ public:
             outPath = nullptr;
         }
         if (outPath != nullptr) {
-            comm.setFilePath(outPath);
+            comm.setFile(outPath);
             free(outPath);
         }
     }

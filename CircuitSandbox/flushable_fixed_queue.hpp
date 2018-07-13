@@ -11,18 +11,21 @@
 #include <utility>
 #include <type_traits>
 #include <array>
+#include <limits>
 #include <cassert>
 
 namespace ext {
     /**
      * T = type of elements in the queue
+     * expects T to be trivially constructible and trivially destructible
      * Size = buffer size = max num of elements + 1
      */
     template <typename T, size_t Size>
-    class concurrent_fixed_queue {
+    class flushable_fixed_queue {
     private:
-        std::array<std::aligned_storage_t<sizeof(T), alignof(T)>, Size> buffer;
+        std::array<T, Size> buffer;
         std::atomic<size_t> pushIndex, popIndex;
+        std::atomic<size_t> endIndex, flushIndex;
 
         inline static size_t space(size_t tmp_pushIndex, size_t tmp_popIndex) noexcept {
             if (tmp_popIndex <= tmp_pushIndex) tmp_popIndex += Size;
@@ -35,11 +38,13 @@ namespace ext {
         }
 
     public:
-        concurrent_fixed_queue() {
+        flushable_fixed_queue() {
             pushIndex.store(0, std::memory_order_relaxed);
             popIndex.store(0, std::memory_order_relaxed);
+            endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_relaxed);
+            flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_relaxed);
         }
-        ~concurrent_fixed_queue() {}
+        ~flushable_fixed_queue() {}
 
         /**
          * Calling this method must be synchronized with push().
@@ -67,14 +72,46 @@ namespace ext {
          */
         inline void clear() noexcept {
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_acquire);
+            popIndex.store(tmp_pushIndex, std::memory_order_release);
+            endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_relaxed);
+            flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_relaxed);
+        }
+
+        /**
+         * Calling this method must be synchronized with push().
+         */
+        inline void end() noexcept {
+            endIndex.store(pushIndex.load(std::memory_order_relaxed), std::memory_order_release);
+        }
+
+        /**
+        * Calling this method must be synchronized with pop().
+        */
+        inline bool ended() const noexcept {
+            return endIndex.load(std::memory_order_acquire) == popIndex.load(std::memory_order_acquire);
+        }
+
+        /**
+         * Informs the consumer that existing queue items may be discarded.
+         * Calling this method must be synchronized with push().
+         * Must have called end() immediately before this.
+         */
+        inline void flush() noexcept {
+            flushIndex.store(pushIndex.load(std::memory_order_relaxed), std::memory_order_release);
+        }
+
+        /**
+         * Discard discardable existing queue items.
+         * Returns true if flush() was called by the producer.
+         * Calling this method must be synchronized with pop().
+         */
+        inline bool discard() noexcept {
+            size_t tmp_flushIndex = flushIndex.load(std::memory_order_acquire);
+            size_t tmp_pushIndex = pushIndex.load(std::memory_order_acquire);
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            while (tmp_popIndex != tmp_pushIndex) {
-                T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-                obj.~T();
-                ++tmp_popIndex;
-                if (tmp_popIndex == Size) tmp_popIndex -= Size;
-            }
-            popIndex.store(tmp_popIndex, std::memory_order_release);
+            if (tmp_popIndex == tmp_flushIndex || available(tmp_pushIndex, tmp_popIndex) < available(tmp_flushIndex, tmp_popIndex)) return false;
+            popIndex.store(tmp_flushIndex, std::memory_order_release);
+            return true;
         }
 
         /**
@@ -86,7 +123,7 @@ namespace ext {
                 return false;
             }
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
-            new (&buffer[tmp_pushIndex]) T(std::forward<Args>(args)...);
+            buffer[tmp_pushIndex] = T(std::forward<Args>(args)...);
             pushIndex.store((tmp_pushIndex + 1) % Size, std::memory_order_release);
             return true;
         }
@@ -107,7 +144,7 @@ namespace ext {
         inline void push(InBegin begin, InEnd end) {
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
             for (; begin != end; ++begin) {
-                new (&buffer[tmp_pushIndex]) T(*begin);
+                buffer[tmp_pushIndex] = std::move(*begin);
                 ++tmp_pushIndex;
                 if (tmp_pushIndex == Size) tmp_pushIndex -= Size;
             }
@@ -123,9 +160,7 @@ namespace ext {
                 return false;
             }
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-            out = std::move(obj);
-            obj.~T();
+            out = std::move(buffer[tmp_popIndex]);
             popIndex.store((tmp_popIndex + 1) % Size, std::memory_order_release);
             return true;
         }
@@ -138,9 +173,7 @@ namespace ext {
         inline void pop(InBegin begin, InEnd end) {
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
             for (; begin != end; ++begin) {
-                T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-                *begin = std::move(obj);
-                obj.~T();
+                *begin = std::move(buffer[tmp_popIndex]);
                 ++tmp_popIndex;
                 if (tmp_popIndex == Size) tmp_popIndex -= Size;
             }
@@ -156,8 +189,7 @@ namespace ext {
                 return false;
             }
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-            out = obj;
+            out = buffer[tmp_popIndex];
             return true;
         }
 
@@ -167,8 +199,6 @@ namespace ext {
         */
         inline void pop() {
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-            obj.~T();
             popIndex.store((tmp_popIndex + 1) % Size, std::memory_order_release);
         }
 
@@ -179,8 +209,6 @@ namespace ext {
         */
         inline bool pop_testproducerneedssignal() {
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
-            obj.~T();
             tmp_popIndex = (tmp_popIndex + 1) % Size;
             popIndex.store(tmp_popIndex, std::memory_order_release);
             return space(pushIndex.load(std::memory_order_acquire), tmp_popIndex) <= 1;

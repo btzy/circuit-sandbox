@@ -5,12 +5,13 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <queue>
 #include <cstdint>
 #include <cstddef>
 #include <condition_variable>
 #include "declarations.hpp"
 #include "communicator.hpp"
-#include "concurrent_fixed_queue.hpp"
+#include "flushable_fixed_queue.hpp"
 
 class FileInputCommunicator final : public Communicator {
     /**
@@ -30,19 +31,18 @@ private:
     std::string inputFilePath;
 
     // used by simulator thread only
-    size_t numBytesRequested;
-    bool checkRequested;
+    std::queue<uint8_t> transmittedCommands; // TODO: allocation-minimized queue implementation
+    bool suppressEnded = true; // whether the we need to read a byte first (prevents zero-length files)
 
     // used by simulator threaed only
-    uint16_t currentTransmitChunk; // bitmask
-    uint16_t currentTransmitCount;
+    uint8_t currentTransmitChunk; // bitmask
+    uint8_t currentTransmitCount;
     uint16_t currentReceiveChunk; // bitmask
-    uint16_t currentReceiveCount;
+    uint8_t currentReceiveCount;
 
     // shared between simulator and file threads
     constexpr static size_t BufSize = 65536;
-    ext::concurrent_fixed_queue<std::byte, BufSize> fileInputQueue;
-    std::atomic<bool> fileEnded;
+    ext::flushable_fixed_queue<std::byte, BufSize> fileInputQueue;
 
     /**
      * Wakes up the file reading thread if it is sleeping.
@@ -68,6 +68,40 @@ private:
         }
     }
 
+    bool loadFile(const char* filePath) {
+        // stop the current thread if any
+        joinFileThread();
+        fileThread = std::thread();
+
+        // close and clear the old file if any
+        inputStream.close();
+        inputStream.clear();
+
+        // flush any bytes that are still in the buffer
+        fileInputQueue.flush();
+
+        if (filePath != nullptr) {
+            // open the new file
+            inputStream.open(filePath);
+        }
+
+        bool success = inputStream.is_open();
+
+        // launch a new file thread
+        if (success) {
+            stoppingFlag.store(false, std::memory_order_relaxed);
+            fileThread = std::thread([this]() {
+                run();
+            });
+        }
+        else {
+            inputStream.close();
+            inputStream.clear();
+        }
+
+        return success;
+    }
+
 public:
     using element_t = FileInputCommunicatorElement;
 
@@ -81,27 +115,44 @@ public:
      */
     bool receive() noexcept override {
         if (currentReceiveCount == 0) {
-            std::byte out;
-            bool hasByte = fileInputQueue.peek(out);
-            if (numBytesRequested > 0 && hasByte) {
-                bool producerNeedsSignal = fileInputQueue.pop_testproducerneedssignal();
-                currentReceiveChunk = (static_cast<uint16_t>(out) << 3) | 0b001;
-                currentReceiveCount = 11;
-                --numBytesRequested;
-                if (producerNeedsSignal) {
-                    notifyFileThread();
-                }
-            }
-            else if (numBytesRequested == 0 && checkRequested) {
-                if (hasByte) {
-                    currentReceiveChunk = 0b1101;
-                    currentReceiveCount = 4;
-                    checkRequested = false;
-                }
-                else if (fileEnded.load(std::memory_order_acquire)) {
-                    currentReceiveChunk = 0b0101;
-                    currentReceiveCount = 4;
-                    checkRequested = false;
+            if (!transmittedCommands.empty()) {
+                uint8_t command = transmittedCommands.front();
+                std::byte out;
+                switch (command) {
+                case 0b001:
+                    // byte request
+                    if (!suppressEnded) {
+                        fileInputQueue.discard();
+                    }
+                    if (fileInputQueue.peek(out)) {
+                        bool producerNeedsSignal = fileInputQueue.pop_testproducerneedssignal();
+                        currentReceiveChunk = (static_cast<uint16_t>(out) << 3) | 0b001;
+                        currentReceiveCount = 11;
+                        transmittedCommands.pop();
+                        suppressEnded = false;
+                        if (producerNeedsSignal) {
+                            notifyFileThread();
+                        }
+                    }
+                    break;
+                case 0b101:
+                    // byte available in file?
+                    if (!suppressEnded && (fileInputQueue.discard() || fileInputQueue.ended())) {
+                        currentReceiveChunk = 0b0101;
+                        currentReceiveCount = 4;
+                        transmittedCommands.pop();
+                        suppressEnded = true;
+                    }
+                    else if (suppressEnded || (!fileInputQueue.ended() && fileInputQueue.peek(out))) {
+                        currentReceiveChunk = 0b1101;
+                        currentReceiveCount = 4;
+                        transmittedCommands.pop();
+                        suppressEnded = true;
+                    }
+                    break;
+                default:
+                    // unknown command, discard it
+                    transmittedCommands.pop();
                 }
             }
         }
@@ -123,18 +174,8 @@ public:
         if (currentTransmitChunk != 0) {
             ++currentTransmitCount;
             if (currentTransmitCount >= 3) {
-                switch (currentTransmitChunk & 0b111) {
-                case 0b001:
-                    ++numBytesRequested;
-                    currentTransmitChunk = currentTransmitCount = 0;
-                    break;
-                case 0b101:
-                    checkRequested = true;
-                    currentTransmitChunk = currentTransmitCount = 0;
-                    break;
-                default:
-                    currentTransmitChunk = currentTransmitCount = 0;
-                }
+                transmittedCommands.emplace(currentTransmitChunk);
+                currentTransmitChunk = currentTransmitCount = 0;
             }
         }
     }
@@ -144,16 +185,18 @@ public:
      * Must be called from the UI thread only!
      * filePath must be non-null
      */
-    void setFilePath(const char* filePath) {
+    void setFile(const char* filePath) {
         inputFilePath = filePath;
+        loadFile(filePath);
     }
 
     /**
      * Clear the file path
      * Must be called from the UI thread only!
      */
-    void clearFilePath() {
+    void clearFile() {
         inputFilePath.clear();
+        loadFile(nullptr);
     }
 
     /**
@@ -168,14 +211,13 @@ public:
         inputStream.close();
         inputStream.clear();
 
-        numBytesRequested = 0;
-        checkRequested = false;
+        while(!transmittedCommands.empty()) transmittedCommands.pop();
+        suppressEnded = true;
         currentTransmitCount = 0;
         currentTransmitChunk = 0;
         currentReceiveCount = 0;
         currentReceiveChunk = 0;
         fileInputQueue.clear();
-        fileEnded.store(false, std::memory_order_relaxed);
 
         if (!inputFilePath.empty()) {
             // open the new file
@@ -191,11 +233,6 @@ public:
                 run();
             });
         }
-        else {
-            fileEnded.store(true, std::memory_order_release);
-        }
-
-        //return success;
     }
 
 private:
@@ -205,7 +242,8 @@ private:
      * Must be called from the file reading thread only!
      */
     void run() {
-        while (!stoppingFlag.load(std::memory_order_acquire) && !fileEnded.load(std::memory_order_relaxed)) {
+        bool fileEnded = false;
+        while (!stoppingFlag.load(std::memory_order_acquire) && !fileEnded) {
             size_t space;
             while (!stoppingFlag.load(std::memory_order_acquire) && (space = fileInputQueue.space()) > 0) {
                 // try to read as many bytes as possible from the file
@@ -214,11 +252,11 @@ private:
                 auto byteCount = inputStream.gcount();
                 fileInputQueue.push(bytes, bytes + byteCount);
                 if (!inputStream.good()) {
-                    fileEnded.store(true, std::memory_order_release);
+                    fileEnded = true;
                     break;
                 }
             }
-            if (!stoppingFlag.load(std::memory_order_acquire) && !fileEnded.load(std::memory_order_relaxed)) {
+            if (!stoppingFlag.load(std::memory_order_acquire) && !fileEnded) {
                 // if we get here, it means the file hasn't ended but the buffer is full. so we sleep until notified.
                 std::unique_lock<std::mutex> lck(sigMutex);
                 sigCV.wait(lck, [this]() {
@@ -226,5 +264,6 @@ private:
                 });
             }
         }
+        fileInputQueue.end();
     }
 };
