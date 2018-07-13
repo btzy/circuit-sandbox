@@ -82,7 +82,7 @@ private:
 
         if (filePath != nullptr) {
             // open the new file
-            inputStream.open(filePath);
+            inputStream.open(filePath, std::ios_base::in | std::ios_base::binary);
         }
 
         bool success = inputStream.is_open();
@@ -221,7 +221,7 @@ public:
 
         if (!inputFilePath.empty()) {
             // open the new file
-            inputStream.open(inputFilePath);
+            inputStream.open(inputFilePath, std::ios_base::in | std::ios_base::binary);
         }
 
         bool success = inputStream.is_open();
@@ -248,7 +248,7 @@ private:
             while (!stoppingFlag.load(std::memory_order_acquire) && (space = fileInputQueue.space()) > 0) {
                 // try to read as many bytes as possible from the file
                 std::byte bytes[BufSize];
-                inputStream.read(reinterpret_cast<char*>(bytes), BufSize);
+                inputStream.read(reinterpret_cast<char*>(bytes), space);
                 auto byteCount = inputStream.gcount();
                 fileInputQueue.push(bytes, bytes + byteCount);
                 if (!inputStream.good()) {

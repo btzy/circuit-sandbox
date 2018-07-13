@@ -109,7 +109,7 @@ namespace ext {
             size_t tmp_flushIndex = flushIndex.load(std::memory_order_acquire);
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_acquire);
             size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
-            if (tmp_popIndex == tmp_flushIndex || available(tmp_pushIndex, tmp_popIndex) < available(tmp_flushIndex, tmp_popIndex)) return false;
+            if (tmp_popIndex == tmp_flushIndex || tmp_flushIndex == std::numeric_limits<size_t>::max() || available(tmp_pushIndex, tmp_popIndex) < available(tmp_flushIndex, tmp_popIndex)) return false;
             popIndex.store(tmp_flushIndex, std::memory_order_release);
             return true;
         }
@@ -124,7 +124,14 @@ namespace ext {
             }
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
             buffer[tmp_pushIndex] = T(std::forward<Args>(args)...);
-            pushIndex.store((tmp_pushIndex + 1) % Size, std::memory_order_release);
+            tmp_pushIndex = (tmp_pushIndex + 1) % Size;
+            if (endIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+            }
+            if (flushIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+            }
+            pushIndex.store(tmp_pushIndex, std::memory_order_release);
             return true;
         }
 
@@ -145,6 +152,12 @@ namespace ext {
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
             for (; begin != end; ++begin) {
                 buffer[tmp_pushIndex] = std::move(*begin);
+                if (endIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                    endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+                }
+                if (flushIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                    flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+                }
                 ++tmp_pushIndex;
                 if (tmp_pushIndex == Size) tmp_pushIndex -= Size;
             }
