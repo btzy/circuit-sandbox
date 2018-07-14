@@ -27,7 +27,7 @@ private:
     std::atomic<bool> stoppingFlag;
     std::mutex sigMutex;
     std::condition_variable sigCV;
-    std::ifstream inputStream;
+    std::filebuf inputBuf;
     std::string inputFilePath;
 
     // used by simulator thread only
@@ -57,7 +57,7 @@ private:
     /**
      * Joins the file reading thread if it is joinable.
      */
-    void joinFileThread() noexcept {
+    void unloadFile() noexcept {
         if (fileThread.joinable()) {
             {
                 std::scoped_lock<std::mutex> lock(sigMutex);
@@ -68,45 +68,25 @@ private:
         }
     }
 
-    bool loadFile(const char* filePath) {
-        // stop the current thread if any
-        joinFileThread();
-        fileThread = std::thread();
-
-        // close and clear the old file if any
-        inputStream.close();
-        inputStream.clear();
-
-        // flush any bytes that are still in the buffer
-        fileInputQueue.flush();
-
-        if (filePath != nullptr) {
-            // open the new file
-            inputStream.open(filePath, std::ios_base::in | std::ios_base::binary);
-        }
-
-        bool success = inputStream.is_open();
-
-        // launch a new file thread
-        if (success) {
+    // must call unloadFile() before calling this!
+    // returns true is load succeeded, false otherwise.
+    bool loadFile() {
+        if (!inputFilePath.empty() && inputBuf.open(inputFilePath, std::ios_base::in | std::ios_base::binary) != nullptr) {
+            // launch a new file thread
             stoppingFlag.store(false, std::memory_order_relaxed);
             fileThread = std::thread([this]() {
                 run();
             });
+            return true;
         }
-        else {
-            inputStream.close();
-            inputStream.clear();
-        }
-
-        return success;
+        return false;
     }
 
 public:
     using element_t = FileInputCommunicatorElement;
 
     ~FileInputCommunicator() {
-        joinFileThread();
+        unloadFile();
     }
 
     /**
@@ -187,7 +167,12 @@ public:
      */
     void setFile(const char* filePath) {
         inputFilePath = filePath;
-        loadFile(filePath);
+        unloadFile();
+
+        // flush any bytes that are still in the buffer
+        fileInputQueue.flush();
+
+        loadFile();
     }
 
     /**
@@ -196,7 +181,10 @@ public:
      */
     void clearFile() {
         inputFilePath.clear();
-        loadFile(nullptr);
+        unloadFile();
+
+        // flush any bytes that are still in the buffer
+        fileInputQueue.flush();
     }
 
     /**
@@ -204,12 +192,7 @@ public:
      */
     void reset() noexcept override {
         // stop the current thread if any
-        joinFileThread();
-        fileThread = std::thread();
-
-        // close and clear the old file if any
-        inputStream.close();
-        inputStream.clear();
+        unloadFile();
 
         while(!transmittedCommands.empty()) transmittedCommands.pop();
         suppressEnded = true;
@@ -219,20 +202,8 @@ public:
         currentReceiveChunk = 0;
         fileInputQueue.clear();
 
-        if (!inputFilePath.empty()) {
-            // open the new file
-            inputStream.open(inputFilePath, std::ios_base::in | std::ios_base::binary);
-        }
-
-        bool success = inputStream.is_open();
-
-        // launch a new file thread
-        if (success) {
-            stoppingFlag.store(false, std::memory_order_relaxed);
-            fileThread = std::thread([this]() {
-                run();
-            });
-        }
+        // open the new file
+        loadFile();
     }
 
 private:
@@ -248,10 +219,9 @@ private:
             while (!stoppingFlag.load(std::memory_order_acquire) && (space = fileInputQueue.space()) > 0) {
                 // try to read as many bytes as possible from the file
                 std::byte bytes[BufSize];
-                inputStream.read(reinterpret_cast<char*>(bytes), space);
-                auto byteCount = inputStream.gcount();
+                auto byteCount = inputBuf.sgetn(reinterpret_cast<char*>(bytes), space);
                 fileInputQueue.push(bytes, bytes + byteCount);
-                if (!inputStream.good()) {
+                if (byteCount < space) {
                     fileEnded = true;
                     break;
                 }
@@ -265,5 +235,8 @@ private:
             }
         }
         fileInputQueue.end();
+
+        // close the file ASAP, even though unloadFile() might not have been called yet.
+        inputBuf.close();
     }
 };
