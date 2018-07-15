@@ -59,6 +59,9 @@ class FileInputCommunicator;
  */
 constexpr static size_t NUM_INPUT_HANDLES = 6;
 
+// number of clipboards (excluding the default clipboard)
+constexpr static size_t NUM_CLIPBOARDS = 10;
+
 /**
  * Resolve the mouse button event to the input handle index (used with 'selectedToolIndices');
  * Uses fields 'which' and 'button'

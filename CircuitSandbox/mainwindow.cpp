@@ -18,6 +18,7 @@
 #include "historyaction.hpp"
 #include "eyedropperaction.hpp"
 #include "changesimulationspeedaction.hpp"
+#include "clipboardaction.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -412,7 +413,7 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
             return;
         }
     }
-    
+
     if (event.type == SDL_KEYDOWN) {
         SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
         if (modifiers & KMOD_CTRL) {
@@ -431,7 +432,12 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                 FileSaveAction::start(*this, modifiers, currentAction.getStarter());
                 return;
             case SDL_SCANCODE_V: // Paste
-                SelectionAction::startByPasting(*this, playArea, currentAction.getStarter());
+                if (modifiers & KMOD_SHIFT) {
+                    ClipboardAction::startPasteDialog(*this, renderer, currentAction.getStarter());
+                }
+                else {
+                    SelectionAction::startByPasting(*this, playArea, currentAction.getStarter());
+                }
                 return;
             case SDL_SCANCODE_Y: // Redo
                 HistoryAction::startByRedoing(*this, currentAction.getStarter());

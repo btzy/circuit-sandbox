@@ -9,8 +9,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <sstream> // for to_string_with_precision
-#include <iomanip> // for to_string_with_precision
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include "unicode.hpp"
@@ -91,6 +89,11 @@ public:
         layoutComponents(renderer);
         text = mainWindow.displayedSimulationFPS;
         SDL_StartTextInput();
+        ext::point mousePosition;
+        SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
+        if (ext::point_in_rect(mousePosition, renderArea)) {
+            mouseLocation = mousePosition;
+        }
     }
 
     ~ChangeSimulationSpeedAction() override {
@@ -122,7 +125,7 @@ public:
         SDL_RenderCopy(renderer, dialogTexture.get(), nullptr, &dialogArea);
         renderButton(okayButton, renderer);
         renderButton(cancelButton, renderer);
-        
+
         // draw the text
         {
             SDL_Surface* surface = TTF_RenderText_Shaded(inputFont, text.c_str(), inputColor, backgroundColor);
@@ -179,7 +182,7 @@ public:
         SDL_Texture* texture1 = SDL_CreateTextureFromSurface(renderer, surface1);
         SDL_Texture* texture2 = SDL_CreateTextureFromSurface(renderer, surface2);
         ext::point textureSize = TEXTBOX_SIZE + PADDING * 2;
-        textureSize.y += surface1->h + surface2->h + PADDING.y + BUTTON_HEIGHT;
+        textureSize.y += surface1->h + surface2->h + PADDING.y * 2 + BUTTON_HEIGHT;
         dialogArea = { renderArea.x + renderArea.w / 2 - textureSize.x / 2, renderArea.y + renderArea.h / 2 - textureSize.y / 2, textureSize.x, textureSize.y };
         auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, textureSize.x, textureSize.y);
         SDL_SetRenderTarget(renderer, texture);
@@ -199,7 +202,7 @@ public:
             SDL_RenderCopy(renderer, texture2, nullptr, &target);
         }
         { // text box outline
-            const SDL_Rect target{ PADDING.x, PADDING.y + surface1->h + surface2->h, TEXTBOX_SIZE.x, TEXTBOX_SIZE.y };
+            const SDL_Rect target{ PADDING.x, PADDING.y * 2 + surface1->h + surface2->h, TEXTBOX_SIZE.x, TEXTBOX_SIZE.y };
             SDL_RenderDrawRect(renderer, &target);
         }
         SDL_SetRenderTarget(renderer, nullptr);
@@ -207,7 +210,7 @@ public:
         SDL_DestroyTexture(texture2);
 
         // save the offsets so that the render() function can do its job
-        ext::point textBoxTopLeftOffset = { renderArea.x + renderArea.w / 2 - textureSize.x / 2 + PADDING.x, renderArea.y + renderArea.h / 2 - textureSize.y / 2 + PADDING.y + surface1->h + surface2->h };
+        ext::point textBoxTopLeftOffset = { renderArea.x + renderArea.w / 2 - textureSize.x / 2 + PADDING.x, renderArea.y + renderArea.h / 2 - textureSize.y / 2 + PADDING.y * 2 + surface1->h + surface2->h };
         topLeftOffset = textBoxTopLeftOffset + TEXT_PADDING;
         textSize = TEXTBOX_SIZE - TEXT_PADDING * 2;
 
@@ -242,10 +245,12 @@ public:
         if (mouseLocation) {
             if (&okayButton == activeButton && ext::point_in_rect(*mouseLocation, okayButton.renderArea)) {
                 // user clicked okay
+                activeButton = nullptr;
                 return commit();
             }
             else if (&cancelButton == activeButton && ext::point_in_rect(*mouseLocation, cancelButton.renderArea)) {
                 // user clicked cancel
+                activeButton = nullptr;
                 return ActionEventResult::COMPLETED;
             }
         }

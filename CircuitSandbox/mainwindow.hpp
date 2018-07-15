@@ -18,6 +18,7 @@
 #include "drawable.hpp"
 #include "font.hpp"
 #include "statemanager.hpp"
+#include "clipboardmanager.hpp"
 
 
 class MainWindow {
@@ -78,12 +79,14 @@ private:
 public:
     // action state
     ActionManager currentAction;
+    ClipboardManager clipboard;
 
     friend class PlayAreaAction;
     friend class KeyboardEventHook;
     friend class MainWindowEventHook;
     friend void PlayArea::updateHoveredElementDescription(const ext::point&);
     friend void PlayArea::processMouseLeave();
+    friend class ClipboardAction; // TODO: proper encapsulation
 
     /**
      * Process the event that has occurred (called by start())

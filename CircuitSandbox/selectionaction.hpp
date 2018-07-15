@@ -9,6 +9,8 @@
 #include "eventhook.hpp"
 #include "sdl_fast_maprgb.hpp"
 #include "expandable_matrix.hpp"
+#include "clipboardaction.hpp"
+#include "clipboardmanager.hpp"
 
 
 /**
@@ -41,7 +43,7 @@ private:
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
 
-    static CanvasState clipboard; // the single clipboard; will be changed to support multi-clipboard
+    friend class ClipboardAction;
 
     /**
      * Prepare base, selection, baseTrans, selectionTrans from selectionOrigin and selectionEnd. Returns true if the selection is not empty.
@@ -198,10 +200,10 @@ public:
         // action.selectionEnd = action.selection.size() - ext::point{ 1, 1 };
     }
 
-    static inline void startByPasting(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter) {
-        if (clipboard.empty()) return;
-
+    static inline void startByPasting(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter, std::optional<int32_t> index = std::nullopt) {
         auto& action = starter.start<SelectionAction>(mainWindow, State::MOVED);
+        action.selection = index ? mainWindow.clipboard.read(*index) : mainWindow.clipboard.read();
+        if (action.selection.empty()) return;
 
         ext::point windowOffset;
         SDL_GetMouseState(&windowOffset.x, &windowOffset.y);
@@ -212,7 +214,6 @@ public:
         }
         ext::point canvasOffset = playArea.canvasFromWindowOffset(windowOffset);
 
-        action.selection = clipboard; // have to make a copy, so that we don't mess up the clipboard
         action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
         action.baseTrans = { 0, 0 };
     }
@@ -361,13 +362,19 @@ public:
                 return ActionEventResult::COMPLETED; // tell playarea to end this action
             case SDL_SCANCODE_C:
                 if (modifiers & KMOD_CTRL) {
-                    clipboard = selection;
-                    return ActionEventResult::PROCESSED;
+                    if (modifiers & KMOD_SHIFT) {
+                        ClipboardAction::startCopyDialog(mainWindow, mainWindow.renderer, mainWindow.currentAction.getStarter(), selection);
+                        return ActionEventResult::PROCESSED;
+                    }
+                    else {
+                        mainWindow.clipboard.write(selection);
+                        return ActionEventResult::PROCESSED;
+                    }
                 }
             case SDL_SCANCODE_X:
                 if (modifiers & KMOD_CTRL) {
                     state = State::MOVED;
-                    clipboard = std::move(selection);
+                    mainWindow.clipboard.write(std::move(selection));
                     selection = CanvasState(); // clear the selection
                     return ActionEventResult::COMPLETED; // tell playarea to end this action
                 }
