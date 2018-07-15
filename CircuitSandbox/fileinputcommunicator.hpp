@@ -176,6 +176,15 @@ public:
     }
 
     /**
+     * Set the file path
+     * Must be called from the UI thread only!
+     * filePath must be non-null
+     */
+    const std::string& getFile() const {
+        return inputFilePath;
+    }
+
+    /**
      * Clear the file path
      * Must be called from the UI thread only!
      */
@@ -220,8 +229,9 @@ private:
                 // try to read as many bytes as possible from the file
                 std::byte bytes[BufSize];
                 auto byteCount = inputBuf.sgetn(reinterpret_cast<char*>(bytes), space);
+                assert(byteCount >= 0);
                 fileInputQueue.push(bytes, bytes + byteCount);
-                if (byteCount < space) {
+                if (byteCount < static_cast<std::streamsize>(space)) {
                     fileEnded = true;
                     break;
                 }

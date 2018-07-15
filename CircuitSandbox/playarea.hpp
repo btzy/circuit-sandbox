@@ -86,6 +86,11 @@ public:
      * @pre renderer must not be null.
      */
     void layoutComponents(SDL_Renderer*) override;
+
+    /**
+     * Update the hovered element to the element at the current point, and also update the mouseoverCanvasPoint field if necessary.
+     */
+    void updateHoveredElementDescription(const ext::point& tmp_mouseoverCanvasPoint);
     
     /**
      * Check if default view is being used

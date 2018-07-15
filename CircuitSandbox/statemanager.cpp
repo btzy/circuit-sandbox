@@ -6,6 +6,8 @@
 #include "statemanager.hpp"
 #include "visitor.hpp"
 #include "sdl_fast_maprgb.hpp"
+#include "buttonbar.hpp"
+#include "fileutils.hpp"
 
 StateManager::StateManager(Simulator::period_t period) {
     // compile the empty stateManager, so that simulator won't be empty
@@ -152,4 +154,61 @@ void StateManager::resetSimulator() {
 
 void StateManager::updateDefaultState() {
     simulator.takeSnapshot(defaultState);
+}
+
+void StateManager::setButtonBarDescription(ButtonBar& buttonBar, const ext::point& pt) {
+    if (!defaultState.contains(pt)) {
+        buttonBar.clearDescription();
+        return;
+    }
+    std::visit([&](const auto& element) {
+        using ElementType = std::decay_t<decltype(element)>;
+        if constexpr(std::is_base_of_v<LogicGate, ElementType> || std::is_base_of_v<ScreenCommunicatorElement, ElementType>) {
+            if (element.getLogicLevel()) {
+                buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [HIGH]", SDL_Color{ 0x66, 0xFF, 0x66, 0xFF });
+            }
+            else {
+                buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [LOW]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
+            }
+        }
+        else if constexpr(std::is_base_of_v<Relay, ElementType>) {
+            // TODO: make canvasstate and savefile store whether relays are conductive or not
+            // currently we're just using the logic level
+            if (element.getLogicLevel()) {
+                buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [Conductive]", SDL_Color{ 0xFF, 0xFF, 0x66, 0xFF });
+            }
+            else {
+                buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [Insulator]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
+            }
+        }
+        else if constexpr(std::is_base_of_v<FileInputCommunicatorElement, ElementType>) {
+            std::string filePathDescription;
+            const char* logicDescription;
+            SDL_Color filePathColor;
+            SDL_Color logicColor;
+            if (element.communicator && !element.communicator->getFile().empty()) {
+                filePathDescription = " [" + std::string(getFileName(element.communicator->getFile().c_str())) + "]";
+                filePathColor = SDL_Color{ 0xFF, 0xFF, 0xFF, 0xFF };
+            }
+            else {
+                filePathDescription = " [No file]";
+                filePathColor = SDL_Color{ 0x66, 0x66, 0x66, 0xFF };
+            }
+            if (element.getLogicLevel()) {
+                logicDescription = " [HIGH]";
+                logicColor = SDL_Color{ 0x66, 0xFF, 0x66, 0xFF };
+            }
+            else {
+                logicDescription = " [LOW]";
+                logicColor = SDL_Color{ 0x66, 0x66, 0x66, 0xFF };
+            }
+            buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, logicDescription, logicColor, filePathDescription.c_str(), filePathColor);
+        }
+        else if constexpr(std::is_base_of_v<Element, ElementType>) {
+            buttonBar.setDescription(ElementType::displayName, ElementType::displayColor);
+        }
+        else {
+            buttonBar.clearDescription();
+        }
+    }, defaultState[pt]);
 }

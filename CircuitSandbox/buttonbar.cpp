@@ -40,11 +40,9 @@ void ButtonBar::render(SDL_Renderer* renderer) const {
         item->render(renderer, *this, { x, renderArea.y }, clickedItem == item.get() ? RenderStyle::CLICK : hoveredItem == item.get() ? RenderStyle::HOVER : RenderStyle::DEFAULT);
         x += item->width();
     }
-    if (hoveredItem) {
-        if (descriptionTexture) {
-            SDL_Rect target{ descriptionOffset + mainWindow.logicalToPhysicalSize(20), renderArea.y + (mainWindow.BUTTONBAR_HEIGHT - descriptionSize.y) / 2, descriptionSize.x, descriptionSize.y };
-            SDL_RenderCopy(renderer, descriptionTexture.get(), nullptr, &target);
-        }
+    if (descriptionTexture) {
+        SDL_Rect target{ descriptionOffset + mainWindow.logicalToPhysicalSize(20), renderArea.y + (mainWindow.BUTTONBAR_HEIGHT - descriptionSize.y) / 2, descriptionSize.x, descriptionSize.y };
+        SDL_RenderCopy(renderer, descriptionTexture.get(), nullptr, &target);
     }
 }
 

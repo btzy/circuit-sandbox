@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <vector>
 #include <memory>
 
 #include <SDL.h>
@@ -67,6 +66,36 @@ private:
     SDL_Renderer* getRenderer();
     Font& getInterfaceFont();
 
+    template <size_t Index, typename Tuple>
+    inline void _setDescriptionSize(ext::point& size, Tuple& arr) {
+        if (std::get<Index>(arr) != nullptr) {
+            size.x += std::get<Index>(arr)->w;
+            size.y = std::max(size.y, std::get<Index>(arr)->h);
+        }
+        if constexpr (Index + 1 < std::tuple_size_v<Tuple>) {
+            _setDescriptionSize<Index + 1>(size, arr);
+        }
+    }
+    template <size_t Index, typename Tuple, typename... Args>
+    inline void _setDescriptionSurface(Tuple& arr, const char* description, SDL_Color color = ButtonBar::foregroundColor, Args&&... args) {
+        std::get<Index>(arr) = TTF_RenderText_Shaded(getInterfaceFont(), description, color, ButtonBar::backgroundColor);
+        if constexpr(sizeof...(Args) > 0) {
+            _setDescriptionSurface<Index + 1>(arr, std::forward<Args>(args)...);
+        }
+    }
+    template <size_t Index, typename Tuple>
+    inline void _setDescriptionCopyAndFree(SDL_Surface* surface, Tuple& arr, int32_t offsetWidth) {
+        if (std::get<Index>(arr) != nullptr) {
+            SDL_Rect target{ offsetWidth, 0, std::get<Index>(arr)->w, std::get<Index>(arr)->h };
+            SDL_BlitSurface(std::get<Index>(arr), nullptr, surface, &target);
+            offsetWidth += std::get<Index>(arr)->w;
+            SDL_FreeSurface(std::get<Index>(arr));
+        }
+        if constexpr (Index + 1 < std::tuple_size_v<Tuple>) {
+            _setDescriptionCopyAndFree<Index + 1>(surface, arr, offsetWidth);
+        }
+    }
+
 public:
     ButtonBar(MainWindow&, PlayArea&);
 
@@ -86,16 +115,33 @@ public:
     void render(SDL_Renderer* renderer) const;
 
     /**
-     * Description text.
+     * Set or clear description text.
+     * setDescription() has the ability to set text in multiple colours.
      */
-    void setDescription(const char* description) {
+    template <typename... Args>
+    void setDescription(const char* description, SDL_Color color = ButtonBar::foregroundColor, Args&&... args) {
         assert(description);
-        SDL_Surface* surface = TTF_RenderText_Shaded(getInterfaceFont(), description, ButtonBar::foregroundColor, ButtonBar::backgroundColor);
-        if (surface) { // if there is text to show
-            descriptionTexture.reset(nullptr);
-            descriptionTexture.reset(SDL_CreateTextureFromSurface(getRenderer(), surface));
-            descriptionSize = { surface->w, surface->h };
-            SDL_FreeSurface(surface);
+        if constexpr (sizeof...(args) > 0) {
+            std::array<SDL_Surface*, (sizeof...(args) + 3) / 2> surfaces;
+            _setDescriptionSurface<0>(surfaces, description, color, std::forward<Args>(args)...);
+            descriptionSize = ext::point::zero();
+            _setDescriptionSize<0>(descriptionSize, surfaces);
+            if (descriptionSize.x != 0) {
+                SDL_Surface* surface = SDL_CreateRGBSurface(0, descriptionSize.x, descriptionSize.y, 32, 0, 0, 0, 0);
+                _setDescriptionCopyAndFree<0>(surface, surfaces, 0);
+                descriptionTexture.reset(nullptr);
+                descriptionTexture.reset(SDL_CreateTextureFromSurface(getRenderer(), surface));
+                SDL_FreeSurface(surface);
+            }
+        }
+        else {
+            SDL_Surface* surface = TTF_RenderText_Shaded(getInterfaceFont(), description, color, ButtonBar::backgroundColor);
+            if (surface) { // if there is text to show
+                descriptionTexture.reset(nullptr);
+                descriptionTexture.reset(SDL_CreateTextureFromSurface(getRenderer(), surface));
+                descriptionSize = { surface->w, surface->h };
+                SDL_FreeSurface(surface);
+            }
         }
     }
     void clearDescription() {

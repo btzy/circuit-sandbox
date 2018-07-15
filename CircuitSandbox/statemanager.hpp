@@ -124,4 +124,9 @@ public:
      * Update defaultState with a new snapshot from the simulator.
      */
     void updateDefaultState();
+
+    /**
+     * Set button bar description for a given canvas point.
+     */
+    void setButtonBarDescription(ButtonBar& buttonBar, const ext::point& point);
 };

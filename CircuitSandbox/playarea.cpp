@@ -104,6 +104,10 @@ void PlayArea::layoutComponents(SDL_Renderer* renderer) {
     prepareTexture(renderer);
 }
 
+void PlayArea::updateHoveredElementDescription(const ext::point& tmp_mouseoverCanvasPoint) {
+    mainWindow.stateManager.setButtonBarDescription(mainWindow.buttonBar, tmp_mouseoverCanvasPoint);
+}
+
 
 void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
 
@@ -112,11 +116,16 @@ void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
     // store the new mouseover point
     mouseoverPoint = physicalOffset;
 
+    // description of element
+    updateHoveredElementDescription(canvasFromWindowOffset(physicalOffset));
+
     currentAction.processPlayAreaMouseHover(event);
 }
 
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
+    mainWindow.buttonBar.clearDescription();
+
     currentAction.processPlayAreaMouseLeave();
 }
 
