@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <SDL.h>
-#include "sdl_deleters.hpp"
+#include "sdl_automatic.hpp"
 #include "point.hpp"
 
 /**
@@ -23,9 +23,9 @@ enum class RenderStyle : unsigned char {
 
 class Renderable {
 protected:
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureDefault;
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureHover;
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureClick;
+    UniqueTexture textureDefault;
+    UniqueTexture textureHover;
+    UniqueTexture textureClick;
 public:
     SDL_Rect renderArea;
     void render(SDL_Renderer* renderer, RenderStyle style) const {

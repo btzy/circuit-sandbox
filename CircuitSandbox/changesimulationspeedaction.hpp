@@ -19,7 +19,7 @@
 #include "eventhook.hpp"
 #include "simulator.hpp"
 #include "font.hpp"
-#include "sdl_deleters.hpp"
+#include "sdl_automatic.hpp"
 #include "renderable.hpp"
 
 class ChangeSimulationSpeedAction final : public StatefulAction, public MainWindowEventHook {
@@ -41,7 +41,7 @@ private:
         ChangeSimulationSpeedAction& owner;
     public:
         DialogButton(ChangeSimulationSpeedAction& owner) :owner(owner) {}
-        inline void drawButton(SDL_Renderer* renderer, std::unique_ptr<SDL_Texture, TextureDeleter>& textureStore, const SDL_Color& textColor, const SDL_Color& backColor) {
+        inline void drawButton(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& textColor, const SDL_Color& backColor) {
             textureStore.reset(nullptr);
             SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
             SDL_Surface* surface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Okay ? "OK" : "Cancel", textColor, backColor);
@@ -78,7 +78,7 @@ private:
     std::string text;
     bool const simulatorRunning;
     Font inputFont;
-    std::unique_ptr<SDL_Texture, TextureDeleter> dialogTexture;
+    UniqueTexture dialogTexture;
     DialogButton<true> okayButton; // the 'OK' dialog button
     DialogButton<false> cancelButton; // the 'Cancel' dialog button
     ext::point topLeftOffset, textSize; // the top-left and bottom-right offsets for rendering the text, set by layoutComponents()

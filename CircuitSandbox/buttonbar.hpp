@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <SDL.h>
+#include "sdl_automatic.hpp"
 
 #include "declarations.hpp"
 #include "drawable.hpp"
@@ -28,6 +29,11 @@ private:
 
     // icon font
     Font iconFont;
+
+    // description texture
+    UniqueTexture descriptionTexture;
+    ext::point descriptionSize;
+    int32_t descriptionOffset; // in physical pixels, from left of screen
 
     constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
@@ -58,6 +64,9 @@ private:
     friend class RedoButton;
     friend class PlayPauseButton;
 
+    SDL_Renderer* getRenderer();
+    Font& getInterfaceFont();
+
 public:
     ButtonBar(MainWindow&, PlayArea&);
 
@@ -75,6 +84,23 @@ public:
         std::as_const(*this).render(renderer);
     }
     void render(SDL_Renderer* renderer) const;
+
+    /**
+     * Description text.
+     */
+    void setDescription(const char* description) {
+        assert(description);
+        SDL_Surface* surface = TTF_RenderText_Shaded(getInterfaceFont(), description, ButtonBar::foregroundColor, ButtonBar::backgroundColor);
+        if (surface) { // if there is text to show
+            descriptionTexture.reset(nullptr);
+            descriptionTexture.reset(SDL_CreateTextureFromSurface(getRenderer(), surface));
+            descriptionSize = { surface->w, surface->h };
+            SDL_FreeSurface(surface);
+        }
+    }
+    void clearDescription() {
+        descriptionTexture = nullptr;
+    }
 
     /**
      * Processing of events.

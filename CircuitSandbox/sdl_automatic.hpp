@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * Automatic memory management for SDL pointers.
+ */
+
+#include <memory>
 #include <SDL.h>
 
 struct TextureDeleter {
@@ -7,3 +12,5 @@ struct TextureDeleter {
         SDL_DestroyTexture(ptr);
     }
 };
+
+using UniqueTexture = std::unique_ptr<SDL_Texture, TextureDeleter>;

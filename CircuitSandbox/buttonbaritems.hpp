@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <SDL.h>
 #include "point.hpp"
-#include "sdl_deleters.hpp"
+#include "sdl_automatic.hpp"
 #include "renderable.hpp"
 #include "iconcodepoints.hpp"
 
@@ -22,9 +22,9 @@ public:
 template <uint16_t CodePoint>
 class IconButton : public ButtonBarItem {
 private:
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureDefault;
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureHover;
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureClick;
+    UniqueTexture textureDefault;
+    UniqueTexture textureHover;
+    UniqueTexture textureClick;
     int32_t _length;
 public:
     void render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const override;
@@ -56,9 +56,9 @@ class RedoButton final : public IconButton<IconCodePoints::REDO> {
 
 class PlayPauseButton final : public ButtonBarItem {
 private:
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureDefault[2];
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureHover[2];
-    std::unique_ptr<SDL_Texture, TextureDeleter> textureClick[2];
+    UniqueTexture textureDefault[2];
+    UniqueTexture textureHover[2];
+    UniqueTexture textureClick[2];
     int32_t _length;
 public:
     void render(SDL_Renderer* renderer, const ButtonBar& buttonBar, const ext::point& offset, RenderStyle style) const override;

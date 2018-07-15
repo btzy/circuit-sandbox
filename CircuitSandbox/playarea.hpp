@@ -11,7 +11,7 @@
 #include "statemanager.hpp"
 #include "point.hpp"
 #include "playareaactionmanager.hpp"
-#include "sdl_deleters.hpp"
+#include "sdl_automatic.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -39,7 +39,7 @@ private:
     // the texture used to render the canvas pixels on.
     // This is in canvas coordinates - the area that is visible on the play area.  Updated during layoutComponents(), or when the scale changes.
     // Note: depending on the translation, there might be one row/column of pixels at the right or bottom that is totally hidden from view.
-    std::unique_ptr<SDL_Texture, TextureDeleter> pixelTexture;
+    UniqueTexture pixelTexture;
     uint32_t pixelFormat;
     ext::point pixelTextureSize;
 

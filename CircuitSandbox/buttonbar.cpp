@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <utility>
+#include <cassert>
 
 #include <SDL.h>
 
@@ -13,13 +14,23 @@
 #include "historyaction.hpp"
 #include "changesimulationspeedaction.hpp"
 
+SDL_Renderer* ButtonBar::getRenderer() {
+    return mainWindow.renderer;
+}
+
+Font& ButtonBar::getInterfaceFont() {
+    return mainWindow.interfaceFont;
+}
+
 ButtonBar::ButtonBar(MainWindow& mainWindow, PlayArea& playArea) : mainWindow(mainWindow), playArea(playArea), iconFont("ButtonIcons.ttf", MainWindow::LOGICAL_BUTTONBAR_HEIGHT) {}
 
 void ButtonBar::layoutComponents(SDL_Renderer* renderer) {
     iconFont.updateDPI(mainWindow);
     int32_t height = mainWindow.BUTTONBAR_HEIGHT;
+    descriptionOffset = 0;
     for (auto& item : items) {
         item->setHeight(renderer, *this, height);
+        descriptionOffset += item->width();
     }
 }
 
@@ -30,33 +41,35 @@ void ButtonBar::render(SDL_Renderer* renderer) const {
         x += item->width();
     }
     if (hoveredItem) {
-        const char* description = hoveredItem->description(*this);
-        if (description) {
-            SDL_Surface* surface = TTF_RenderText_Shaded(mainWindow.interfaceFont, description, ButtonBar::foregroundColor, ButtonBar::backgroundColor);
-            if (surface != nullptr) { // if there is text to show
-                SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-                SDL_Rect target{ x + mainWindow.logicalToPhysicalSize(20),renderArea.y + (mainWindow.BUTTONBAR_HEIGHT - surface->h) / 2, surface->w, surface->h };
-                SDL_RenderCopy(renderer, texture, nullptr, &target);
-                SDL_DestroyTexture(texture);
-                SDL_FreeSurface(surface);
-            }
+        if (descriptionTexture) {
+            SDL_Rect target{ descriptionOffset + mainWindow.logicalToPhysicalSize(20), renderArea.y + (mainWindow.BUTTONBAR_HEIGHT - descriptionSize.y) / 2, descriptionSize.x, descriptionSize.y };
+            SDL_RenderCopy(renderer, descriptionTexture.get(), nullptr, &target);
         }
     }
 }
 
 void ButtonBar::processMouseHover(const SDL_MouseMotionEvent& event) {
     auto x = renderArea.x;
+    decltype(hoveredItem) newHoveredItem = nullptr;
     for (const auto& item : items) {
         x += item->width();
         if (x > event.x) {
-            hoveredItem = item.get();
-            return;
+            newHoveredItem = item.get();
+            break;
         }
     }
-    hoveredItem = nullptr;
+    if (newHoveredItem != hoveredItem) {
+        if (hoveredItem) clearDescription();
+        hoveredItem = newHoveredItem;
+        const char* description;
+        if (hoveredItem && (description = hoveredItem->description(*this)) != nullptr) setDescription(description);
+    }
 }
 void ButtonBar::processMouseLeave() {
-    hoveredItem = nullptr;
+    if (hoveredItem != nullptr) {
+        clearDescription();
+        hoveredItem = nullptr;
+    }
 }
 
 bool ButtonBar::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
