@@ -127,7 +127,8 @@ public:
     void updateDefaultState();
 
     /**
-     * Set button bar description for a given canvas point.
+     * Get the element at the given canvas point.
+     * Returns std::monostate if the point is outside the canvas bounds.
      */
-    void setButtonBarDescription(ButtonBar& buttonBar, const ext::point& point);
+    CanvasState::element_variant_t getElementAtPoint(const ext::point& pt) const;
 };

@@ -2,6 +2,7 @@
 #include <tuple>
 #include <cstdint>
 #include <stdexcept>
+#include <variant>
 
 #include <SDL.h>
 
@@ -53,22 +54,24 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
     };
     SDL_RenderCopy(renderer, pixelTexture.get(), nullptr, &dstRect);
 
-    // render a mouseover rectangle (if the mouseoverPoint is non-empty)
+    
     if (mouseoverPoint) {
-        int32_t gameStateX = ext::div_floor(mouseoverPoint->x - translation.x, scale);
-        int32_t gameStateY = ext::div_floor(mouseoverPoint->y - translation.y, scale);
+        ext::point canvasPoint = canvasFromWindowOffset(*mouseoverPoint);
 
+        // render a mouseover rectangle (if the mouseoverPoint is non-empty)
         SDL_Rect mouseoverRect{
-            gameStateX * scale + translation.x,
-            gameStateY * scale + translation.y,
+            canvasPoint.x * scale + translation.x,
+            canvasPoint.y * scale + translation.y,
             scale,
             scale
         };
-
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
         SDL_RenderFillRect(renderer, &mouseoverRect);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+        // set the element description
+        changeMouseoverElement(mainWindow.stateManager.getElementAtPoint(canvasPoint));
     }
 
     // ask current action to render itself directly if necessary
@@ -104,8 +107,21 @@ void PlayArea::layoutComponents(SDL_Renderer* renderer) {
     prepareTexture(renderer);
 }
 
-void PlayArea::updateHoveredElementDescription(const ext::point& tmp_mouseoverCanvasPoint) {
-    mainWindow.stateManager.setButtonBarDescription(mainWindow.buttonBar, tmp_mouseoverCanvasPoint);
+
+void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t& newElement) {
+    if (mouseoverElement != newElement) {
+        mouseoverElement = newElement;
+        std::visit([&](const auto& element) {
+            if constexpr (std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
+                element.setDescription([&](auto&&... args) {
+                    mainWindow.buttonBar.setDescription(std::forward<decltype(args)>(args)...);
+                });
+            }
+            else {
+                mainWindow.buttonBar.clearDescription();
+            }
+        }, mouseoverElement);
+    }
 }
 
 
@@ -115,16 +131,11 @@ void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
 
     // store the new mouseover point
     mouseoverPoint = physicalOffset;
-
-    // description of element
-    updateHoveredElementDescription(canvasFromWindowOffset(physicalOffset));
-
     currentAction.processPlayAreaMouseHover(event);
 }
 
 void PlayArea::processMouseLeave() {
     mouseoverPoint = std::nullopt;
-    mainWindow.buttonBar.clearDescription();
 
     currentAction.processPlayAreaMouseLeave();
 }

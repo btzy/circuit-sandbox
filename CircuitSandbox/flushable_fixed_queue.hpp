@@ -152,14 +152,14 @@ namespace ext {
             size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
             for (; begin != end; ++begin) {
                 buffer[tmp_pushIndex] = std::move(*begin);
+                ++tmp_pushIndex;
+                if (tmp_pushIndex == Size) tmp_pushIndex -= Size;
                 if (endIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
                     endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
                 }
                 if (flushIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
                     flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
                 }
-                ++tmp_pushIndex;
-                if (tmp_pushIndex == Size) tmp_pushIndex -= Size;
             }
             pushIndex.store(tmp_pushIndex, std::memory_order_release);
         }

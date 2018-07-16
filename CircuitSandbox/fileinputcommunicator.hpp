@@ -180,7 +180,7 @@ public:
      * Must be called from the UI thread only!
      * filePath must be non-null
      */
-    const std::string& getFile() const {
+    const std::string& getFile() const noexcept {
         return inputFilePath;
     }
 

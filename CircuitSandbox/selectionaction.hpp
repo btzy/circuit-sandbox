@@ -413,7 +413,7 @@ public:
                                 std::visit(visitor{
                                     [](std::monostate) {},
                                     [&color](const auto& element) {
-                                        color = fast_MapRGB<FormatType::value>(computeDisplayColor<DefaultViewType::value>(element));
+                                        color = fast_MapRGB<FormatType::value>(element.template computeDisplayColor<DefaultViewType::value>());
                                     },
                                 }, canvas()[canvasPt - baseTrans]);
                             }
@@ -423,7 +423,7 @@ public:
                                 std::visit(visitor{
                                     [](std::monostate) {},
                                     [this, &color](const auto& element) {
-                                        alignas(uint32_t) SDL_Color computedColor = computeDisplayColor<DefaultViewType::value>(element);
+                                        alignas(uint32_t) SDL_Color computedColor = element.template computeDisplayColor<DefaultViewType::value>();
                                         if (state == State::SELECTING || state == State::SELECTED) {
                                             computedColor.b = 0xFF; // colour the selection blue if it can still be modified
                                         }

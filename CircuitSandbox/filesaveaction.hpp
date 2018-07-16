@@ -55,19 +55,19 @@ private:
                     using ElementType = typename std::decay_t<decltype(element)>;
                     if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
                         // TODO: store communicator transmit states in the save file?
-                        logicLevel = element.getLogicLevel<false>();
-                        defaultLogicLevel = element.getLogicLevel<true>();
+                        logicLevel = element.logicLevel;
+                        defaultLogicLevel = element.startingLogicLevel;
                     }
                     else if constexpr (std::is_base_of_v<Relay, ElementType>) {
                         // TODO: store relay states in the save file!
-                        logicLevel = element.getConductiveState<false>();
-                        defaultLogicLevel = element.getConductiveState<true>();
+                        logicLevel = element.conductiveState;
+                        defaultLogicLevel = element.startingConductiveState;
                     }
                     else if constexpr (std::is_base_of_v<RenderLogicLevelElement, ElementType>) {
                         // even though ElementType might not be a LogicLevelElement (i.e. with useful logic levels), we save the logic level for compatibility with saves in the v0.2 format.
                         // but when loaded, those non-useful logic levels will be ignored.
-                        logicLevel = element.getLogicLevel<false>();
-                        defaultLogicLevel = element.getLogicLevel<true>();
+                        logicLevel = element.logicLevel;
+                        defaultLogicLevel = element.startingLogicLevel;
                     }
                 }, element);
 

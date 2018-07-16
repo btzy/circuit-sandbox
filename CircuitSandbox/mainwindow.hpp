@@ -56,6 +56,7 @@ private:
     PlayArea playArea;
     ButtonBar buttonBar;
 
+    // Note: buttonBar has to come *after* playArea for the element mouseover description to appear in the correct frame.
     std::vector<Drawable*> drawables{ &toolbox, &playArea, &buttonBar };
     std::vector<KeyboardEventReceiver*> keyboardEventReceivers{ &toolbox, &playArea, &buttonBar };
     Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
@@ -84,8 +85,7 @@ public:
     friend class PlayAreaAction;
     friend class KeyboardEventHook;
     friend class MainWindowEventHook;
-    friend void PlayArea::updateHoveredElementDescription(const ext::point&);
-    friend void PlayArea::processMouseLeave();
+    friend void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t&);
     friend class ClipboardAction; // TODO: proper encapsulation
 
     /**

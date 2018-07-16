@@ -5,7 +5,11 @@
 #include <variant>
 #include <memory>
 #include <atomic>
+#include <string>
 #include "declarations.hpp"
+#include "fileutils.hpp"
+
+using namespace std::literals;
 
 /**
  * This header file contains the definitions for all the elements in the game.
@@ -13,7 +17,10 @@
 
 
 struct Pencil {}; // base class for normal elements and the eraser
-struct Element : public Pencil {
+struct Element : public Pencil {}; // base class for elements
+
+template <typename T>
+struct ElementBase : public Element {
 public:
     constexpr bool isSignal() const noexcept {
         return false;
@@ -23,11 +30,36 @@ public:
         return false;
     }
 
-}; // base class for elements
+    template <bool StartingState = false>
+    SDL_Color computeDisplayColor() const noexcept {
+        if (static_cast<const T&>(*this).template getLogicLevel<StartingState>()) {
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - T::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - T::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - T::displayColor.b) * 2 / 3), T::displayColor.a };
+        }
+        else {
+            return SDL_Color{ static_cast<Uint8>(T::displayColor.r * 2 / 3), static_cast<Uint8>(T::displayColor.g * 2 / 3), static_cast<Uint8>(T::displayColor.b * 2 / 3), T::displayColor.a };
+        }
+    }
 
-struct RenderLogicLevelElement {
+    bool operator==(const T& other) const noexcept {
+        return true;
+    }
+
+    bool operator!=(const T& other) const noexcept {
+        return !(*this == other);
+    }
+
+    template <typename Callback>
+    void setDescription(Callback&& callback) const {
+        std::forward<Callback>(callback)(T::displayName, T::displayColor);
+    }
+};
+
+struct RenderLogicLevelElement {};
+
+template <typename T>
+struct RenderLogicLevelElementBase : public RenderLogicLevelElement {
 protected:
-    RenderLogicLevelElement(bool logicLevel, bool startingLogicLevel) noexcept : logicLevel(logicLevel), startingLogicLevel(startingLogicLevel) {}
+    RenderLogicLevelElementBase(bool logicLevel, bool startingLogicLevel) noexcept : logicLevel(logicLevel), startingLogicLevel(startingLogicLevel) {}
 
 public:
     // the current logic level (for display/rendering purposes only!)
@@ -49,7 +81,10 @@ public:
     }
 };
 
-struct SignalReceivingElement : public Element {
+struct SignalReceivingElement {};
+
+template <typename T>
+struct SignalReceivingElementBase : public ElementBase<T> {
 public:
     constexpr bool isSignalReceiver() const noexcept {
         return true;
@@ -57,24 +92,61 @@ public:
 };
 
 // elements that use logic levels for compilation (meaning that it is not only for display purposes)
-struct LogicLevelElement : public RenderLogicLevelElement {
-    LogicLevelElement(bool logicLevel, bool startingLogicLevel) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
+struct LogicLevelElement {};
+
+template <typename T>
+struct LogicLevelElementBase :public LogicLevelElement, public RenderLogicLevelElementBase<T> {
+    LogicLevelElementBase(bool logicLevel, bool startingLogicLevel) noexcept : RenderLogicLevelElementBase<T>(logicLevel, startingLogicLevel) {}
+
+    bool operator==(const T& other) const noexcept {
+        return this->logicLevel == other.logicLevel && this->startingLogicLevel == other.startingLogicLevel;
+    }
+
+    bool operator!=(const T& other) const noexcept {
+        return !(*this == other);
+    }
 };
 
-struct LogicGate : public SignalReceivingElement, public LogicLevelElement {
+struct LogicGate {};
+
+template <typename T>
+struct LogicGateBase : public LogicGate, public SignalReceivingElementBase<T>, public LogicLevelElementBase<T> {
 protected:
-    LogicGate(bool logicLevel, bool startingLogicLevel) noexcept : LogicLevelElement(logicLevel, startingLogicLevel) {}
+    LogicGateBase(bool logicLevel, bool startingLogicLevel) noexcept : LogicLevelElementBase<T>(logicLevel, startingLogicLevel) {}
+
+public:
+    template <typename Callback>
+    void setDescription(Callback&& callback) const {
+        if (static_cast<const T&>(*this).getLogicLevel()) {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [HIGH]", SDL_Color{ 0x66, 0xFF, 0x66, 0xFF });
+        }
+        else {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [LOW]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
+        }
+    }
+
+    bool operator==(const T& other) const noexcept {
+        return static_cast<const LogicLevelElementBase<T>&>(*this) == other;
+    }
+
+    bool operator!=(const T& other) const noexcept {
+        return !(*this == other);
+    }
 };
-struct Relay : public SignalReceivingElement, public RenderLogicLevelElement {
+
+struct Relay {};
+
+template <typename T>
+struct RelayBase : public Relay, public SignalReceivingElementBase<T>, public RenderLogicLevelElementBase<T> {
 protected:
-    Relay(bool logicLevel, bool startingLogicLevel, bool conductiveState, bool startingConductiveState) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel), conductiveState(conductiveState), startingConductiveState(startingConductiveState) {}
+    RelayBase(bool logicLevel, bool startingLogicLevel, bool conductiveState, bool startingConductiveState) noexcept : RenderLogicLevelElementBase<T>(logicLevel, startingLogicLevel), conductiveState(conductiveState), startingConductiveState(startingConductiveState) {}
 public:
     bool conductiveState;
     bool startingConductiveState;
 
     void reset() noexcept {
         conductiveState = startingConductiveState;
-        RenderLogicLevelElement::reset();
+        RenderLogicLevelElementBase<T>::reset();
     }
 
     template <bool StartingState = false>
@@ -86,13 +158,44 @@ public:
             return conductiveState;
         }
     }
+
+    bool operator==(const T& other) const noexcept {
+        return conductiveState == other.conductiveState && startingConductiveState == other.startingConductiveState;
+    }
+
+    bool operator!=(const T& other) const noexcept {
+        return !(*this == other);
+    }
+
+    template <typename Callback>
+    void setDescription(Callback&& callback) const {
+        if (static_cast<const T&>(*this).getConductiveState()) {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [Conductive]", SDL_Color{ 0xFF, 0xFF, 0x66, 0xFF });
+        }
+        else {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [Insulator]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
+        }
+    }
 };
-struct CommunicatorElement : public SignalReceivingElement, public LogicLevelElement {
+
+struct CommunicatorElement{};
+
+template <typename T>
+struct CommunicatorElementBase : public CommunicatorElement, public SignalReceivingElementBase<T>, public LogicLevelElementBase<T> {
 protected:
-    CommunicatorElement(bool logicLevel, bool startingLogicLevel, bool transmitState) : LogicLevelElement(logicLevel, startingLogicLevel), transmitState(transmitState) {}
+    CommunicatorElementBase(bool logicLevel, bool startingLogicLevel, bool transmitState) : LogicLevelElementBase<T>(logicLevel, startingLogicLevel), transmitState(transmitState) {}
 public:
     bool transmitState; // filled in by Simulator::takeSnapshot()
+
+    bool operator==(const T& other) const noexcept {
+        return static_cast<const LogicLevelElementBase<T>&>(*this) == other;
+    }
+
+    bool operator!=(const T& other) const noexcept {
+        return !(*this == other);
+    }
 };
+
 
 
 // convenience functions
@@ -156,27 +259,27 @@ struct Eraser : public Pencil {
     static constexpr const char* displayName = "Eraser";
 };
 
-struct ConductiveWire : public Element, public RenderLogicLevelElement {
+struct ConductiveWire : public ElementBase<ConductiveWire>, public RenderLogicLevelElementBase<ConductiveWire> {
     static constexpr SDL_Color displayColor{0x99, 0x99, 0x99, 0xFF};
     static constexpr const char* displayName = "Conductive Wire";
 
-    ConductiveWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
+    ConductiveWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<ConductiveWire>(logicLevel, startingLogicLevel) {}
 };
 
-struct InsulatedWire : public Element, public RenderLogicLevelElement {
+struct InsulatedWire : public ElementBase<InsulatedWire>, public RenderLogicLevelElementBase<InsulatedWire> {
     // previously was: {0xCC, 0x99, 0x66, 0xFF};
     static constexpr SDL_Color displayColor{0, 0x66, 0x44, 0xFF};
     static constexpr const char* displayName = "Insulated Wire";
 
-    InsulatedWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
+    InsulatedWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<InsulatedWire>(logicLevel, startingLogicLevel) {}
 };
 
 
-struct Signal : public Element, public RenderLogicLevelElement {
+struct Signal : public ElementBase<Signal>, public RenderLogicLevelElementBase<Signal> {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Signal";
 
-    Signal(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
+    Signal(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<Signal>(logicLevel, startingLogicLevel) {}
 
     constexpr bool isSignal() const {
         return true;
@@ -184,7 +287,7 @@ struct Signal : public Element, public RenderLogicLevelElement {
 };
 
 
-struct Source : public Element {
+struct Source : public ElementBase<Source> {
     static constexpr SDL_Color displayColor{ 0, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Source";
 
@@ -199,54 +302,54 @@ struct Source : public Element {
 };
 
 
-struct AndGate : public LogicGate {
+struct AndGate : public LogicGateBase<AndGate> {
     static constexpr SDL_Color displayColor{ 0xFF, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "AND Gate";
 
-    AndGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
+    AndGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<AndGate>(logicLevel, startingLogicLevel) {}
 };
 
 
-struct OrGate : public LogicGate {
+struct OrGate : public LogicGateBase<OrGate> {
     static constexpr SDL_Color displayColor{ 0x99, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "OR Gate";
 
-    OrGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
+    OrGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<OrGate>(logicLevel, startingLogicLevel) {}
 };
 
 
-struct NandGate : public LogicGate {
+struct NandGate : public LogicGateBase<NandGate> {
     static constexpr SDL_Color displayColor{ 0x66, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NAND Gate";
 
-    NandGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
+    NandGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<NandGate>(logicLevel, startingLogicLevel) {}
 };
 
 
-struct NorGate : public LogicGate {
+struct NorGate : public LogicGateBase<NorGate> {
     static constexpr SDL_Color displayColor{ 0x0, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NOR Gate";
 
-    NorGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
+    NorGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<NorGate>(logicLevel, startingLogicLevel) {}
 };
 
 
-struct PositiveRelay : public Relay {
+struct PositiveRelay : public RelayBase<PositiveRelay> {
     static constexpr SDL_Color displayColor{ 0xFF, 0x99, 0, 0xFF };
     static constexpr const char* displayName = "Positive Relay";
 
-    PositiveRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : Relay(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
+    PositiveRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : RelayBase<PositiveRelay>(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
 
-struct NegativeRelay : public Relay {
+struct NegativeRelay : public RelayBase<NegativeRelay> {
     static constexpr SDL_Color displayColor{ 0xFF, 0x33, 0x0, 0xFF };
     static constexpr const char* displayName = "Negative Relay";
 
-    NegativeRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : Relay(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
+    NegativeRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : RelayBase<NegativeRelay>(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
-struct ScreenCommunicatorElement : public CommunicatorElement {
+struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunicatorElement> {
     static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
     static constexpr const char* displayName = "Screen I/O";
 
@@ -254,8 +357,9 @@ struct ScreenCommunicatorElement : public CommunicatorElement {
     // after action is ended, this should point to a valid communicator instance (filled in by Simulator::compile())
     std::shared_ptr<ScreenCommunicator> communicator;
 
-    ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElement(logicLevel, startingLogicLevel, transmitState) {}
+    ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<ScreenCommunicatorElement>(logicLevel, startingLogicLevel, transmitState) {}
 
+    template <bool StartingState = false>
     SDL_Color computeDisplayColor() const noexcept {
         if (transmitState) {
             return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.r) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.g) * 1 / 3), static_cast<Uint8>(0xFF - (0xFF - ScreenCommunicatorElement::displayColor.b) * 1 / 3), ScreenCommunicatorElement::displayColor.a };
@@ -266,39 +370,49 @@ struct ScreenCommunicatorElement : public CommunicatorElement {
     }
 };
 
-struct FileInputCommunicatorElement : public CommunicatorElement {
+struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCommunicatorElement> {
+private:
+    const std::string& getCommunicatorFile() const noexcept;
+
+public:
     static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
     static constexpr const char* displayName = "File Input";
 
     std::shared_ptr<FileInputCommunicator> communicator;
 
-    FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElement(logicLevel, startingLogicLevel, transmitState) {}
+    FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileInputCommunicatorElement>(logicLevel, startingLogicLevel, transmitState) {}
 
+    template <bool StartingState = false>
     SDL_Color computeDisplayColor() const noexcept {
         if (transmitState) {
-            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - FileInputCommunicatorElement::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - FileInputCommunicatorElement::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - FileInputCommunicatorElement::displayColor.b) * 2 / 3), FileInputCommunicatorElement::displayColor.a };
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - displayColor.b) * 2 / 3), displayColor.a };
         }
         else {
-            return SDL_Color{ static_cast<Uint8>(FileInputCommunicatorElement::displayColor.r * 2 / 3), static_cast<Uint8>(FileInputCommunicatorElement::displayColor.g * 2 / 3), static_cast<Uint8>(FileInputCommunicatorElement::displayColor.b * 2 / 3), FileInputCommunicatorElement::displayColor.a };
+            return SDL_Color{ static_cast<Uint8>(displayColor.r * 2 / 3), static_cast<Uint8>(displayColor.g * 2 / 3), static_cast<Uint8>(displayColor.b * 2 / 3), displayColor.a };
+        }
+    }
+
+    template <typename Callback>
+    void setDescription(Callback&& callback) const {
+        bool displayLogicLevel = this->getLogicLevel();
+        if (communicator && !getCommunicatorFile().empty()) {
+            std::string str = " ["s + getFileName(getCommunicatorFile().c_str()) + "]";
+            std::forward<Callback>(callback)(
+                displayName,
+                displayColor,
+                displayLogicLevel ? " [HIGH]" : " [LOW]",
+                displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
+                str.c_str(),
+                SDL_Color{ 0xFF, 0xFF, 0xFF, 0xFF });
+        }
+        else {
+            std::forward<Callback>(callback)(
+                displayName,
+                displayColor,
+                displayLogicLevel ? " [HIGH]" : " [LOW]",
+                displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
+                " [No file]",
+                SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
         }
     }
 };
-
-
-
-
-// display colour functions
-template <bool StartingState, typename Element>
-constexpr inline SDL_Color computeDisplayColor(const Element& element) noexcept {
-    if constexpr(std::is_base_of_v<CommunicatorElement, Element>) {
-        return element.computeDisplayColor();
-    }
-    else {
-        if (element.getLogicLevel<StartingState>()) {
-            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.b) * 2 / 3), Element::displayColor.a };
-        }
-        else {
-            return SDL_Color{ static_cast<Uint8>(Element::displayColor.r * 2 / 3), static_cast<Uint8>(Element::displayColor.g * 2 / 3), static_cast<Uint8>(Element::displayColor.b * 2 / 3), Element::displayColor.a };
-        }
-    }
-}

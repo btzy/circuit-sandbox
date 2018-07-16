@@ -34,6 +34,9 @@ private:
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<ext::point> mouseoverPoint;
 
+    // copy of element being mouseovered, for description in button bar
+    CanvasState::element_variant_t mouseoverElement;
+
     std::optional<ext::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
 
     // the texture used to render the canvas pixels on.
@@ -75,9 +78,9 @@ private:
     void render(SDL_Renderer* renderer, StateManager& stateManager);
 
     /**
-    * Prepares the texture for use.
-    * @pre renderer must not be null.
-    */
+     * Prepares the texture for use.
+     * @pre renderer must not be null.
+     */
     void prepareTexture(SDL_Renderer*);
 
 public:
@@ -88,16 +91,16 @@ public:
     void layoutComponents(SDL_Renderer*) override;
 
     /**
-     * Update the hovered element to the element at the current point, and also update the mouseoverCanvasPoint field if necessary.
-     */
-    void updateHoveredElementDescription(const ext::point& tmp_mouseoverCanvasPoint);
-    
-    /**
      * Check if default view is being used
      */
     inline bool isDefaultView() const noexcept {
         return defaultView;
     }
+
+    /**
+     * Sets mouseoverElement field and updates description in button bar if necessary.
+     */
+    void changeMouseoverElement(const CanvasState::element_variant_t& newElement);
 
     /**
      * Processing of events.

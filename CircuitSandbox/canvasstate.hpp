@@ -23,8 +23,8 @@
 #include "expandable_matrix.hpp"
 
 class CanvasState {
-private:
 
+public:
     // the possible elements that a pixel can represent
     // std::monostate is a 'default' state, which represents an empty pixel
     using element_tags_t = ext::tag_tuple<std::monostate, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate, ScreenCommunicatorElement, FileInputCommunicatorElement>;
@@ -32,6 +32,7 @@ private:
 
     using element_variant_t = element_tags_t::instantiate<std::variant>;
 
+private:
     using matrix_t = ext::heap_matrix<element_variant_t>;
 
     matrix_t dataMatrix;
