@@ -478,23 +478,28 @@ void Simulator::compile(CanvasState& gameState) {
         for (int32_t x = 0; x != gameState.width(); ++x) {
             ext::point pt{ x, y };
             std::visit([&](const auto& element) {
-                // TODO: Have to fix save format to store whether *relays* are conductive
-                // Other elements should not store any transient state
                 using ElementType = std::decay_t<decltype(element)>;
                 if constexpr (std::is_same_v<Source, ElementType>) {
                     int32_t outputComponent = staticData.pixels[pt].index[0];
                     assert(outputComponent >= 0 && outputComponent < staticData.components.size);
                     dynamicData.componentLogicLevels[outputComponent] = true;
                 }
-                else if constexpr (std::is_base_of_v<LogicGate, ElementType>) {
-                    if (element.getLogicLevel()) {
+                if constexpr (std::is_base_of_v<LogicLevelElement, ElementType>) {
+                    if (element.logicLevel) {
                         int32_t outputComponent = staticData.pixels[pt].index[0];
                         assert(outputComponent >= 0 && outputComponent < staticData.components.size);
                         dynamicData.componentLogicLevels[outputComponent] = true;
                     }
                 }
-                else if constexpr(std::is_base_of_v<Relay, ElementType>) {
-                    if (element.getLogicLevel()) {
+                if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
+                    if (element.transmitState) {
+                        int32_t outputCommunicator = element.communicator->communicatorIndex;
+                        assert(outputCommunicator >= 0 && outputCommunicator < staticData.communicators.size);
+                        dynamicData.communicatorTransmitStates[outputCommunicator] = true;
+                    }
+                }
+                if constexpr(std::is_base_of_v<Relay, ElementType>) {
+                    if (element.conductiveState) {
                         int32_t outputRelayPixel = staticData.pixels[pt].index[0];
                         assert(outputRelayPixel >= 0 && outputRelayPixel < staticData.relayPixels.size);
                         dynamicData.relayPixelIsConductive[outputRelayPixel] = true;
@@ -581,11 +586,14 @@ void Simulator::takeSnapshot(CanvasState& returnState) const {
             ext::point pt{ x, y };
             std::visit([&](auto& element) {
                 using ElementType = std::decay_t<decltype(element)>;
+                if constexpr(std::is_base_of_v<RenderLogicLevelElement, ElementType>) {
+                    element.logicLevel = staticData.pixels[pt].logicLevel(*dynamicData);
+                }
                 if constexpr(std::is_base_of_v<CommunicatorElement, ElementType>) {
                     element.transmitState = dynamicData->communicatorTransmitStates[element.communicator->communicatorIndex];
                 }
-                if constexpr(std::is_base_of_v<Element, ElementType>) {
-                    element.setLogicLevel(staticData.pixels[pt].logicLevel(*dynamicData));
+                if constexpr(std::is_base_of_v<Relay, ElementType>) {
+                    element.conductiveState = dynamicData->relayPixelIsConductive[staticData.pixels[pt].index[0]];
                 }
             }, returnState[pt]);
         }

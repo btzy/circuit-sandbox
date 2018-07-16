@@ -11,104 +11,85 @@
  * This header file contains the definitions for all the elements in the game.
  */
 
-enum struct AdjacentElementType : char {
-    EMPTY,
-    WIRE,
-    SIGNAL
-};
-
-struct AdjacentInput {
-    AdjacentElementType type;
-    bool logicLevel;
-
-    // operator so that the getLowSignalCounts and getHighSignal counts will work:
-    friend inline bool operator==(const AdjacentInput& a, const AdjacentInput& b) {
-        return a.type == b.type && a.logicLevel == b.logicLevel;
-    }
-
-    friend bool operator!=(const AdjacentInput& a, const AdjacentInput& b) {
-        return !(a == b);
-    }
-};
-
-struct AdjacentEnvironment {
-    AdjacentInput inputs[4];
-};
-
-enum struct ElementState {
-    INSULATOR,
-    INSULATED_WIRE,
-    CONDUCTIVE_WIRE,
-    SOURCE
-};
-
-
-// preprocess an AdjacentEnvironment for the counts of the low and high signals respectively; useful for some element types
-inline auto getLowSignalCounts(const AdjacentEnvironment& env) {
-    return std::count(env.inputs, env.inputs + 4, AdjacentInput{ AdjacentElementType::SIGNAL, false });
-}
-
-inline auto getHighSignalCounts(const AdjacentEnvironment& env) {
-    return  std::count(env.inputs, env.inputs + 4, AdjacentInput{ AdjacentElementType::SIGNAL, true });
-}
-
 
 struct Pencil {}; // base class for normal elements and the eraser
 struct Element : public Pencil {
-protected:
-    // the current logic level (for display/rendering purposes only!)
-    bool logicLevel; // true = HIGH, false = LOW
-    bool defaultLogicLevel;
-
-    Element(bool logicLevel, bool defaultLogicLevel) : logicLevel(logicLevel), defaultLogicLevel(defaultLogicLevel) {}
-
 public:
-
-    constexpr bool isSignal() const {
+    constexpr bool isSignal() const noexcept {
         return false;
     }
 
-    constexpr bool isSignalReceiver() const {
+    constexpr bool isSignalReceiver() const noexcept {
         return false;
     }
 
-    bool getLogicLevel() const {
-        return logicLevel;
-    }
-
-    bool getDefaultLogicLevel() const {
-        return defaultLogicLevel;
-    }
-
-    void setLogicLevel(bool level) {
-        logicLevel = level;
-    }
-
-    void resetLogicLevel() {
-        logicLevel = defaultLogicLevel;
-    }
 }; // base class for elements
 
-struct SignalReceivingElement : public Element {
+struct RenderLogicLevelElement {
 protected:
-    SignalReceivingElement(bool logicLevel, bool defaultLogicLevel) :Element(logicLevel, defaultLogicLevel) {}
+    RenderLogicLevelElement(bool logicLevel, bool startingLogicLevel) noexcept : logicLevel(logicLevel), startingLogicLevel(startingLogicLevel) {}
+
 public:
-    constexpr bool isSignalReceiver() const {
+    // the current logic level (for display/rendering purposes only!)
+    bool logicLevel; // true = HIGH, false = LOW
+    bool startingLogicLevel;
+
+    void reset() noexcept {
+        logicLevel = startingLogicLevel;
+    }
+
+    template <bool StartingState = false>
+    bool getLogicLevel() const noexcept {
+        if constexpr (StartingState) {
+            return startingLogicLevel;
+        }
+        else {
+            return logicLevel;
+        }
+    }
+};
+
+struct SignalReceivingElement : public Element {
+public:
+    constexpr bool isSignalReceiver() const noexcept {
         return true;
     }
 };
 
-struct LogicGate : public SignalReceivingElement {
-protected:
-    LogicGate(bool logicLevel, bool defaultLogicLevel) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
+// elements that use logic levels for compilation (meaning that it is not only for display purposes)
+struct LogicLevelElement : public RenderLogicLevelElement {
+    LogicLevelElement(bool logicLevel, bool startingLogicLevel) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
 };
-struct Relay : public SignalReceivingElement {
+
+struct LogicGate : public SignalReceivingElement, public LogicLevelElement {
 protected:
-    Relay(bool logicLevel, bool defaultLogicLevel) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
+    LogicGate(bool logicLevel, bool startingLogicLevel) noexcept : LogicLevelElement(logicLevel, startingLogicLevel) {}
 };
-struct CommunicatorElement : public SignalReceivingElement {
+struct Relay : public SignalReceivingElement, public RenderLogicLevelElement {
 protected:
-    CommunicatorElement(bool logicLevel, bool defaultLogicLevel, bool transmitState) :SignalReceivingElement(logicLevel, defaultLogicLevel), transmitState(transmitState) {}
+    Relay(bool logicLevel, bool startingLogicLevel, bool conductiveState, bool startingConductiveState) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel), conductiveState(conductiveState), startingConductiveState(startingConductiveState) {}
+public:
+    bool conductiveState;
+    bool startingConductiveState;
+
+    void reset() noexcept {
+        conductiveState = startingConductiveState;
+        RenderLogicLevelElement::reset();
+    }
+
+    template <bool StartingState = false>
+    bool getConductiveState() const noexcept {
+        if constexpr (StartingState) {
+            return startingConductiveState;
+        }
+        else {
+            return conductiveState;
+        }
+    }
+};
+struct CommunicatorElement : public SignalReceivingElement, public LogicLevelElement {
+protected:
+    CommunicatorElement(bool logicLevel, bool startingLogicLevel, bool transmitState) : LogicLevelElement(logicLevel, startingLogicLevel), transmitState(transmitState) {}
 public:
     bool transmitState; // filled in by Simulator::takeSnapshot()
 };
@@ -124,6 +105,7 @@ constexpr inline bool isSignal(const ElementVariant& v) {
         else return false;
     }, v);
 }
+
 template <typename ElementVariant>
 constexpr inline bool isSignalReceiver(const ElementVariant& v) {
     return std::visit([](const auto& element) {
@@ -133,11 +115,15 @@ constexpr inline bool isSignalReceiver(const ElementVariant& v) {
         else return false;
     }, v);
 }
+
+/**
+ * Reset the this element (usually this will reset the logic levels to starting state).
+ */
 template <typename ElementVariant>
 constexpr inline void resetLogicLevel(ElementVariant& v) {
     std::visit([](auto& element) {
         if constexpr(std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
-            element.resetLogicLevel();
+            element.reset();
         }
     }, v);
 }
@@ -170,42 +156,27 @@ struct Eraser : public Pencil {
     static constexpr const char* displayName = "Eraser";
 };
 
-struct ConductiveWire : public Element {
+struct ConductiveWire : public Element, public RenderLogicLevelElement {
     static constexpr SDL_Color displayColor{0x99, 0x99, 0x99, 0xFF};
     static constexpr const char* displayName = "Conductive Wire";
 
-    ConductiveWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment&) const {
-        return ElementState::CONDUCTIVE_WIRE;
-    }
+    ConductiveWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
 };
 
-struct InsulatedWire : public Element {
+struct InsulatedWire : public Element, public RenderLogicLevelElement {
     // previously was: {0xCC, 0x99, 0x66, 0xFF};
     static constexpr SDL_Color displayColor{0, 0x66, 0x44, 0xFF};
     static constexpr const char* displayName = "Insulated Wire";
 
-    InsulatedWire(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment&) const {
-        return ElementState::INSULATED_WIRE;
-    }
+    InsulatedWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
 };
 
 
-struct Signal : public Element {
+struct Signal : public Element, public RenderLogicLevelElement {
     static constexpr SDL_Color displayColor{ 0xFF, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Signal";
 
-    Signal(bool logicLevel = false, bool defaultLogicLevel = false) :Element(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment&) const {
-        return ElementState::CONDUCTIVE_WIRE;
-    }
+    Signal(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElement(logicLevel, startingLogicLevel) {}
 
     constexpr bool isSignal() const {
         return true;
@@ -213,16 +184,18 @@ struct Signal : public Element {
 };
 
 
-struct Source : public SignalReceivingElement {
+struct Source : public Element {
     static constexpr SDL_Color displayColor{ 0, 0xFF, 0, 0xFF };
     static constexpr const char* displayName = "Source";
 
-    Source(bool logicLevel = true, bool defaultLogicLevel = true) :SignalReceivingElement(logicLevel, defaultLogicLevel) {}
+    Source() noexcept {}
 
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment&) const {
-        return ElementState::SOURCE;
+    template <bool StartingState = false>
+    bool getLogicLevel() const noexcept {
+        return true;
     }
+
+    void reset() const noexcept {}
 };
 
 
@@ -230,12 +203,7 @@ struct AndGate : public LogicGate {
     static constexpr SDL_Color displayColor{ 0xFF, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "AND Gate";
 
-    AndGate(bool logicLevel = false, bool defaultLogicLevel = false) :LogicGate(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getLowSignalCounts(env) == 0 ? ElementState::SOURCE : ElementState::CONDUCTIVE_WIRE;
-    }
+    AndGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
 };
 
 
@@ -243,12 +211,7 @@ struct OrGate : public LogicGate {
     static constexpr SDL_Color displayColor{ 0x99, 0x0, 0xFF, 0xFF };
     static constexpr const char* displayName = "OR Gate";
 
-    OrGate(bool logicLevel = false, bool defaultLogicLevel = false) :LogicGate(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getHighSignalCounts(env) != 0 ? ElementState::SOURCE : ElementState::CONDUCTIVE_WIRE;
-    }
+    OrGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
 };
 
 
@@ -256,12 +219,7 @@ struct NandGate : public LogicGate {
     static constexpr SDL_Color displayColor{ 0x66, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NAND Gate";
 
-    NandGate(bool logicLevel = false, bool defaultLogicLevel = false) :LogicGate(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getLowSignalCounts(env) != 0 ? ElementState::SOURCE : ElementState::CONDUCTIVE_WIRE;
-    }
+    NandGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
 };
 
 
@@ -269,12 +227,7 @@ struct NorGate : public LogicGate {
     static constexpr SDL_Color displayColor{ 0x0, 0x88, 0xFF, 0xFF };
     static constexpr const char* displayName = "NOR Gate";
 
-    NorGate(bool logicLevel = false, bool defaultLogicLevel = false) :LogicGate(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getHighSignalCounts(env) == 0 ? ElementState::SOURCE : ElementState::CONDUCTIVE_WIRE;
-    }
+    NorGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGate(logicLevel, startingLogicLevel) {}
 };
 
 
@@ -282,12 +235,7 @@ struct PositiveRelay : public Relay {
     static constexpr SDL_Color displayColor{ 0xFF, 0x99, 0, 0xFF };
     static constexpr const char* displayName = "Positive Relay";
 
-    PositiveRelay(bool logicLevel = false, bool defaultLogicLevel = false) :Relay(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getHighSignalCounts(env) != 0 ? ElementState::CONDUCTIVE_WIRE : ElementState::INSULATOR;
-    }
+    PositiveRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : Relay(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
 
@@ -295,12 +243,7 @@ struct NegativeRelay : public Relay {
     static constexpr SDL_Color displayColor{ 0xFF, 0x33, 0x0, 0xFF };
     static constexpr const char* displayName = "Negative Relay";
 
-    NegativeRelay(bool logicLevel = false, bool defaultLogicLevel = false) :Relay(logicLevel, defaultLogicLevel) {}
-
-    // process a step of the simulation
-    ElementState processStep(const AdjacentEnvironment& env) const {
-        return getLowSignalCounts(env) != 0 ? ElementState::CONDUCTIVE_WIRE : ElementState::INSULATOR;
-    }
+    NegativeRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : Relay(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
 struct ScreenCommunicatorElement : public CommunicatorElement {
@@ -311,7 +254,7 @@ struct ScreenCommunicatorElement : public CommunicatorElement {
     // after action is ended, this should point to a valid communicator instance (filled in by Simulator::compile())
     std::shared_ptr<ScreenCommunicator> communicator;
 
-    ScreenCommunicatorElement(bool logicLevel = false, bool defaultLogicLevel = false, bool transmitState = false) :CommunicatorElement(logicLevel, defaultLogicLevel, transmitState) {}
+    ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElement(logicLevel, startingLogicLevel, transmitState) {}
 
     SDL_Color computeDisplayColor() const noexcept {
         if (transmitState) {
@@ -329,7 +272,7 @@ struct FileInputCommunicatorElement : public CommunicatorElement {
 
     std::shared_ptr<FileInputCommunicator> communicator;
 
-    FileInputCommunicatorElement(bool logicLevel = false, bool defaultLogicLevel = false, bool transmitState = false) :CommunicatorElement(logicLevel, defaultLogicLevel, transmitState) {}
+    FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElement(logicLevel, startingLogicLevel, transmitState) {}
 
     SDL_Color computeDisplayColor() const noexcept {
         if (transmitState) {
@@ -345,13 +288,13 @@ struct FileInputCommunicatorElement : public CommunicatorElement {
 
 
 // display colour functions
-template <typename Element>
-constexpr inline SDL_Color computeDisplayColor(const Element& element, bool useDefaultLogicLevel) {
+template <bool StartingState, typename Element>
+constexpr inline SDL_Color computeDisplayColor(const Element& element) noexcept {
     if constexpr(std::is_base_of_v<CommunicatorElement, Element>) {
         return element.computeDisplayColor();
     }
     else {
-        if (useDefaultLogicLevel ? element.getDefaultLogicLevel() : element.getLogicLevel()) {
+        if (element.getLogicLevel<StartingState>()) {
             return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - Element::displayColor.b) * 2 / 3), Element::displayColor.a };
         }
         else {

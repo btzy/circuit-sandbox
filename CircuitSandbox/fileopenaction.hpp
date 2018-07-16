@@ -4,6 +4,7 @@
 #include <fstream>
 #include <algorithm>
 #include <limits>
+#include <type_traits>
 
 #include <boost/endian/conversion.hpp>
 #include <boost/process/spawn.hpp>
@@ -12,6 +13,7 @@
 
 #include "action.hpp"
 #include "mainwindow.hpp"
+#include "elements.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 
@@ -60,9 +62,20 @@ private:
 
                 CanvasState::element_variant_t& element = canvasData[{x, y}];
                 if (!CanvasState::element_tags_t::get(element_index, [&](const auto element_tag) {
-                    using Element = typename decltype(element_tag)::type;
-                    if constexpr (!std::is_same<Element, std::monostate>::value) {
-                        element.emplace<Element>(logicLevel, defaultLogicLevel);
+                    using ElementType = typename decltype(element_tag)::type;
+                    if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
+                        // TODO: store communicator transmit states in the save file?
+                        element.emplace<ElementType>(logicLevel, defaultLogicLevel, false);
+                    }
+                    else if constexpr (std::is_base_of_v<LogicLevelElement, ElementType>) {
+                        element.emplace<ElementType>(logicLevel, defaultLogicLevel);
+                    }
+                    else if constexpr (std::is_base_of_v<Relay, ElementType>) {
+                        // TODO: store relay states in the save file!
+                        element.emplace<ElementType>(false, false, logicLevel, defaultLogicLevel);
+                    }
+                    else if constexpr (std::is_base_of_v<Element, ElementType>) {
+                        element.emplace<ElementType>();
                     }
                     return true;
                 }, false)) {
@@ -109,7 +122,7 @@ public:
                     mainWindow.stateManager.historyManager.imbue(mainWindow.stateManager.defaultState);
                     mainWindow.setUnsaved(false);
                     mainWindow.setFilePath(filePath);
-                    // recompile the simulator
+                    // recompile the simulator (this will propagate all the logic levels properly for display)
                     mainWindow.stateManager.simulator.compile(mainWindow.stateManager.defaultState);
                     simulatorRunning = false; // don't restart the simulator
                     break;

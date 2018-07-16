@@ -26,28 +26,32 @@ void StateManager::fillSurface(bool useDefaultView, uint32_t* pixelBuffer, uint3
     // this function has been optimized, as it is a bottleneck for large screens when zoomed out
     invoke_RGB_format(pixelFormat, [&](const auto format) {
         using FormatType = decltype(format);
-        uint32_t* row = pixelBuffer;
-        for (int32_t y = surfaceRect.y; y != surfaceRect.y + surfaceRect.h; ++y, row += pitch) {
-            uint32_t* pixel = row;
-            for (int32_t x = surfaceRect.x; x != surfaceRect.x + surfaceRect.w; ++x, ++pixel) {
-                const ext::point canvasPt{ x, y };
+        invoke_bool(useDefaultView, [&](const auto defaultView_tag) {
+            using DefaultViewType = decltype(defaultView_tag);
 
-                // check if the requested pixel is inside the buffer
-                if (defaultState.contains(canvasPt)) {
-                    std::visit(visitor{
-                        [pixel](std::monostate) {
+            uint32_t* row = pixelBuffer;
+            for (int32_t y = surfaceRect.y; y != surfaceRect.y + surfaceRect.h; ++y, row += pitch) {
+                uint32_t* pixel = row;
+                for (int32_t x = surfaceRect.x; x != surfaceRect.x + surfaceRect.w; ++x, ++pixel) {
+                    const ext::point canvasPt{ x, y };
+
+                    // check if the requested pixel is inside the buffer
+                    if (defaultState.contains(canvasPt)) {
+                        std::visit(visitor{
+                            [pixel](std::monostate) {
+                            *pixel = 0;
+                        },
+                            [pixel, useDefaultView](const auto& element) {
+                            *pixel = fast_MapRGB<FormatType::value>(computeDisplayColor<DefaultViewType::value>(element));
+                        },
+                            }, defaultState.dataMatrix[canvasPt]);
+                    }
+                    else {
                         *pixel = 0;
-                    },
-                        [pixel, useDefaultView](const auto& element) {
-                        *pixel = fast_MapRGB<FormatType::value>(computeDisplayColor(element, useDefaultView));
-                    },
-                        }, defaultState.dataMatrix[canvasPt]);
-                }
-                else {
-                    *pixel = 0;
+                    }
                 }
             }
-        }
+        });
     });
 }
 
@@ -164,7 +168,7 @@ void StateManager::setButtonBarDescription(ButtonBar& buttonBar, const ext::poin
     std::visit([&](const auto& element) {
         using ElementType = std::decay_t<decltype(element)>;
         if constexpr(std::is_base_of_v<LogicGate, ElementType> || std::is_base_of_v<ScreenCommunicatorElement, ElementType>) {
-            if (element.getLogicLevel()) {
+            if (element.logicLevel) {
                 buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [HIGH]", SDL_Color{ 0x66, 0xFF, 0x66, 0xFF });
             }
             else {
@@ -172,9 +176,7 @@ void StateManager::setButtonBarDescription(ButtonBar& buttonBar, const ext::poin
             }
         }
         else if constexpr(std::is_base_of_v<Relay, ElementType>) {
-            // TODO: make canvasstate and savefile store whether relays are conductive or not
-            // currently we're just using the logic level
-            if (element.getLogicLevel()) {
+            if (element.conductiveState) {
                 buttonBar.setDescription(ElementType::displayName, ElementType::displayColor, " [Conductive]", SDL_Color{ 0xFF, 0xFF, 0x66, 0xFF });
             }
             else {

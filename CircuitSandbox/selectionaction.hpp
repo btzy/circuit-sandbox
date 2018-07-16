@@ -398,41 +398,46 @@ public:
         if (!selection.empty()) {
             bool defaultView = playArea().isDefaultView();
 
-            invoke_RGB_format(pixelFormat, [&](const auto format) {
-                using FormatType = decltype(format);
-                for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y, pixelBuffer += pitch) {
-                    uint32_t* pixel = pixelBuffer;
-                    for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x, ++pixel) {
-                        const ext::point canvasPt{ x, y };
-                        uint32_t color = 0;
-                        // draw base, check if the requested pixel inside the buffer
-                        if (canvas().contains(canvasPt - baseTrans)) {
-                            std::visit(visitor{
-                                [](std::monostate) {},
-                                [&color, defaultView](const auto& element) {
-                                    color = fast_MapRGB<FormatType::value>(computeDisplayColor(element, defaultView));
-                                },
-                            }, canvas()[canvasPt - baseTrans]);
-                        }
+            invoke_RGB_format(pixelFormat, [&](const auto format_tag) {
+                using FormatType = decltype(format_tag);
+                invoke_bool(defaultView, [&](const auto defaultView_tag) {
+                    using DefaultViewType = decltype(defaultView_tag);
 
-                        // draw selection, check if the requested pixel inside the buffer
-                        if (selection.contains(canvasPt - selectionTrans)) {
-                            std::visit(visitor{
-                                [](std::monostate) {},
-                                [this, &color, defaultView](const auto& element) {
-                                    alignas(uint32_t) SDL_Color computedColor = computeDisplayColor(element, defaultView);
-                                    if (state == State::SELECTING || state == State::SELECTED) {
-                                        computedColor.b = 0xFF; // colour the selection blue if it can still be modified
-                                    } else {
-                                        computedColor.r = 0xFF; // otherwise colour the selection red
-                                    }
-                                    color = fast_MapRGB<FormatType::value>(computedColor);
-                                },
-                            }, selection[canvasPt - selectionTrans]);
+                    for (int32_t y = renderRect.y; y != renderRect.y + renderRect.h; ++y, pixelBuffer += pitch) {
+                        uint32_t* pixel = pixelBuffer;
+                        for (int32_t x = renderRect.x; x != renderRect.x + renderRect.w; ++x, ++pixel) {
+                            const ext::point canvasPt{ x, y };
+                            uint32_t color = 0;
+                            // draw base, check if the requested pixel inside the buffer
+                            if (canvas().contains(canvasPt - baseTrans)) {
+                                std::visit(visitor{
+                                    [](std::monostate) {},
+                                    [&color](const auto& element) {
+                                        color = fast_MapRGB<FormatType::value>(computeDisplayColor<DefaultViewType::value>(element));
+                                    },
+                                }, canvas()[canvasPt - baseTrans]);
+                            }
+
+                            // draw selection, check if the requested pixel inside the buffer
+                            if (selection.contains(canvasPt - selectionTrans)) {
+                                std::visit(visitor{
+                                    [](std::monostate) {},
+                                    [this, &color](const auto& element) {
+                                        alignas(uint32_t) SDL_Color computedColor = computeDisplayColor<DefaultViewType::value>(element);
+                                        if (state == State::SELECTING || state == State::SELECTED) {
+                                            computedColor.b = 0xFF; // colour the selection blue if it can still be modified
+                                        }
+                                        else {
+                                            computedColor.r = 0xFF; // otherwise colour the selection red
+                                        }
+                                        color = fast_MapRGB<FormatType::value>(computedColor);
+                                    },
+                                }, selection[canvasPt - selectionTrans]);
+                            }
+                            *pixel = color;
                         }
-                        *pixel = color;
                     }
-                }
+                });
             });
         }
     }

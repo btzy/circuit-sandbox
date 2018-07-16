@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <cstring>
+#include <type_traits>
 
 #include <boost/endian/conversion.hpp>
 #include <boost/process/spawn.hpp>
@@ -11,6 +12,7 @@
 #include "visitor.hpp"
 #include "action.hpp"
 #include "playarea.hpp"
+#include "elements.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
 
@@ -49,15 +51,27 @@ private:
                 bool logicLevel = false;
                 bool defaultLogicLevel = false;
 
-                std::visit(visitor{
-                    [](std::monostate) {},
-                    [&](const auto& element) {
-                        logicLevel = element.getLogicLevel();
-                        defaultLogicLevel = element.getDefaultLogicLevel();
-                    },
+                std::visit([&](const auto& element) {
+                    using ElementType = typename std::decay_t<decltype(element)>;
+                    if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
+                        // TODO: store communicator transmit states in the save file?
+                        logicLevel = element.getLogicLevel<false>();
+                        defaultLogicLevel = element.getLogicLevel<true>();
+                    }
+                    else if constexpr (std::is_base_of_v<Relay, ElementType>) {
+                        // TODO: store relay states in the save file!
+                        logicLevel = element.getConductiveState<false>();
+                        defaultLogicLevel = element.getConductiveState<true>();
+                    }
+                    else if constexpr (std::is_base_of_v<RenderLogicLevelElement, ElementType>) {
+                        // even though ElementType might not be a LogicLevelElement (i.e. with useful logic levels), we save the logic level for compatibility with saves in the v0.2 format.
+                        // but when loaded, those non-useful logic levels will be ignored.
+                        logicLevel = element.getLogicLevel<false>();
+                        defaultLogicLevel = element.getLogicLevel<true>();
+                    }
                 }, element);
 
-                uint8_t elementData = static_cast<uint8_t>((element_index << 2) + (logicLevel << 1) + defaultLogicLevel);
+                uint8_t elementData = static_cast<uint8_t>((element_index << 2) | (logicLevel << 1) | defaultLogicLevel);
                 saveFile.write(reinterpret_cast<char*>(&elementData), 1);
             }
         }
