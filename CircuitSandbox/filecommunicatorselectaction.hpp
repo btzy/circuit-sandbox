@@ -11,10 +11,7 @@
 #include "fileinputcommunicator.hpp"
 
 class FileCommunicatorSelectAction final : public PlayAreaAction {
-private:
-
 public:
-
     FileCommunicatorSelectAction(MainWindow& mainWindow, FileInputCommunicator& comm) :PlayAreaAction(mainWindow) {
         // select file
         char* outPath = nullptr;
@@ -26,6 +23,10 @@ public:
         if (outPath != nullptr) {
             comm.setFile(outPath);
             free(outPath);
+
+            // save to history, but never recompile
+            changed() = true;
+            stateManager().saveToHistory();
         }
     }
     ~FileCommunicatorSelectAction() override {}

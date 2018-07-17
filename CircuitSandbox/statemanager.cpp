@@ -59,7 +59,7 @@ bool StateManager::evaluateChangedState() {
         return changed;
     }
 
-    const CanvasState& currentState = historyManager.currentState();
+    const auto& currentState = historyManager.currentState();
     if (defaultState.width() != currentState.width() ||
         defaultState.height() != currentState.height()) {
 

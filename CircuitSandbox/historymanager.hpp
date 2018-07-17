@@ -5,13 +5,14 @@
 #include <utility>
 #include "canvasstate.hpp"
 #include "point.hpp"
+#include "historycanvasstate.hpp"
 
 struct HistoryManager {
 private:
     // fields for undo/redo stack
-    std::stack<std::pair<CanvasState, ext::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
-    std::stack<std::pair<CanvasState, ext::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
-    CanvasState currentHistoryState; // the canvas state treated as 'current' by the history manager; this is either the state when saveToHistory() was last called, or the state after an undo/redo operation.
+    std::stack<std::pair<HistoryCanvasState, ext::point>> undoStack; // the undo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    std::stack<std::pair<HistoryCanvasState, ext::point>> redoStack; // the redo stack stores entire CanvasStates (with accompanying deltaTrans) for now
+    HistoryCanvasState currentHistoryState; // the canvas state treated as 'current' by the history manager; this is either the state when saveToHistory() was last called, or the state after an undo/redo operation.
 
     // distance of currentHistoryState from the last saved state in history
     // 0 if currentHistoryState is the same as the last saved state
@@ -49,7 +50,8 @@ public:
 
         // note: we save the inverse of the undo translation into the redo stack
         redoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
-        state = currentHistoryState = std::move(canvasState);
+        // note: explicit CanvasState constructor to lock the weak_ptr before losing the shared_ptrs from `state`
+        state = CanvasState(currentHistoryState = std::move(canvasState));
 
         if (saveDistance) --*saveDistance;
 
@@ -62,7 +64,8 @@ public:
 
         // note: we save the inverse of the redo translation into the undo stack
         undoStack.emplace(std::move(currentHistoryState), -tmpDeltaTrans);
-        state = currentHistoryState = std::move(canvasState);
+        // note: explicit CanvasState constructor to lock the weak_ptr before losing the shared_ptrs from `state`
+        state = CanvasState(currentHistoryState = std::move(canvasState));
 
         if (saveDistance) ++*saveDistance;
 
@@ -91,7 +94,7 @@ public:
         return redoStack.empty() && undoStack.empty();
     }
 
-    const CanvasState& currentState() const {
+    const HistoryCanvasState& currentState() const {
         return currentHistoryState;
     }
 

@@ -41,6 +41,7 @@ private:
     friend class Simulator;
     friend class FileOpenAction;
     friend class FileSaveAction;
+    friend class HistoryCanvasState;
 
     /**
      * Modifies the dataMatrix so that the x and y will be within the matrix.
@@ -192,22 +193,22 @@ public:
 
 
     /**
-    * returns true if the matrix is empty (i.e. has no width and height)
-    */
+     * returns true if the matrix is empty (i.e. has no width and height)
+     */
     bool empty() const noexcept {
         return dataMatrix.empty();
     }
 
     /**
-    * returns the width of the matrix
-    */
+     * returns the width of the matrix
+     */
     int32_t width() const noexcept {
         return dataMatrix.width();
     }
 
     /**
-    * returns the height of the matrix
-    */
+     * returns the height of the matrix
+     */
     int32_t height() const noexcept {
         return dataMatrix.height();
     }
@@ -220,8 +221,8 @@ public:
     }
 
     /**
-    * returns true if the point is within the bounds of the matrix
-    */
+     * returns true if the point is within the bounds of the matrix
+     */
     bool contains(const ext::point& pt) const noexcept {
         return dataMatrix.contains(pt);
     }
