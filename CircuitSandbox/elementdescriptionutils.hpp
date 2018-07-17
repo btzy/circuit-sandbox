@@ -15,16 +15,51 @@ using namespace std::literals;
 
 namespace Description {
 
-    struct FileInputCommunicatorDescriptionElement : public LogicLevelElementBase<FileInputCommunicatorDescriptionElement>, public Element {
+    template <typename T>
+    struct CommunicatorDescriptionElementBase : public LogicLevelElementBase<T>, public Element {
+        template <typename T2, typename TCommunicator>
+        CommunicatorDescriptionElementBase(const CommunicatorElementBase<T2, TCommunicator>& el) noexcept : LogicLevelElementBase<T>(el.logicLevel, el.startingLogicLevel) {}
+        
+        CommunicatorDescriptionElementBase(const CommunicatorDescriptionElementBase&) = default;
+        CommunicatorDescriptionElementBase& operator=(const CommunicatorDescriptionElementBase&) = default;
+        CommunicatorDescriptionElementBase(CommunicatorDescriptionElementBase&&) = default;
+        CommunicatorDescriptionElementBase& operator=(CommunicatorDescriptionElementBase&&) = default;
+
+        bool operator==(const T& other) const noexcept {
+            return static_cast<const LogicLevelElementBase<T>&>(*this) == other;
+        }
+
+        bool operator!=(const T& other) const noexcept {
+            return !(*this == other);
+        }
+
+        using LogicLevelElementBase<T>::setDescription;
+    };
+
+    struct ScreenCommunicatorDescriptionElement : public CommunicatorDescriptionElementBase<ScreenCommunicatorDescriptionElement> {
+        ScreenCommunicatorDescriptionElement(const ScreenCommunicatorElement& el) noexcept : CommunicatorDescriptionElementBase<ScreenCommunicatorDescriptionElement>(el) {}
+        ScreenCommunicatorDescriptionElement(const ScreenCommunicatorDescriptionElement&) = default;
+        ScreenCommunicatorDescriptionElement& operator=(const ScreenCommunicatorDescriptionElement&) = default;
+        ScreenCommunicatorDescriptionElement(ScreenCommunicatorDescriptionElement&&) = default;
+        ScreenCommunicatorDescriptionElement& operator=(ScreenCommunicatorDescriptionElement&&) = default;
+        
+        static constexpr auto displayColor = ScreenCommunicatorElement::displayColor;
+        static constexpr auto displayName = ScreenCommunicatorElement::displayName;
+    };
+
+    struct FileInputCommunicatorDescriptionElement : public CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement> {
         std::string inputFilePath;
 
-        FileInputCommunicatorDescriptionElement(const FileInputCommunicatorElement& el) : LogicLevelElementBase<FileInputCommunicatorDescriptionElement>(el.logicLevel, el.startingLogicLevel) {
+        FileInputCommunicatorDescriptionElement(const FileInputCommunicatorElement& el) : CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement>(el) {
             inputFilePath = el.communicator ? el.communicator->getFile() : ""s;
         }
         FileInputCommunicatorDescriptionElement(const FileInputCommunicatorDescriptionElement&) = default;
         FileInputCommunicatorDescriptionElement& operator=(const FileInputCommunicatorDescriptionElement&) = default;
         FileInputCommunicatorDescriptionElement(FileInputCommunicatorDescriptionElement&&) = default;
         FileInputCommunicatorDescriptionElement& operator=(FileInputCommunicatorDescriptionElement&&) = default;
+        
+        static constexpr auto displayColor = FileInputCommunicatorElement::displayColor;
+        static constexpr auto displayName = FileInputCommunicatorElement::displayName;
 
         template <typename Callback>
         void setDescription(Callback&& callback) const {
@@ -51,7 +86,7 @@ namespace Description {
         }
 
         bool operator==(const FileInputCommunicatorDescriptionElement& other) const noexcept {
-            return static_cast<const LogicLevelElementBase<FileInputCommunicatorDescriptionElement>&>(*this) == other && inputFilePath == other.inputFilePath;
+            return static_cast<const CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement>&>(*this) == other && inputFilePath == other.inputFilePath;
         }
 
         bool operator!=(const FileInputCommunicatorDescriptionElement& other) const noexcept {
@@ -65,6 +100,10 @@ namespace Description {
     };
 
     template <>
+    struct ElementType<ScreenCommunicatorElement> {
+        using type = ScreenCommunicatorDescriptionElement;
+    };
+    template <>
     struct ElementType<FileInputCommunicatorElement> {
         using type = FileInputCommunicatorDescriptionElement;
     };
@@ -76,7 +115,7 @@ namespace Description {
 
     inline ElementVariant_t fromElementVariant(const CanvasState::element_variant_t& elementVariant) {
         return std::visit([](const auto& element) {
-            return ElementVariant_t(element);
+            return ElementVariant_t(std::in_place_type_t<ElementType_t<std::decay_t<decltype(element)>>>(), element);
         }, elementVariant);
     }
 

@@ -98,6 +98,16 @@ template <typename T>
 struct LogicLevelElementBase :public LogicLevelElement, public RenderLogicLevelElementBase<T> {
     LogicLevelElementBase(bool logicLevel, bool startingLogicLevel) noexcept : RenderLogicLevelElementBase<T>(logicLevel, startingLogicLevel) {}
 
+    template <typename Callback>
+    void setDescription(Callback&& callback) const {
+        if (static_cast<const T&>(*this).getLogicLevel()) {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [HIGH]", SDL_Color{ 0x66, 0xFF, 0x66, 0xFF });
+        }
+        else {
+            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [LOW]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
+        }
+    }
+
     bool operator==(const T& other) const noexcept {
         return this->logicLevel == other.logicLevel && this->startingLogicLevel == other.startingLogicLevel;
     }
@@ -115,16 +125,6 @@ protected:
     LogicGateBase(bool logicLevel, bool startingLogicLevel) noexcept : LogicLevelElementBase<T>(logicLevel, startingLogicLevel) {}
 
 public:
-    template <typename Callback>
-    void setDescription(Callback&& callback) const {
-        if (static_cast<const T&>(*this).getLogicLevel()) {
-            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [HIGH]", SDL_Color{ 0x66, 0xFF, 0x66, 0xFF });
-        }
-        else {
-            std::forward<Callback>(callback)(T::displayName, T::displayColor, " [LOW]", SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
-        }
-    }
-
     bool operator==(const T& other) const noexcept {
         return static_cast<const LogicLevelElementBase<T>&>(*this) == other;
     }
@@ -132,6 +132,8 @@ public:
     bool operator!=(const T& other) const noexcept {
         return !(*this == other);
     }
+
+    using LogicLevelElementBase<T>::setDescription;
 };
 
 struct Relay {};
