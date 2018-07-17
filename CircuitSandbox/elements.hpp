@@ -180,12 +180,16 @@ public:
 
 struct CommunicatorElement{};
 
-template <typename T>
+template <typename T, typename TCommunicator>
 struct CommunicatorElementBase : public CommunicatorElement, public SignalReceivingElementBase<T>, public LogicLevelElementBase<T> {
 protected:
     CommunicatorElementBase(bool logicLevel, bool startingLogicLevel, bool transmitState) : LogicLevelElementBase<T>(logicLevel, startingLogicLevel), transmitState(transmitState) {}
 public:
     bool transmitState; // filled in by Simulator::takeSnapshot()
+
+    // shared communicator instance
+    // after action is ended, this should point to a valid communicator instance (filled in by Simulator::compile())
+    std::shared_ptr<TCommunicator> communicator;
 
     bool operator==(const T& other) const noexcept {
         return static_cast<const LogicLevelElementBase<T>&>(*this) == other;
@@ -349,15 +353,11 @@ struct NegativeRelay : public RelayBase<NegativeRelay> {
     NegativeRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : RelayBase<NegativeRelay>(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
-struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunicatorElement> {
+struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunicatorElement, ScreenCommunicator> {
     static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
     static constexpr const char* displayName = "Screen I/O";
 
-    // shared communicator instance
-    // after action is ended, this should point to a valid communicator instance (filled in by Simulator::compile())
-    std::shared_ptr<ScreenCommunicator> communicator;
-
-    ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<ScreenCommunicatorElement>(logicLevel, startingLogicLevel, transmitState) {}
+    ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<ScreenCommunicatorElement, ScreenCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
 
     template <bool StartingState = false>
     SDL_Color computeDisplayColor() const noexcept {
@@ -370,17 +370,11 @@ struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunic
     }
 };
 
-struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCommunicatorElement> {
-private:
-    const std::string& getCommunicatorFile() const noexcept;
-
-public:
+struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCommunicatorElement, FileInputCommunicator> {
     static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
     static constexpr const char* displayName = "File Input";
 
-    std::shared_ptr<FileInputCommunicator> communicator;
-
-    FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileInputCommunicatorElement>(logicLevel, startingLogicLevel, transmitState) {}
+    FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileInputCommunicatorElement, FileInputCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
 
     template <bool StartingState = false>
     SDL_Color computeDisplayColor() const noexcept {
@@ -389,30 +383,6 @@ public:
         }
         else {
             return SDL_Color{ static_cast<Uint8>(displayColor.r * 2 / 3), static_cast<Uint8>(displayColor.g * 2 / 3), static_cast<Uint8>(displayColor.b * 2 / 3), displayColor.a };
-        }
-    }
-
-    template <typename Callback>
-    void setDescription(Callback&& callback) const {
-        bool displayLogicLevel = this->getLogicLevel();
-        if (communicator && !getCommunicatorFile().empty()) {
-            std::string str = " ["s + getFileName(getCommunicatorFile().c_str()) + "]";
-            std::forward<Callback>(callback)(
-                displayName,
-                displayColor,
-                displayLogicLevel ? " [HIGH]" : " [LOW]",
-                displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
-                str.c_str(),
-                SDL_Color{ 0xFF, 0xFF, 0xFF, 0xFF });
-        }
-        else {
-            std::forward<Callback>(callback)(
-                displayName,
-                displayColor,
-                displayLogicLevel ? " [HIGH]" : " [LOW]",
-                displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
-                " [No file]",
-                SDL_Color{ 0x66, 0x66, 0x66, 0xFF });
         }
     }
 };

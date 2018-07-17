@@ -12,6 +12,7 @@
 #include "point.hpp"
 #include "playareaactionmanager.hpp"
 #include "sdl_automatic.hpp"
+#include "elementdescriptionutils.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -35,7 +36,7 @@ private:
     std::optional<ext::point> mouseoverPoint;
 
     // copy of element being mouseovered, for description in button bar
-    CanvasState::element_variant_t mouseoverElement;
+    Description::ElementVariant_t mouseoverElement;
 
     std::optional<ext::point> panOrigin; // the last position the mouse was dragged to (nullopt if we are not currently panning)
 

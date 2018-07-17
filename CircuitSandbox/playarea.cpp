@@ -109,8 +109,9 @@ void PlayArea::layoutComponents(SDL_Renderer* renderer) {
 
 
 void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t& newElement) {
-    if (mouseoverElement != newElement) {
-        mouseoverElement = newElement;
+    Description::ElementVariant_t descElement = Description::fromElementVariant(newElement);
+    if (mouseoverElement != descElement) {
+        mouseoverElement = std::move(descElement);
         std::visit([&](const auto& element) {
             if constexpr (std::is_base_of_v<Element, std::decay_t<decltype(element)>>) {
                 element.setDescription([&](auto&&... args) {

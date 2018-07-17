@@ -110,10 +110,16 @@ namespace ext {
         }
 
         /**
-         * Generic template instantiation helper
+         * Generic template instantiation helper.
          */
         template <template <typename...> typename TemplateType>
         using instantiate = TemplateType<T...>;
+
+        /**
+         * Wrap each type as a template parameter of the given template type, effectively transforming each type.
+         */
+        template <template <typename> typename TemplateType>
+        using transform = tag_tuple<TemplateType<T>...>;
 
     };
 
