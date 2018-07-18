@@ -22,7 +22,6 @@
 #include "heap_matrix.hpp"
 #include "communicator.hpp"
 #include "screencommunicator.hpp"
-#include "fileinputcommunicator.hpp"
 #include "concurrent_queue.hpp"
 
 

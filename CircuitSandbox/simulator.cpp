@@ -14,6 +14,9 @@
 #include "elements.hpp"
 #include "tag_tuple.hpp"
 #include "visitor.hpp"
+#include "screencommunicator.hpp"
+#include "fileinputcommunicator.hpp"
+#include "fileoutputcommunicator.hpp"
 
 Simulator::~Simulator() {
     if (running())stop();
@@ -248,7 +251,7 @@ void Simulator::compile(CanvasState& gameState) {
     */
 
     // types of communicators that we recognize:
-    using CommunicatorTypes_t = ext::tag_tuple<ScreenCommunicator, FileInputCommunicator>;
+    using CommunicatorTypes_t = ext::tag_tuple<ScreenCommunicator, FileInputCommunicator, FileOutputCommunicator>;
 
     // Describes the communicator index of each pixel (if it is a communicator)
     ext::heap_matrix<int32_t> communicatorComponentIndices(gameState.size());

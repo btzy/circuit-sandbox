@@ -9,13 +9,24 @@
 #include "playareaaction.hpp"
 #include "elements.hpp"
 #include "fileinputcommunicator.hpp"
+#include "fileoutputcommunicator.hpp"
 
 class FileCommunicatorSelectAction final : public PlayAreaAction {
 public:
-    FileCommunicatorSelectAction(MainWindow& mainWindow, FileInputCommunicator& comm) :PlayAreaAction(mainWindow) {
+    template <typename FileCommunicator>
+    FileCommunicatorSelectAction(MainWindow& mainWindow, FileCommunicator& comm) :PlayAreaAction(mainWindow) {
         // select file
         char* outPath = nullptr;
-        nfdresult_t result = NFD_OpenDialog(nullptr, nullptr, &outPath);
+        nfdresult_t result;
+        if constexpr(std::is_same_v<FileInputCommunicator, FileCommunicator>) {
+            result = NFD_OpenDialog(nullptr, nullptr, &outPath);
+        }
+        else if constexpr(std::is_same_v<FileOutputCommunicator, FileCommunicator>) {
+            result = NFD_SaveDialog(nullptr, nullptr, &outPath);
+        }
+        else {
+            static_assert(std::is_same_v<FileCommunicator, FileCommunicator>, "Unrecognized communicator type");
+        }
         mainWindow.suppressMouseUntilNextDown();
         if (result != NFD_OKAY) {
             outPath = nullptr;
@@ -45,7 +56,7 @@ public:
                 if (mainWindow.stateManager.defaultState.contains(canvasOffset)){
                     return std::visit([&](auto& element) {
                         using ElementType = std::decay_t<decltype(element)>;
-                        if constexpr(std::is_same_v<FileInputCommunicatorElement, ElementType>) {
+                        if constexpr(std::is_same_v<FileInputCommunicatorElement, ElementType> || std::is_same_v<FileOutputCommunicatorElement, ElementType>) {
                             // Only start the file input action if the mouse was pressed down over a File Input Communicator.
                             starter.start<FileCommunicatorSelectAction>(mainWindow, *element.communicator);
                             return ActionEventResult::PROCESSED;

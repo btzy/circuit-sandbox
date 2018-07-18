@@ -43,16 +43,18 @@ struct NandGate;
 struct NorGate;
 struct ScreenCommunicatorElement;
 struct FileInputCommunicatorElement;
+struct FileOutputCommunicatorElement;
 
 // compile-time type tag which stores the list of available elements
-using tool_tags_t = ext::tag_tuple<Selector, Panner, Interactor, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate, ScreenCommunicatorElement, FileInputCommunicatorElement>;
+using tool_tags_t = ext::tag_tuple<Selector, Panner, Interactor, Eraser, ConductiveWire, InsulatedWire, Signal, Source, PositiveRelay, NegativeRelay, AndGate, OrGate, NandGate, NorGate, ScreenCommunicatorElement, FileInputCommunicatorElement, FileOutputCommunicatorElement>;
 
 // list of actions that have a static startWithPlayAreaMouseButtonDown(const SDL_MouseButtonEvent&, MainWindow&, PlayArea& const ActionStarter&);
-using playarea_action_tags_t = ext::tag_tuple<SelectionAction, ScreenInputAction, FileCommunicatorSelectAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>, PencilAction<FileInputCommunicatorElement>>;
+using playarea_action_tags_t = ext::tag_tuple<SelectionAction, ScreenInputAction, FileCommunicatorSelectAction, PencilAction<Eraser>, PencilAction<ConductiveWire>, PencilAction<InsulatedWire>, PencilAction<Signal>, PencilAction<Source>, PencilAction<PositiveRelay>, PencilAction<NegativeRelay>, PencilAction<AndGate>, PencilAction<OrGate>, PencilAction<NandGate>, PencilAction<NorGate>, PencilAction<ScreenCommunicatorElement>, PencilAction<FileInputCommunicatorElement>, PencilAction<FileOutputCommunicatorElement>>;
 
 // communicators
 class ScreenCommunicator;
 class FileInputCommunicator;
+class FileOutputCommunicator;
 
 /**
  * The number of distinct "input handles": 5 (SDL2 supports this many mouse buttons) + 1 (for touch input)

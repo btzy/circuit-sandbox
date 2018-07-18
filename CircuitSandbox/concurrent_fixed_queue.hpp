@@ -185,5 +185,19 @@ namespace ext {
             popIndex.store(tmp_popIndex, std::memory_order_release);
             return space(pushIndex.load(std::memory_order_acquire), tmp_popIndex) <= 1;
         }
+
+        /**
+         * Removes the element from the front of the queue.
+         * Returns true if the producer needs signal.
+         * Assumes that there is at least one element in the queue (use after peek()).
+         */
+        template <typename... Args>
+        inline bool emplace_testconsumerneedssignal(Args&&... args) {
+            size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
+            new (&buffer[tmp_pushIndex]) T(std::forward<Args>(args)...);
+            tmp_pushIndex = (tmp_pushIndex + 1) % Size;
+            pushIndex.store(tmp_pushIndex, std::memory_order_release);
+            return available(tmp_pushIndex, popIndex.load(std::memory_order_acquire)) <= 1;
+        }
     };
 }

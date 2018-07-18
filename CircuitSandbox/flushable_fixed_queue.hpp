@@ -217,7 +217,7 @@ namespace ext {
 
         /**
         * Removes the element from the front of the queue.
-        * Returns 
+        * Returns true if the producer needs signal.
         * Assumes that there is at least one element in the queue (use after peek()).
         */
         inline bool pop_testproducerneedssignal() {
@@ -225,6 +225,26 @@ namespace ext {
             tmp_popIndex = (tmp_popIndex + 1) % Size;
             popIndex.store(tmp_popIndex, std::memory_order_release);
             return space(pushIndex.load(std::memory_order_acquire), tmp_popIndex) <= 1;
+        }
+
+        /**
+         * Removes the element from the front of the queue.
+         * Returns true if the producer needs signal.
+         * Assumes that there is at least one element in the queue (use after peek()).
+         */
+        template <typename... Args>
+        inline bool emplace_testconsumerneedssignal(Args&&... args) {
+            size_t tmp_pushIndex = pushIndex.load(std::memory_order_relaxed);
+            buffer[tmp_pushIndex] = T(std::forward<Args>(args)...);
+            tmp_pushIndex = (tmp_pushIndex + 1) % Size;
+            if (endIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                endIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+            }
+            if (flushIndex.load(std::memory_order_relaxed) == tmp_pushIndex) {
+                flushIndex.store(std::numeric_limits<size_t>::max(), std::memory_order_release);
+            }
+            pushIndex.store(tmp_pushIndex, std::memory_order_release);
+            return available(tmp_pushIndex, popIndex.load(std::memory_order_acquire)) <= 1;
         }
     };
 }

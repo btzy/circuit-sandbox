@@ -388,3 +388,20 @@ struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCo
         }
     }
 };
+
+struct FileOutputCommunicatorElement : public CommunicatorElementBase<FileOutputCommunicatorElement, FileOutputCommunicator> {
+    static constexpr SDL_Color displayColor{ 0xFF, 0, 0, 0xFF };
+    static constexpr const char* displayName = "File Output";
+
+    FileOutputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileOutputCommunicatorElement, FileOutputCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
+
+    template <bool StartingState = false>
+    SDL_Color computeDisplayColor() const noexcept {
+        if (transmitState) {
+            return SDL_Color{ static_cast<Uint8>(0xFF - (0xFF - displayColor.r) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - displayColor.g) * 2 / 3), static_cast<Uint8>(0xFF - (0xFF - displayColor.b) * 2 / 3), displayColor.a };
+        }
+        else {
+            return SDL_Color{ static_cast<Uint8>(displayColor.r * 2 / 3), static_cast<Uint8>(displayColor.g * 2 / 3), static_cast<Uint8>(displayColor.b * 2 / 3), displayColor.a };
+        }
+    }
+};

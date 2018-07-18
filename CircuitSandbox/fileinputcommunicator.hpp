@@ -151,7 +151,7 @@ public:
      * Must be called from the simulation thread only!
      */
     void transmit(bool value) noexcept override {
-        currentTransmitChunk |= (static_cast<uint16_t>(value) << currentTransmitCount);
+        currentTransmitChunk |= (static_cast<uint8_t>(value) << currentTransmitCount);
         if (currentTransmitChunk != 0) {
             ++currentTransmitCount;
             if (currentTransmitCount >= 3) {

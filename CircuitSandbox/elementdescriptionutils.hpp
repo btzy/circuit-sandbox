@@ -5,6 +5,7 @@
 #include <type_traits>
 #include "elements.hpp"
 #include "fileinputcommunicator.hpp"
+#include "fileoutputcommunicator.hpp"
 #include "canvasstate.hpp"
 
 using namespace std::literals;
@@ -47,28 +48,29 @@ namespace Description {
         static constexpr auto displayName = ScreenCommunicatorElement::displayName;
     };
 
-    struct FileInputCommunicatorDescriptionElement : public CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement> {
-        std::string inputFilePath;
+    template <typename TElement>
+    struct FileCommunicatorDescriptionElement : public CommunicatorDescriptionElementBase<FileCommunicatorDescriptionElement<TElement>> {
+        std::string filePath;
 
-        FileInputCommunicatorDescriptionElement(const FileInputCommunicatorElement& el) : CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement>(el) {
-            inputFilePath = el.communicator ? el.communicator->getFile() : ""s;
+        FileCommunicatorDescriptionElement(const TElement& el) : CommunicatorDescriptionElementBase<FileCommunicatorDescriptionElement<TElement>>(el) {
+            filePath = el.communicator ? el.communicator->getFile() : ""s;
         }
-        FileInputCommunicatorDescriptionElement(const FileInputCommunicatorDescriptionElement&) = default;
-        FileInputCommunicatorDescriptionElement& operator=(const FileInputCommunicatorDescriptionElement&) = default;
-        FileInputCommunicatorDescriptionElement(FileInputCommunicatorDescriptionElement&&) = default;
-        FileInputCommunicatorDescriptionElement& operator=(FileInputCommunicatorDescriptionElement&&) = default;
+        FileCommunicatorDescriptionElement(const FileCommunicatorDescriptionElement<TElement>&) = default;
+        FileCommunicatorDescriptionElement& operator=(const FileCommunicatorDescriptionElement<TElement>&) = default;
+        FileCommunicatorDescriptionElement(FileCommunicatorDescriptionElement<TElement>&&) = default;
+        FileCommunicatorDescriptionElement& operator=(FileCommunicatorDescriptionElement<TElement>&&) = default;
         
-        static constexpr auto displayColor = FileInputCommunicatorElement::displayColor;
-        static constexpr auto displayName = FileInputCommunicatorElement::displayName;
+        static constexpr auto displayColor = TElement::displayColor;
+        static constexpr auto displayName = TElement::displayName;
 
         template <typename Callback>
         void setDescription(Callback&& callback) const {
             bool displayLogicLevel = this->getLogicLevel();
-            if (!inputFilePath.empty()) {
-                std::string str = " ["s + getFileName(inputFilePath.c_str()) + "]";
+            if (!filePath.empty()) {
+                std::string str = " ["s + getFileName(filePath.c_str()) + "]";
                 std::forward<Callback>(callback)(
-                    FileInputCommunicatorElement::displayName,
-                    FileInputCommunicatorElement::displayColor,
+                    TElement::displayName,
+                    TElement::displayColor,
                     displayLogicLevel ? " [HIGH]" : " [LOW]",
                     displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
                     str.c_str(),
@@ -76,8 +78,8 @@ namespace Description {
             }
             else {
                 std::forward<Callback>(callback)(
-                    FileInputCommunicatorElement::displayName,
-                    FileInputCommunicatorElement::displayColor,
+                    TElement::displayName,
+                    TElement::displayColor,
                     displayLogicLevel ? " [HIGH]" : " [LOW]",
                     displayLogicLevel ? SDL_Color{ 0x66, 0xFF, 0x66, 0xFF } : SDL_Color{ 0x66, 0x66, 0x66, 0xFF },
                     " [No file]",
@@ -85,11 +87,11 @@ namespace Description {
             }
         }
 
-        bool operator==(const FileInputCommunicatorDescriptionElement& other) const noexcept {
-            return static_cast<const CommunicatorDescriptionElementBase<FileInputCommunicatorDescriptionElement>&>(*this) == other && inputFilePath == other.inputFilePath;
+        bool operator==(const FileCommunicatorDescriptionElement<TElement>& other) const noexcept {
+            return static_cast<const CommunicatorDescriptionElementBase<FileCommunicatorDescriptionElement<TElement>>&>(*this) == other && filePath == other.filePath;
         }
 
-        bool operator!=(const FileInputCommunicatorDescriptionElement& other) const noexcept {
+        bool operator!=(const FileCommunicatorDescriptionElement<TElement>& other) const noexcept {
             return !(*this == other);
         }
     };
@@ -105,7 +107,11 @@ namespace Description {
     };
     template <>
     struct ElementType<FileInputCommunicatorElement> {
-        using type = FileInputCommunicatorDescriptionElement;
+        using type = FileCommunicatorDescriptionElement<FileInputCommunicatorElement>;
+    };
+    template <>
+    struct ElementType<FileOutputCommunicatorElement> {
+        using type = FileCommunicatorDescriptionElement<FileOutputCommunicatorElement>;
     };
 
     template <typename T>
