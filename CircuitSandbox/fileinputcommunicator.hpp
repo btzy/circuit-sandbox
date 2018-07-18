@@ -12,6 +12,7 @@
 #include "declarations.hpp"
 #include "communicator.hpp"
 #include "flushable_fixed_queue.hpp"
+#include "unrolled_linked_list_queue.hpp"
 
 class FileInputCommunicator final : public Communicator {
     /**
@@ -31,7 +32,7 @@ private:
     std::string inputFilePath;
 
     // used by simulator thread only
-    std::queue<uint8_t> transmittedCommands; // TODO: allocation-minimized queue implementation
+    ext::unrolled_linked_list_queue<uint8_t, 65536> transmittedCommands;
     bool suppressEnded = true; // whether the we need to read a byte first (prevents zero-length files)
 
     // used by simulator threaed only

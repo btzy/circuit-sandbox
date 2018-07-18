@@ -345,6 +345,10 @@ public:
                         std::holds_alternative<ScreenCommunicatorElement>(dataMatrix[nextPt])) {
                         pendingVisit.emplace(nextPt, axis);
                     }
+                    else if (std::holds_alternative<FileInputCommunicatorElement>(dataMatrix[pt]) &&
+                        std::holds_alternative<FileInputCommunicatorElement>(dataMatrix[nextPt])) {
+                        pendingVisit.emplace(nextPt, axis);
+                    }
                 }
             });
         }
