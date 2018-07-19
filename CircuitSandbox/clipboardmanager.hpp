@@ -20,8 +20,7 @@ private:
     /**
      * Generate the thumbnail to be used in the clipboard action interface.
      */
-    void generateThumbnail(int32_t index);
-
+    void generateThumbnail(int32_t index, SDL_Renderer* renderer);
 
 public:
     /**
@@ -34,10 +33,12 @@ public:
      * Write to a clipboard. Use the default clipboard if index is not given.
      */
     void write(const CanvasState& state);
-    void write(const CanvasState& state, int32_t index);
+    void write(const CanvasState& state, int32_t index, SDL_Renderer* renderer);
 
     /**
      * Return a permutation of clipboard indices representing the order they should be displayed in.
      */
     std::array<size_t, NUM_CLIPBOARDS> getOrder() const;
+
+    SDL_Texture* getThumbnail(int32_t index) const;
 };

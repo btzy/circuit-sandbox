@@ -459,4 +459,23 @@ public:
 
         return { std::move(newState), -newMin };
     }
+
+    /**
+     * Draw all elements onto a pixel buffer.
+     * @pre Assumes that the pixel buffer has the same size as the datamatrix
+     */
+    void fillSurface(uint32_t* pixelBuffer) {
+        for (int32_t y = 0; y < height(); ++y) {
+            for (int32_t x = 0; x < width(); ++x) {
+                SDL_Color computedColor{ 0, 0, 0, 0 };
+                std::visit(visitor{
+                    [](std::monostate) {},
+                    [&computedColor](const auto& element) {
+                        computedColor = element.template computeDisplayColor<false>();
+                    },
+                }, dataMatrix[{x, y}]);
+                *pixelBuffer++ = computedColor.r | (computedColor.g << 8) | (computedColor.b << 16);
+            }
+        }
+    }
 };

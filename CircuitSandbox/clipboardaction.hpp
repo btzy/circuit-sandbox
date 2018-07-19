@@ -52,17 +52,41 @@ private:
         inline void prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& textColor, const SDL_Color& backColor) {
             textureStore.reset(nullptr);
             SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
-            SDL_Surface* surface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, std::to_string(index).c_str(), textColor, backColor);
+            SDL_Surface* surface = TTF_RenderText_Blended(owner.mainWindow.interfaceFont, std::to_string(index).c_str(), textColor);
             SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, surface);
+            SDL_Texture* thumbnailTexture = owner.mainWindow.clipboard.getThumbnail(index);
             SDL_SetRenderTarget(renderer, texture);
-            {
-                SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, backColor.a);
-                SDL_RenderClear(renderer);
+
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
+            SDL_RenderClear(renderer);
+            // thumbnail
+            if (thumbnailTexture) {
+                int32_t xPadding = 0;
+                int32_t yPadding = 0;
+                int32_t width;
+                int32_t height;
+                SDL_QueryTexture(thumbnailTexture, nullptr, nullptr, &width, &height);
+                if (width * renderArea.h > height * renderArea.w) {
+                    yPadding = renderArea.h - renderArea.w * height / width;
+                } else {
+                    xPadding = renderArea.w - renderArea.h * width / height;
+                }
+                const SDL_Rect targetRect{ xPadding/2, yPadding/2, renderArea.w - xPadding, renderArea.h - yPadding };
+                SDL_RenderCopy(renderer, thumbnailTexture, nullptr, &targetRect);
             }
+            // overlay
+            {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+                SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, 125);
+                const SDL_Rect targetRect{ 0, 0, renderArea.w, renderArea.h };
+                SDL_RenderFillRect(renderer, &targetRect);
+            }
+            // text
             {
                 const SDL_Rect targetRect{ renderArea.w / 2 - surface->w / 2, renderArea.h / 2 - surface->h / 2, surface->w, surface->h };
                 SDL_RenderCopy(renderer, textTexture, nullptr, &targetRect);
             }
+            // border
             {
                 SDL_SetRenderDrawColor(renderer, foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a);
                 const SDL_Rect targetRect{ 0, 0, renderArea.w, renderArea.h };

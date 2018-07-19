@@ -238,7 +238,7 @@ ActionEventResult ClipboardAction::selectClipboard() {
 ActionEventResult ClipboardAction::selectClipboard(int32_t clipboardIndex) {
     switch (mode) {
     case Mode::COPY:
-        mainWindow.clipboard.write(selection, clipboardIndex);
+        mainWindow.clipboard.write(selection, clipboardIndex, mainWindow.renderer);
         return ActionEventResult::COMPLETED;
     case Mode::PASTE:
         SelectionAction::startByPasting(mainWindow, mainWindow.playArea, mainWindow.currentAction.getStarter(), clipboardIndex);
