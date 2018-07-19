@@ -354,6 +354,42 @@ public:
                 state = State::MOVED;
                 selection.rotateClockwise();
                 return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_RIGHT:
+                state = State::MOVED;
+                if (modifiers & KMOD_SHIFT) {
+                    selectionTrans += { 4, 0 };
+                }
+                else {
+                    selectionTrans += { 1, 0 };
+                }
+                return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_LEFT:
+                state = State::MOVED;
+                if (modifiers & KMOD_SHIFT) {
+                    selectionTrans += { -4, 0 };
+                }
+                else {
+                    selectionTrans += { -1, 0 };
+                }
+                return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_UP:
+                state = State::MOVED;
+                if (modifiers & KMOD_SHIFT) {
+                    selectionTrans += { 0, -4 };
+                }
+                else {
+                    selectionTrans += { 0, -1 };
+                }
+                return ActionEventResult::PROCESSED;
+            case SDL_SCANCODE_DOWN:
+                state = State::MOVED;
+                if (modifiers & KMOD_SHIFT) {
+                    selectionTrans += { 0, 4 };
+                }
+                else {
+                    selectionTrans += { 0, 1 };
+                }
+                return ActionEventResult::PROCESSED;
             case SDL_SCANCODE_D:
                 [[fallthrough]];
             case SDL_SCANCODE_DELETE:
@@ -492,6 +528,6 @@ public:
     }
 
     const char* getStatus() const {
-        return !selection.empty() ? "Hold Shift to add to the selection, Alt to subtract from it" : nullptr;
+        return selection.empty() || state == State::MOVED || state == State::MOVING ? nullptr : "Hold Shift to add to the selection, Alt to subtract from it";
     }
 };
