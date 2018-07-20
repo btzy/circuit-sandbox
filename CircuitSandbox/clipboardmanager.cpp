@@ -25,11 +25,20 @@ void ClipboardManager::write(SDL_Renderer* renderer, const CanvasState& state) {
     defaultClipboard.state = state;
     generateThumbnail(0, renderer);
 }
+void ClipboardManager::write(SDL_Renderer* renderer, CanvasState&& state) {
+    defaultClipboard.state = std::move(state);
+    generateThumbnail(0, renderer);
+}
 
 void ClipboardManager::write(SDL_Renderer* renderer, const CanvasState& state, int32_t index) {
     clipboards[index].state = state;
     generateThumbnail(index, renderer);
     write(renderer, state); // also write to the default clipboard
+}
+void ClipboardManager::write(SDL_Renderer* renderer, CanvasState&& state, int32_t index) {
+    clipboards[index].state = state;
+    generateThumbnail(index, renderer);
+    write(renderer, std::move(state)); // also write to the default clipboard
 }
 
 std::array<size_t, NUM_CLIPBOARDS> ClipboardManager::getOrder() const {

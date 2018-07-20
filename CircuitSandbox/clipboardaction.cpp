@@ -1,12 +1,19 @@
 #include "clipboardaction.hpp"
 #include "selectionaction.hpp"
 
-ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode) : StatefulAction(mainWindow), MainWindowEventHook(mainWindow, mainWindow.getRenderArea()), mode(mode), simulatorRunning(stateManager().simulator.running()), dialogTexture(nullptr)  {
-    if (simulatorRunning) stateManager().stopSimulatorUnchecked();
+ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode) : 
+    StatefulAction(mainWindow), 
+    MainWindowEventHook(mainWindow, mainWindow.getRenderArea()), 
+    mode(mode), 
+    simulatorRunning(stateManager().simulator.running()),
+    dialogTexture(nullptr),
+    clipboardButtons{ std::apply([&](auto... index) -> std::array<ClipboardButton, NUM_CLIPBOARDS> {
+        return { ClipboardButton(*this, index)... };
+    }, mainWindow.clipboard.getOrder()) } {
 
-    for (int32_t index : mainWindow.clipboard.getOrder()) {
-        clipboardButtons.push_back(ClipboardButton(*this, index));
-    }
+    // note: above clipboardButtons constructor works due to C++17 guaranteed copy elision.
+
+    if (simulatorRunning) stateManager().stopSimulatorUnchecked();
 
     layoutComponents(renderer);
     ext::point mousePosition;
@@ -152,10 +159,11 @@ ActionEventResult ClipboardAction::processWindowMouseButtonUp() {
     if (mouseLocation) {
         int32_t buttons = std::min(CLIPBOARDS_PER_PAGE, static_cast<int32_t>(NUM_CLIPBOARDS - page * CLIPBOARDS_PER_PAGE));
         for (int32_t i = 0; i < buttons; ++i) {
-            auto& button = clipboardButtons[i + page * CLIPBOARDS_PER_PAGE];
+            auto buttonIndex = i + page * CLIPBOARDS_PER_PAGE;
+            const auto& button = clipboardButtons[buttonIndex];
             if (activeButton == &button && ext::point_in_rect(*mouseLocation, button.renderArea)) {
                 activeButton = nullptr;
-                return selectClipboard(button.index);
+                return selectClipboard(buttonIndex);
             }
         }
 

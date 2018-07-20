@@ -33,7 +33,9 @@ public:
      * Write to a clipboard. Use the default clipboard if index is not given.
      */
     void write(SDL_Renderer* renderer, const CanvasState& state);
+    void write(SDL_Renderer* renderer, CanvasState&& state);
     void write(SDL_Renderer* renderer, const CanvasState& state, int32_t index);
+    void write(SDL_Renderer* renderer, CanvasState&& state, int32_t index);
 
     /**
      * Return a permutation of clipboard indices representing the order they should be displayed in.

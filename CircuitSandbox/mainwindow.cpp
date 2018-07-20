@@ -54,7 +54,7 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);
 
-    window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(640), logicalToPhysicalSize(480), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(960), logicalToPhysicalSize(720), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }

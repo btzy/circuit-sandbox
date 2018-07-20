@@ -11,7 +11,6 @@
 #include <optional>
 #include <SDL.h>
 #include <SDL_ttf.h>
-#include "unicode.hpp"
 #include "point.hpp"
 #include "statefulaction.hpp"
 #include "eventhook.hpp"
@@ -159,7 +158,7 @@ private:
     int32_t page = 0;
     CanvasState selection;
     UniqueTexture dialogTexture;
-    std::vector<ClipboardButton> clipboardButtons;
+    std::array<ClipboardButton, NUM_CLIPBOARDS> clipboardButtons;
     NavigationButton<true> nextButton = NavigationButton<true>(*this);
     NavigationButton<false> prevButton = NavigationButton<false>(*this);
 
@@ -210,7 +209,8 @@ public:
     void prevPage();
     void nextPage();
 
-    static inline void startCopyDialog(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter, const CanvasState selection) {
+    // note: selection passed by value, because the caller (SelectionAction) will have been destroyed by the action starter.
+    static inline void startCopyDialog(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter, CanvasState selection) {
         auto& action = starter.start<ClipboardAction>(mainWindow, renderer, Mode::COPY);
         action.selection = std::move(selection);
     }
