@@ -134,7 +134,7 @@ public:
                         // write to fileOutputQueue if possible, instead of the writeQueue
                         std::byte tmp = static_cast<std::byte>(currentTransmitChunk >> 3);
                         bool consumerNeedsSignal = false;
-                        if (fileOutputQueue.space() > 0) {
+                        if (writeQueue.empty() && fileOutputQueue.space() > 0) {
                             consumerNeedsSignal = fileOutputQueue.emplace_testconsumerneedssignal(tmp);
                         }
                         else {
@@ -215,7 +215,11 @@ private:
                 // try to write as many bytes as possible to the file
                 std::byte bytes[BufSize];
                 fileOutputQueue.pop(bytes, bytes + available);
-                outputBuf.sputn(reinterpret_cast<char*>(bytes), available);
+                if (outputBuf.sputn(reinterpret_cast<char*>(bytes), available) != available) {
+                    // file broken for some reason
+                    stoppingFlag.store(true, std::memory_order_relaxed);
+                }
+                acknowledged_bytes.fetch_add(available, std::memory_order_release);
             }
             if (!stoppingFlag.load(std::memory_order_acquire)) {
                 // if we get here, it means the file hasn't ended but the buffer is empty. so we sleep until notified.
