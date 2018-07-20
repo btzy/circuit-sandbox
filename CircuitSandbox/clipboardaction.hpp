@@ -205,7 +205,6 @@ public:
     /**
      * The user has selected a clipboard. The actual clipboard action is performed here.
      */
-    ActionEventResult selectClipboard();
     ActionEventResult selectClipboard(int32_t clipboardIndex);
 
     void prevPage();

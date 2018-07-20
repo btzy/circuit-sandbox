@@ -10,24 +10,26 @@ void ClipboardManager::generateThumbnail(int32_t index, SDL_Renderer* renderer) 
 }
 
 CanvasState ClipboardManager::read() const {
-    return defaultClipboard;
+    return defaultClipboard.state;
 }
 
 CanvasState ClipboardManager::read(int32_t index) {
     // overwrite the default clipboard too, unless the selected clipboard is empty
     if (!clipboards[index].state.empty()) {
-        defaultClipboard = clipboards[index].state;
+        defaultClipboard.state = clipboards[index].state;
     }
     return clipboards[index].state;
 }
 
-void ClipboardManager::write(const CanvasState& state) {
-    defaultClipboard = state;
+void ClipboardManager::write(SDL_Renderer* renderer, const CanvasState& state) {
+    defaultClipboard.state = state;
+    generateThumbnail(0, renderer);
 }
 
-void ClipboardManager::write(const CanvasState& state, int32_t index, SDL_Renderer* renderer) {
-    defaultClipboard = clipboards[index].state = state;
+void ClipboardManager::write(SDL_Renderer* renderer, const CanvasState& state, int32_t index) {
+    clipboards[index].state = state;
     generateThumbnail(index, renderer);
+    write(renderer, state); // also write to the default clipboard
 }
 
 std::array<size_t, NUM_CLIPBOARDS> ClipboardManager::getOrder() const {

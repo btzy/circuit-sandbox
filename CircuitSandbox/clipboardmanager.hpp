@@ -14,8 +14,8 @@ private:
         UniqueTexture thumbnail;
     };
 
-    CanvasState defaultClipboard;
     std::array<Clipboard, NUM_CLIPBOARDS> clipboards;
+    Clipboard& defaultClipboard = clipboards[0];
 
     /**
      * Generate the thumbnail to be used in the clipboard action interface.
@@ -32,8 +32,8 @@ public:
     /**
      * Write to a clipboard. Use the default clipboard if index is not given.
      */
-    void write(const CanvasState& state);
-    void write(const CanvasState& state, int32_t index, SDL_Renderer* renderer);
+    void write(SDL_Renderer* renderer, const CanvasState& state);
+    void write(SDL_Renderer* renderer, const CanvasState& state, int32_t index);
 
     /**
      * Return a permutation of clipboard indices representing the order they should be displayed in.

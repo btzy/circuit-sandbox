@@ -124,7 +124,7 @@ void ClipboardAction::layoutComponents(SDL_Renderer* renderer) {
 ActionEventResult ClipboardAction::processWindowMouseButtonDown(const SDL_MouseButtonEvent& event) {
     if (!ext::point_in_rect(event, dialogArea)) {
         // select the default clipboard if the user clicked outside
-        return selectClipboard();
+        return ActionEventResult::COMPLETED;
     }
 
     int32_t buttons = std::min(CLIPBOARDS_PER_PAGE, static_cast<int32_t>(NUM_CLIPBOARDS - page * CLIPBOARDS_PER_PAGE));
@@ -189,7 +189,7 @@ ActionEventResult ClipboardAction::processWindowKeyboard(const SDL_KeyboardEvent
     if (event.type == SDL_KEYDOWN) {
         switch (event.keysym.sym) {
             case SDLK_ESCAPE:
-                return selectClipboard();
+                return ActionEventResult::COMPLETED;
             case SDLK_LEFT:
                 prevPage();
                 return ActionEventResult::PROCESSED;
@@ -223,22 +223,10 @@ ActionEventResult ClipboardAction::processWindowKeyboard(const SDL_KeyboardEvent
     return ActionEventResult::PROCESSED;
 }
 
-ActionEventResult ClipboardAction::selectClipboard() {
-    switch (mode) {
-    case Mode::COPY:
-        mainWindow.clipboard.write(selection);
-        return ActionEventResult::COMPLETED;
-    case Mode::PASTE:
-        SelectionAction::startByPasting(mainWindow, mainWindow.playArea, mainWindow.currentAction.getStarter());
-        return ActionEventResult::PROCESSED;
-    }
-    return ActionEventResult::PROCESSED;
-}
-
 ActionEventResult ClipboardAction::selectClipboard(int32_t clipboardIndex) {
     switch (mode) {
     case Mode::COPY:
-        mainWindow.clipboard.write(selection, clipboardIndex, mainWindow.renderer);
+        mainWindow.clipboard.write(mainWindow.renderer, selection, clipboardIndex);
         return ActionEventResult::COMPLETED;
     case Mode::PASTE:
         SelectionAction::startByPasting(mainWindow, mainWindow.playArea, mainWindow.currentAction.getStarter(), clipboardIndex);

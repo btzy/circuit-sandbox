@@ -403,14 +403,14 @@ public:
                         return ActionEventResult::PROCESSED;
                     }
                     else {
-                        mainWindow.clipboard.write(selection);
+                        mainWindow.clipboard.write(mainWindow.renderer, selection);
                         return ActionEventResult::PROCESSED;
                     }
                 }
             case SDL_SCANCODE_X:
                 if (modifiers & KMOD_CTRL) {
                     state = State::MOVED;
-                    mainWindow.clipboard.write(std::move(selection));
+                    mainWindow.clipboard.write(mainWindow.renderer, std::move(selection));
                     selection = CanvasState(); // clear the selection
                     return ActionEventResult::COMPLETED; // tell playarea to end this action
                 }
