@@ -148,10 +148,40 @@ namespace ext {
         }
 
         /**
+         * Pops some elements from the front of the queue, discarding them.
+         * Assumes that there is enough elements available (use available() to check for availability).
+         */
+        inline void pop(size_t amount) noexcept {
+            size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
+            for (; amount > 0; --amount) {
+                T& obj = reinterpret_cast<T&>(buffer[tmp_popIndex]);
+                obj.~T();
+                ++tmp_popIndex;
+                if (tmp_popIndex == Size) tmp_popIndex -= Size;
+            }
+            popIndex.store(tmp_popIndex, std::memory_order_release);
+        }
+
+        /**
+        * Peeks some elements from the front of the queue.
+        * Assumes that there is enough elements available (use available() to check for availability).
+        */
+        template <typename InBegin, typename InEnd>
+        inline void peek(InBegin begin, InEnd end) const {
+            size_t tmp_popIndex = popIndex.load(std::memory_order_relaxed);
+            for (; begin != end; ++begin) {
+                const T& obj = reinterpret_cast<const T&>(buffer[tmp_popIndex]);
+                *begin = obj;
+                ++tmp_popIndex;
+                if (tmp_popIndex == Size) tmp_popIndex -= Size;
+            }
+        }
+
+        /**
          * Peeks the element from the front of the queue if exists.
          * Returns true if there was an element to remove.
          */
-        inline bool peek(T& out) {
+        inline bool peek(T& out) const {
             if (available() == 0) {
                 return false;
             }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <fstream>
+#include <cstdio>
 #include <string>
 #include <thread>
 #include <mutex>
@@ -28,7 +28,7 @@ private:
     std::atomic<bool> stoppingFlag;
     std::mutex sigMutex;
     std::condition_variable sigCV;
-    std::filebuf outputBuf;
+    std::FILE* outputHandle;
     std::string outputFilePath;
 
     // used by simulator thread only
@@ -72,7 +72,10 @@ private:
     // must call unloadFile() before calling this!
     // returns true is load succeeded, false otherwise.
     bool loadFile() {
-        if (!outputFilePath.empty() && outputBuf.open(outputFilePath, std::ios_base::out | std::ios_base::binary) != nullptr) {
+        if (!outputFilePath.empty() && (outputHandle = std::fopen(outputFilePath.c_str(), "wb")) != nullptr) {
+            // disable output buffering
+            std::setvbuf(outputHandle, nullptr, _IONBF, 0);
+            
             // launch a new file thread
             stoppingFlag.store(false, std::memory_order_relaxed);
             fileThread = std::thread([this]() {
@@ -214,12 +217,21 @@ private:
             while (!stoppingFlag.load(std::memory_order_acquire) && (available = fileOutputQueue.available()) > 0) {
                 // try to write as many bytes as possible to the file
                 std::byte bytes[BufSize];
-                fileOutputQueue.pop(bytes, bytes + available);
-                if (outputBuf.sputn(reinterpret_cast<char*>(bytes), available) != available) {
+                // peek at the bytes at the front, but don't modify the queue yet in case the write fails
+                fileOutputQueue.peek(bytes, bytes + available);
+                auto commitCount = std::fwrite(reinterpret_cast<void*>(bytes), 1, available, outputHandle);
+
+                // pop the bytes that were committed
+                fileOutputQueue.pop(commitCount);
+
+                // enqueue the acknowledgements
+                acknowledged_bytes.fetch_add(commitCount, std::memory_order_release);
+
+                // check if everything that was available were committed
+                if (commitCount != available) {
                     // file broken for some reason
                     stoppingFlag.store(true, std::memory_order_relaxed);
                 }
-                acknowledged_bytes.fetch_add(available, std::memory_order_release);
             }
             if (!stoppingFlag.load(std::memory_order_acquire)) {
                 // if we get here, it means the file hasn't ended but the buffer is empty. so we sleep until notified.
@@ -231,6 +243,6 @@ private:
         }
 
         // close the file, because we are stopping (probably user requested to change the file)
-        outputBuf.close();
+        std::fclose(outputHandle);
     }
 };
