@@ -79,9 +79,6 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
         SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
     }
 
-    // do the layout
-    layoutComponents(true);
-
 #ifdef _WIN32
     // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
     // This tries to fix this
@@ -212,6 +209,9 @@ void MainWindow::start() {
 
     // Show the window to the user
     SDL_ShowWindow(window);
+
+    // do the layout (must be done after showing the window, otherwise pre-rendering done here won't work properly)
+    layoutComponents(true);
 
 #if defined(_WIN32)
     SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);

@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <tuple>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -15,15 +16,33 @@
 using namespace std::literals::string_literals; // gives the 's' suffix for strings
 
 
-Toolbox::Toolbox(MainWindow& main_window) : mainWindow(main_window) {};
+Toolbox::Toolbox(MainWindow& main_window) : 
+    mainWindow(main_window),
+    mouseoverToolIndex(MainWindow::EMPTY_INDEX),
+    mouseclickToolIndex(MainWindow::EMPTY_INDEX),
+    toolButtons(std::apply([&](auto... tool_tags) {
+        return tool_buttons_t{ ToolRenderable<typename decltype(tool_tags)::type>(*this)... };
+    }, tool_tags_t::transform<ext::tag>::instantiate<std::tuple>{})) {
+};
 
 
-void Toolbox::layoutComponents(SDL_Renderer*) {
+void Toolbox::layoutComponents(SDL_Renderer* renderer) {
     BUTTON_HEIGHT = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_HEIGHT);
     PADDING_HORIZONTAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_HORIZONTAL);
     PADDING_VERTICAL = mainWindow.logicalToPhysicalSize(LOGICAL_PADDING_VERTICAL);
     BUTTON_PADDING = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_PADDING);
     BUTTON_SPACING = mainWindow.logicalToPhysicalSize(LOGICAL_BUTTON_SPACING);
+
+    SDL_Rect buttonRect{
+        renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING,
+        renderArea.y + PADDING_VERTICAL + BUTTON_PADDING,
+        renderArea.w - 2 * (PADDING_HORIZONTAL + BUTTON_PADDING),
+        BUTTON_HEIGHT - 2 * BUTTON_PADDING
+    };
+    tool_tags_t::for_each([&](auto, auto int_tag) {
+        std::get<decltype(int_tag)::value>(toolButtons).layoutComponents(renderer, buttonRect);
+        buttonRect.y += BUTTON_HEIGHT + BUTTON_SPACING;
+    });
 }
 
 
@@ -39,37 +58,11 @@ void Toolbox::render(SDL_Renderer* renderer) const {
 
 
     // draw the buttons to the screen one-by-one
-    tool_tags_t::for_each([this, &renderer](const auto tool_tag, const auto index_tag) {
-        // 'Tool' is the type of tool (e.g. ConductiveWire)
-        using Tool = typename decltype(tool_tag)::type;
+    tool_tags_t::for_each([&](auto, auto index_tag) {
         // 'index' is the index of this element inside the tool_tags_t
-        constexpr size_t index = decltype(index_tag)::value;
+        constexpr size_t Index = decltype(index_tag)::value;
 
-        SDL_Color backgroundColorForText = MainWindow::backgroundColor;
-
-        // Make a grey rectangle if the element is being moused over, otherwise make a black rectangle
-
-        {
-            if (mouseoverToolIndex == index) { // <-- test that current index is the index being mouseovered
-                backgroundColorForText = SDL_Color{ 0x44, 0x44, 0x44, 0xFF };
-            }
-            SDL_SetRenderDrawColor(renderer, backgroundColorForText.r, backgroundColorForText.g, backgroundColorForText.b, backgroundColorForText.a);
-            const SDL_Rect destRect{ renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING, renderArea.y + PADDING_VERTICAL + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(index) + BUTTON_PADDING, renderArea.w - 2 * (PADDING_HORIZONTAL + BUTTON_PADDING), BUTTON_HEIGHT - 2 * BUTTON_PADDING };
-            SDL_RenderFillRect(renderer, &destRect);
-        }
-
-        // Render the text
-        {
-            SDL_Surface* surface = TTF_RenderText_Shaded(this->mainWindow.interfaceFont, Tool::displayName, Tool::displayColor, backgroundColorForText);
-            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-            SDL_FreeSurface(surface);
-            int textureWidth, textureHeight;
-            SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
-            // the complicated calculation here makes the text vertically-centered and horizontally displaced by 2 logical pixels
-            const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING + mainWindow.logicalToPhysicalSize(4), renderArea.y + PADDING_VERTICAL + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(index) + (BUTTON_HEIGHT - textureHeight) / 2, textureWidth, textureHeight};
-            SDL_RenderCopy(renderer, texture, nullptr, &destRect);
-            SDL_DestroyTexture(texture);
-        }
+        renderButton<Index>(renderer);
     });
 
     // render the status of the current action if any
@@ -126,10 +119,73 @@ bool Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
     // check if the mouse is on the button spacing instead of on the actual button
     if ((offsetY - PADDING_VERTICAL) - static_cast<int32_t>(index) * (BUTTON_HEIGHT + BUTTON_SPACING) >= BUTTON_HEIGHT) return true;
 
-    mainWindow.bindTool(resolveInputHandleIndex(event), index);
+    mouseclickToolIndex = index;
+    mouseclickInputHandle = resolveInputHandleIndex(event);
     return true;
+}
+
+
+void Toolbox::processMouseButtonUp() {
+
+    if (mouseoverToolIndex == mouseclickToolIndex) {
+        mainWindow.bindTool(mouseclickInputHandle, mouseclickToolIndex);
+    }
+
+    mouseclickToolIndex = MainWindow::EMPTY_INDEX;
 }
 
 void Toolbox::processMouseLeave() {
     mouseoverToolIndex = MainWindow::EMPTY_INDEX;
+}
+
+
+template <size_t Index>
+inline void Toolbox::renderButton(SDL_Renderer* renderer) const {
+    if (mouseclickToolIndex == Index) {
+        std::get<Index>(toolButtons).template render<RenderStyle::CLICK>(renderer);
+    }
+    else if (mouseoverToolIndex == Index) {
+        std::get<Index>(toolButtons).template render<RenderStyle::HOVER>(renderer);
+    }
+    else {
+        std::get<Index>(toolButtons).template render<RenderStyle::DEFAULT>(renderer);
+    }
+}
+
+
+template <typename Tool>
+Toolbox::ToolRenderable<Tool>::ToolRenderable(Toolbox& owner) noexcept : owner(owner) {};
+
+
+template <typename Tool>
+void Toolbox::ToolRenderable<Tool>::prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& backColor) {
+    textureStore.reset(nullptr);
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
+    const char* x = Tool::displayName;
+    const SDL_Color y = Tool::displayColor;
+    SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, x, y, backColor);
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+
+    SDL_SetRenderTarget(renderer, texture);
+
+    SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, backColor.a);
+    SDL_RenderClear(renderer);
+
+    // text
+    {
+        const SDL_Rect targetRect{ owner.mainWindow.logicalToPhysicalSize(LOGICAL_TEXT_LEFT_PADDING), (renderArea.h - textSurface->h) / 2, textSurface->w, textSurface->h };
+        SDL_RenderCopy(renderer, textTexture, nullptr, &targetRect);
+    }
+
+    SDL_SetRenderTarget(renderer, nullptr);
+    SDL_DestroyTexture(textTexture);
+    SDL_FreeSurface(textSurface);
+    textureStore.reset(texture);
+}
+template <typename Tool>
+void Toolbox::ToolRenderable<Tool>::layoutComponents(SDL_Renderer* renderer, const SDL_Rect& render_area) {
+    renderArea = render_area;
+    prepareTexture(renderer, textureDefault, backgroundColor);
+    prepareTexture(renderer, textureHover, hoverColor);
+    prepareTexture(renderer, textureClick, clickColor);
 }

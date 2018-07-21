@@ -4,20 +4,21 @@
  * Represents the toolbox - the place where all the element buttons are located.
  */
 
-#include <SDL.h>
-
 #include <utility>
+#include <tuple>
+
+#include <SDL.h>
 
 #include "declarations.hpp"
 #include "drawable.hpp"
-
-
+#include "renderable.hpp"
 
 
 class Toolbox final : public Drawable {
 private:
-    // owner window
-    MainWindow& mainWindow;
+    constexpr static SDL_Color clickColor{ 0x66, 0x66, 0x66, 0xFF };
+    constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
+    constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
 
     // logical units
     constexpr static int LOGICAL_BUTTON_HEIGHT = 24;
@@ -33,8 +34,31 @@ private:
     int BUTTON_PADDING = LOGICAL_BUTTON_PADDING;
     int BUTTON_SPACING = LOGICAL_BUTTON_SPACING;
 
+    template <typename Tool>
+    class ToolRenderable : public Renderable {
+    private:
+        Toolbox& owner;
+        constexpr static int LOGICAL_TEXT_LEFT_PADDING = 4;
+    public:
+        ToolRenderable(Toolbox& owner) noexcept;
+        void prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& backColor);
+        void layoutComponents(SDL_Renderer* renderer, const SDL_Rect& render_area);
+    };
+
+    // owner window
+    MainWindow& mainWindow;
+
     // the index of the element being mouseovered
     size_t mouseoverToolIndex;
+
+    // the index of the element being clicked
+    size_t mouseclickToolIndex;
+    // the index of the input handle used to click (not used if mouseclickToolIndex == MainWindow::EMPTY_INDEX
+    size_t mouseclickInputHandle;
+
+    // cached buttons (renderables)
+    using tool_buttons_t = tool_tags_t::transform<ToolRenderable>::instantiate<std::tuple>;
+    tool_buttons_t toolButtons;
 
     /**
      * The colour of the each handle
@@ -47,6 +71,9 @@ private:
         { 0, 0xCC, 0xFF, SDL_ALPHA_OPAQUE },
         { 0xCC, 0, 0xFF, SDL_ALPHA_OPAQUE }
     };
+
+    template <size_t Index>
+    inline void renderButton(SDL_Renderer* renderer) const;
 
 public:
 
@@ -72,7 +99,7 @@ public:
      */
     void processMouseHover(const SDL_MouseMotionEvent&) override;
     bool processMouseButtonDown(const SDL_MouseButtonEvent&) override;
-
+    void processMouseButtonUp() override;
 
     /**
      * This is called to reset all the hovering of buttons, because mousemove events are only triggered when the mouse is still on the canvas
