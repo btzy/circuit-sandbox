@@ -98,8 +98,6 @@ private:
     // storage for the key points in the current pencil action
     std::vector<ext::point> keyPoints;
 
-    std::optional<bool> polylineMode;
-
     template <typename NewPencilType = PencilType, typename ElementVariant>
     bool change(ElementVariant& element) {
         if (!std::holds_alternative<CanvasStateVariantElement_t<NewPencilType>>(element)) {
@@ -209,7 +207,8 @@ public:
             using Tool = typename decltype(tool_tag)::type;
 
             if constexpr (std::is_same_v<PencilType, Tool>) {
-                return true;
+                // if double click or more, then end the action even if we are using the extended (polyline) tool.
+                return event.clicks == 1;
             }
             else {
                 return false;
@@ -224,18 +223,20 @@ public:
     ActionEventResult processPlayAreaMouseButtonUp() override {
         // check if the user is drawing a polyline on the first mouseup
         SDL_Keymod modifiers = SDL_GetModState();
-        if (!polylineMode) polylineMode = modifiers & KMOD_SHIFT;
 
         // create a keypoint on mouseup so dragging works for normal lines
         ext::point keyPoint = find_orthogonal_keypoint(mousePos, keyPoints.back());
         if (keyPoints.back() != keyPoint) {
             keyPoints.emplace_back(keyPoint);
         }
-        // if drawing a polyline and holding shift, don't end the action yet
-        if (*polylineMode && modifiers & KMOD_SHIFT) {
+
+        // if holding shift, don't end the action yet (we are using extended (polyline) mode).
+        if (modifiers & KMOD_SHIFT) {
             return ActionEventResult::PROCESSED;
         }
-        return ActionEventResult::COMPLETED;
+        else {
+            return ActionEventResult::COMPLETED;
+        }
     }
 
     ActionEventResult processPlayAreaMouseHover(const SDL_MouseMotionEvent& event) override {
