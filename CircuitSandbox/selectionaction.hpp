@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional> // for std::reference_wrapper
 #include <SDL.h>
 #include "point.hpp"
 #include "drawing.hpp"
@@ -36,9 +37,8 @@ private:
     // when entering State::SELECTED these will be set; after that these will not be modified
     CanvasState selection; // stores the selection
 
-    // in State::SELECTED and State::MOVING, these are the translations of selection and base, relative to defaultState
+    // in State::SELECTED and State::MOVING, these are the translations of selection, relative to defaultState
     ext::point selectionTrans = { 0, 0 }; // in canvas coordinates
-    ext::point baseTrans = { 0, 0 }; // in canvas coordinates
 
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
@@ -76,7 +76,7 @@ private:
             ext::point unselectedShrinkTrans = unselected.shrinkDataMatrix();
 
             // merge the unselected part with base
-            auto tmpBase = CanvasState::merge(std::move(unselected), topLeft - unselectedShrinkTrans, std::move(base), baseTrans).first;
+            auto tmpBase = CanvasState::merge(std::move(unselected), topLeft - unselectedShrinkTrans, std::move(base), { 0, 0 }).first;
             base = std::move(tmpBase);
         }
         else {
@@ -108,43 +108,209 @@ private:
      * When this method is called, selection is guaranteed to lie within base since base is only shrunk on destruction.
      * If subtract is true, elements in the selection rect are removed from selection.
      */
+    template <bool UseExtendedComponent>
     bool selectConnectedComponent(const ext::point& pt, bool subtract) {
         CanvasState& base = canvas();
 
+        // splice out the connected component
+        auto [connectedComponent, componentTrans] = spliceConnectedComponent<UseExtendedComponent>(pt);
+
         if (subtract) {
-            // if pt contains an element, it is guaranteed to be in base from the first click
-            // move the origin of selection back to selection - it will be moved back later
-            // it is ok if there is no element at pt
-            if (!base.contains(pt)) return !selection.empty();
-            CanvasState origin = base.splice(pt.x, pt.y, 1, 1);
-            auto [newSelection, translation] = CanvasState::merge(std::move(origin), pt, std::move(selection), selectionTrans);
-            selection = std::move(newSelection);
-            selectionTrans = -translation;
-
-            auto [unselected, unselectedTrans] = selection.spliceConnectedComponent(pt - selectionTrans);
-            unselectedTrans += selectionTrans;
-            selectionTrans -= selection.shrinkDataMatrix();
-
-            // merge the unselected part with base
-            auto tmpBase = CanvasState::merge(std::move(unselected), unselectedTrans, std::move(base), baseTrans).first;
+            // merge the component with base
+            auto tmpBase = CanvasState::merge(std::move(base), { 0, 0 }, std::move(connectedComponent), componentTrans).first;
             base = std::move(tmpBase);
         }
         else {
-            // if pt contains an element, it is guaranteed to be in selection from the first click
-            // move the origin of selection back to base - it will be moved back later
-            // it is ok if there is no element at pt
-            if (!selection.contains(pt - selectionTrans)) return !selection.empty();
-            CanvasState origin = selection.splice(pt.x - selectionTrans.x, pt.y - selectionTrans.y, 1, 1);
-            base = std::move(CanvasState::merge(std::move(origin), pt, std::move(base), baseTrans).first);
-
-            auto [newSelection, newSelectionTrans] = base.spliceConnectedComponent(pt);
-
-            // merge the newest selection with selection
-            auto [tmpSelection, translation] = CanvasState::merge(std::move(newSelection), newSelectionTrans, std::move(selection), selectionTrans);
+            // merge the component with selection
+            auto [tmpSelection, translation] = CanvasState::merge(std::move(connectedComponent), componentTrans, std::move(selection), selectionTrans);
             selection = std::move(tmpSelection);
             selectionTrans = -std::move(translation);
         }
+
+        // shrink the selection
+        selectionTrans -= selection.shrinkDataMatrix();
+
         return !selection.empty();
+    }
+
+
+    /**
+    * Moves logically connected elements from base and selection to a new CanvasState and returns them.
+    * Returns the new CanvasState and the translation relative to the base.
+    * When ExtendedComponent is true, the connected component contains everything adjacent (ignoring std::monostate).
+    * This method will resize neither the base nor the selection.  The spliced elements are replaced by std::monostate.
+    * Both base and selection will not be shrinked.
+    */
+    template <bool UseExtendedComponent>
+    std::pair<CanvasState, ext::point> spliceConnectedComponent(const ext::point& origin) {
+        CanvasState& base = canvas();
+
+        if (!base.contains(origin) ||
+            (std::holds_alternative<std::monostate>(base[origin]) &&
+            (!selection.contains(origin - selectionTrans) || std::holds_alternative<std::monostate>(selection[origin - selectionTrans])))) {
+            return { CanvasState{}, { 0, 0 } };
+        }
+
+        CanvasState newState;
+
+        ext::point minPt = ext::point::max();
+        ext::point maxPt = ext::point::min();
+        std::vector<std::pair<ext::point, std::reference_wrapper<CanvasState::element_variant_t>>> componentData;
+
+        // get the min and max bounds
+        floodFillConnectedComponent<UseExtendedComponent>(origin, [&](const ext::point& pt, CanvasState::element_variant_t& element) {
+            minPt = min(minPt, pt);
+            maxPt = max(maxPt, pt);
+            assert(element.index() > 0 && element.index() != std::variant_npos);
+            componentData.emplace_back(pt, element);
+        });
+
+        ext::point spliceSize = maxPt - minPt + ext::point{ 1, 1 };
+
+        newState.dataMatrix = CanvasState::matrix_t(spliceSize);
+
+        // swap the data over to the new state
+        while (!componentData.empty()) {
+            auto& [pt, element] = componentData.back();
+
+            using std::swap;
+            // swap will give correct results because matrix_t is initialized to std::monostate elements
+            swap(element.get(), newState.dataMatrix[pt - minPt]);
+
+            componentData.pop_back();
+        }
+
+        return { std::move(newState), minPt };
+    }
+
+    /**
+    * Runs a floodfill (customized by the ExtendedComponent policy).
+    * Calls callback(ext::point) for each point being visited (including the origin).
+    */
+    template <bool UseExtendedComponent, typename Callback>
+    void floodFillConnectedComponent(const ext::point& origin, Callback callback) {
+        CanvasState& base = canvas();
+
+        if constexpr(!UseExtendedComponent) {
+            // using double-click
+            struct Visited {
+                bool dir[2] = { false, false }; // { 0: horizontal, 1: vertical }
+            };
+            ext::heap_matrix<Visited> visitedMatrix(base.width(), base.height());
+
+            std::stack<std::pair<ext::point, int>> pendingVisit;
+            // flood fill from origin along both axes; guaranteed to never visit monostate
+            pendingVisit.emplace(origin, 0);
+            pendingVisit.emplace(origin, 1);
+
+            while (!pendingVisit.empty()) {
+                auto[pt, axis] = pendingVisit.top();
+                pendingVisit.pop();
+
+                if (visitedMatrix[pt].dir[axis]) continue;
+                visitedMatrix[pt].dir[axis] = true;
+
+                auto& currElement = selection.contains(pt - selectionTrans) && !std::holds_alternative<std::monostate>(selection[pt - selectionTrans]) ? selection[pt - selectionTrans] : base[pt];
+
+                assert(!std::holds_alternative<std::monostate>(currElement));
+
+                // call the callback (only if this is the first direction added, so the callback won't get duplicate points)
+                if (visitedMatrix[pt].dir[0] ^ visitedMatrix[pt].dir[1]) {
+                    callback(pt, currElement);
+                }
+
+                // visit other axis unless this is an insulated wire
+                if (!visitedMatrix[pt].dir[axis ^ 1] && !std::holds_alternative<InsulatedWire>(currElement)) {
+                    pendingVisit.emplace(pt, axis ^ 1);
+                }
+
+                using positive_one_t = std::integral_constant<int32_t, 1>;
+                using negative_one_t = std::integral_constant<int32_t, -1>;
+                using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
+                directions_t::for_each([&](auto direction_tag_t, auto) {
+                    auto[x, y] = pt;
+                    if (axis == 0) {
+                        x += decltype(direction_tag_t)::type::value;
+                    }
+                    else {
+                        y += decltype(direction_tag_t)::type::value;
+                    }
+                    ext::point nextPt{ x, y };
+
+                    if (base.contains(nextPt) && !visitedMatrix[nextPt].dir[axis]) {
+                        const auto& nextElement = selection.contains(nextPt - selectionTrans) && !std::holds_alternative<std::monostate>(selection[nextPt - selectionTrans]) ? selection[nextPt - selectionTrans] : base[nextPt];
+
+                        if ((std::holds_alternative<ConductiveWire>(currElement) || std::holds_alternative<InsulatedWire>(currElement)) &&
+                            (std::holds_alternative<ConductiveWire>(nextElement) || std::holds_alternative<InsulatedWire>(nextElement))) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                        else if (std::holds_alternative<Signal>(currElement) &&
+                            (std::holds_alternative<AndGate>(nextElement) || std::holds_alternative<OrGate>(nextElement) || std::holds_alternative<NandGate>(nextElement) ||
+                                std::holds_alternative<NorGate>(nextElement) || std::holds_alternative<PositiveRelay>(nextElement) || std::holds_alternative<NegativeRelay>(nextElement))) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                        else if ((std::holds_alternative<AndGate>(currElement) || std::holds_alternative<OrGate>(currElement) || std::holds_alternative<NandGate>(currElement) ||
+                            std::holds_alternative<NorGate>(currElement) || std::holds_alternative<PositiveRelay>(currElement) || std::holds_alternative<NegativeRelay>(currElement)) &&
+                            std::holds_alternative<Signal>(nextElement)) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                        else if (std::holds_alternative<ScreenCommunicatorElement>(currElement) &&
+                            std::holds_alternative<ScreenCommunicatorElement>(nextElement)) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                        else if (std::holds_alternative<FileInputCommunicatorElement>(currElement) &&
+                            std::holds_alternative<FileInputCommunicatorElement>(nextElement)) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                        else if (std::holds_alternative<FileOutputCommunicatorElement>(currElement) &&
+                            std::holds_alternative<FileOutputCommunicatorElement>(nextElement)) {
+                            pendingVisit.emplace(nextPt, axis);
+                        }
+                    }
+                });
+            }
+        }
+        else {
+            // using triple-click
+            ext::heap_matrix<bool> visitedMatrix(base.width(), base.height());
+            visitedMatrix.fill(false);
+
+            std::stack<ext::point> pendingVisit;
+            // flood fill from origin along both axes; guaranteed to never visit monostate
+            pendingVisit.emplace(origin);
+
+            while (!pendingVisit.empty()) {
+                auto pt = pendingVisit.top();
+                pendingVisit.pop();
+
+                if (visitedMatrix[pt]) continue;
+                visitedMatrix[pt] = true;
+
+                auto& currElement = selection.contains(pt - selectionTrans) && !std::holds_alternative<std::monostate>(selection[pt - selectionTrans]) ? selection[pt - selectionTrans] : base[pt];
+
+                assert(!std::holds_alternative<std::monostate>(currElement));
+
+                // call the callback
+                callback(pt, currElement);
+
+                using positive_one_t = std::integral_constant<int32_t, 1>;
+                using zero_t = std::integral_constant<int32_t, 0>;
+                using negative_one_t = std::integral_constant<int32_t, -1>;
+                using directions_t = ext::tag_tuple<std::pair<zero_t, negative_one_t>, std::pair<positive_one_t, zero_t>, std::pair<zero_t, positive_one_t>, std::pair<negative_one_t, zero_t>>;
+                directions_t::for_each([&](auto direction_tag_t, auto) {
+                    
+                    ext::point nextPt = pt;
+                    nextPt.x += decltype(direction_tag_t)::type::first_type::value;
+                    nextPt.y += decltype(direction_tag_t)::type::second_type::value;
+                    if (base.contains(nextPt) && !visitedMatrix[nextPt]) {
+                        const auto& nextElement = selection.contains(nextPt - selectionTrans) && !std::holds_alternative<std::monostate>(selection[nextPt - selectionTrans]) ? selection[nextPt - selectionTrans] : base[nextPt];
+                        if (!std::holds_alternative<std::monostate>(nextElement)) {
+                            pendingVisit.emplace(nextPt);
+                        }
+                    }
+                });
+            }
+        }
     }
 
 public:
@@ -153,9 +319,9 @@ public:
     // destructor, called to finish the action immediately
     ~SelectionAction() override {
         // note that base is only shrunk on destruction
-        baseTrans -= canvas().shrinkDataMatrix();
+        auto baseTrans = canvas().shrinkDataMatrix();
         if (state != State::SELECTING) {
-            auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), baseTrans, std::move(selection), selectionTrans);
+            auto[tmpDefaultState, translation] = CanvasState::merge(std::move(canvas()), -baseTrans, std::move(selection), selectionTrans);
             canvas() = std::move(tmpDefaultState);
             deltaTrans = std::move(translation);
         }
@@ -195,7 +361,7 @@ public:
 
         auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
         action.selection = std::move(action.canvas().splice(0, 0, action.canvas().width(), action.canvas().height()));
-        action.selectionTrans = action.baseTrans = { 0, 0 };
+        action.selectionTrans = { 0, 0 };
         // action.selectionOrigin = { 0, 0 };
         // action.selectionEnd = action.selection.size() - ext::point{ 1, 1 };
     }
@@ -215,7 +381,6 @@ public:
         ext::point canvasOffset = playArea.canvasFromWindowOffset(windowOffset);
 
         action.selectionTrans = canvasOffset - action.selection.size() / 2; // set the selection offset as the current offset
-        action.baseTrans = { 0, 0 };
     }
 
     ActionEventResult processPlayAreaMouseDrag(const SDL_MouseMotionEvent& event) override {
@@ -279,10 +444,13 @@ public:
                         }
                         // do not transition to MOVING yet because we want to check for double clicks
                     }
-                    else if (event.clicks == 2) {
+                    else if (event.clicks >= 2) {
                         // select connected components if clicking outside the current selection or if shift/alt is held
-                        if ((selection.width() == 1 && selection.height() == 1) || (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT))) {
-                            selectConnectedComponent(canvasOffset, modifiers & KMOD_ALT);
+                        if (event.clicks == 2) {
+                            selectConnectedComponent<false>(canvasOffset, modifiers & KMOD_ALT);
+                        }
+                        else {
+                            selectConnectedComponent<true>(canvasOffset, modifiers & KMOD_ALT);
                         }
                     }
                     moveOrigin = canvasOffset;
@@ -320,7 +488,7 @@ public:
                     return ActionEventResult::PROCESSED;
                 } else {
                     // we get here if we didn't select anything
-                    selectionTrans = baseTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
+                    selectionTrans = { 0, 0 }; // set these values, because selectRect won't set if it returns false
                     return ActionEventResult::COMPLETED;
                 }
             case State::MOVING:
@@ -445,13 +613,13 @@ public:
                             const ext::point canvasPt{ x, y };
                             uint32_t color = 0;
                             // draw base, check if the requested pixel inside the buffer
-                            if (canvas().contains(canvasPt - baseTrans)) {
+                            if (canvas().contains(canvasPt)) {
                                 std::visit(visitor{
                                     [](std::monostate) {},
                                     [&color](const auto& element) {
                                         color = fast_MapRGB<FormatType::value>(element.template computeDisplayColor<DefaultViewType::value>());
                                     },
-                                }, canvas()[canvasPt - baseTrans]);
+                                }, canvas()[canvasPt]);
                             }
 
                             // draw selection, check if the requested pixel inside the buffer

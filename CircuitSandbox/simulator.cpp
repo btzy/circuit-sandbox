@@ -96,8 +96,8 @@ void Simulator::compile(CanvasState& gameState) {
                                 }
 
                                 // if its not insulated wire, push the opposite direction
-                                if (!std::holds_alternative<InsulatedWire>(gameState[currPt]) && !visited[currPt][1 - currDir]) {
-                                    floodStack.emplace(currPt, 1 - currDir);
+                                if (!std::holds_alternative<InsulatedWire>(gameState[currPt]) && !visited[currPt][currDir ^ 1]) {
+                                    floodStack.emplace(currPt, currDir ^ 1);
                                 }
 
                                 // visit the adjacent pixels
