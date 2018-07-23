@@ -6,6 +6,7 @@
 #include "point.hpp"
 #include "sdl_automatic.hpp"
 #include "declarations.hpp"
+#include "clipboardstore.hpp"
 
 struct ClipboardManager {
 private:
@@ -13,34 +14,26 @@ private:
         CanvasState state;
         UniqueTexture thumbnail;
     };
-
-    std::array<Clipboard, NUM_CLIPBOARDS> clipboards;
-    Clipboard& defaultClipboard = clipboards[0];
-
-    /**
-     * Generate the thumbnail to be used in the clipboard action interface.
-     */
-    void generateThumbnail(int32_t index, SDL_Renderer* renderer);
+    
+    ClipboardStore<NUM_CLIPBOARDS> storage;
 
 public:
     /**
      * Read from a clipboard. Use the default clipboard if index is not given.
      */
-    CanvasState read() const;
-    CanvasState read(int32_t index);
+    CanvasState read(int32_t index = 0);
 
     /**
      * Write to a clipboard. Use the default clipboard if index is not given.
      */
-    void write(SDL_Renderer* renderer, const CanvasState& state);
-    void write(SDL_Renderer* renderer, CanvasState&& state);
-    void write(SDL_Renderer* renderer, const CanvasState& state, int32_t index);
-    void write(SDL_Renderer* renderer, CanvasState&& state, int32_t index);
+    void write(const CanvasState& state, int32_t index = 0);
 
     /**
      * Return a permutation of clipboard indices representing the order they should be displayed in.
      */
     std::array<size_t, NUM_CLIPBOARDS> getOrder() const;
 
-    SDL_Texture* getThumbnail(int32_t index) const;
+    SDL_Texture* getThumbnail(int32_t index);
+
+    void setRenderer(SDL_Renderer* renderer);
 };

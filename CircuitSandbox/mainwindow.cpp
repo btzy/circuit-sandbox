@@ -191,6 +191,11 @@ void MainWindow::layoutComponents(bool forceLayout) {
 
     }
 
+    // one-time initialization of renderer
+    if (forceLayout) {
+        clipboard.setRenderer(renderer);
+    }
+
     if (dpiChanged || sizeChanged || forceLayout) {
         // tell children about the updated layout
         for (Drawable* drawable : drawables) {

@@ -238,7 +238,7 @@ ActionEventResult ClipboardAction::processWindowKeyboard(const SDL_KeyboardEvent
 ActionEventResult ClipboardAction::selectClipboard(int32_t clipboardIndex) {
     switch (mode) {
     case Mode::COPY:
-        mainWindow.clipboard.write(mainWindow.renderer, selection, clipboardIndex);
+        mainWindow.clipboard.write(selection, clipboardIndex);
         restorePreservedAction = true;
         return ActionEventResult::COMPLETED;
     case Mode::PASTE:

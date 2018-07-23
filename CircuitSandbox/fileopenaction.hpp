@@ -6,7 +6,6 @@
 #include <limits>
 #include <type_traits>
 
-#include <boost/endian/conversion.hpp>
 #include <boost/process/spawn.hpp>
 #include <SDL.h>
 #include <nfd.h>
@@ -19,74 +18,12 @@
 
 class FileOpenAction final : public Action {
 private:
-    enum class ReadResult : char {
-        OK,
-        OUTDATED, // file is saved in a newer format
-        CORRUPTED, // file is corrupted
-        IO_ERROR // file cannot be opened or read
-    };
 
-    ReadResult readSave(CanvasState& state, const char* filePath) {
+    static CanvasState::ReadResult readSave(CanvasState& state, const char* filePath) {
         std::ifstream saveFile(filePath, std::ios::binary);
-        if (!saveFile.is_open()) return ReadResult::IO_ERROR;
+        if (!saveFile.is_open()) return CanvasState::ReadResult::IO_ERROR;
 
-        // read the magic sequence
-        char data[4];
-        saveFile.read(data, 4);
-        if (!std::equal(data, data + 4, CCSB_FILE_MAGIC)) return ReadResult::CORRUPTED;
-
-        // read the version number
-        int32_t version;
-        saveFile.read(reinterpret_cast<char*>(&version), sizeof version);
-        boost::endian::little_to_native_inplace(version);
-        if (version != 0) return ReadResult::OUTDATED;
-
-        // read the width and height
-        int32_t matrixWidth, matrixHeight;
-        saveFile.read(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
-        saveFile.read(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
-        boost::endian::little_to_native_inplace(matrixWidth);
-        boost::endian::little_to_native_inplace(matrixHeight);
-        if (matrixWidth < 0 || matrixHeight < 0 || static_cast<int64_t>(matrixWidth) * matrixHeight > std::numeric_limits<int32_t>::max()) return ReadResult::CORRUPTED;
-
-        // create the matrix
-        CanvasState::matrix_t canvasData(matrixWidth, matrixHeight);
-
-        for (int32_t y = 0; y != canvasData.height(); ++y) {
-            for (int32_t x = 0; x != canvasData.width(); ++x) {
-                uint8_t elementData;
-                saveFile.read(reinterpret_cast<char*>(&elementData), 1);
-                size_t element_index = elementData >> 2;
-                bool logicLevel = elementData & 0b10;
-                bool defaultLogicLevel = elementData & 0b01;
-
-                CanvasState::element_variant_t& element = canvasData[{x, y}];
-                if (!CanvasState::element_tags_t::get(element_index, [&](const auto element_tag) {
-                    using ElementType = typename decltype(element_tag)::type;
-                    if constexpr (std::is_base_of_v<CommunicatorElement, ElementType>) {
-                        // TODO: store communicator transmit states in the save file?
-                        element.emplace<ElementType>(logicLevel, defaultLogicLevel, false);
-                    }
-                    else if constexpr (std::is_base_of_v<LogicLevelElement, ElementType>) {
-                        element.emplace<ElementType>(logicLevel, defaultLogicLevel);
-                    }
-                    else if constexpr (std::is_base_of_v<Relay, ElementType>) {
-                        // TODO: store relay states in the save file!
-                        element.emplace<ElementType>(false, false, logicLevel, defaultLogicLevel);
-                    }
-                    else if constexpr (std::is_base_of_v<Element, ElementType>) {
-                        element.emplace<ElementType>();
-                    }
-                    return true;
-                }, false)) {
-                    return ReadResult::OUTDATED; // maybe the new save format contains more elements?
-                }
-            }
-        }
-
-        // only overwriting state.dataMatrix here ensures it is only modified if we return ReadResult::OK.
-        state.dataMatrix = std::move(canvasData);
-        return ReadResult::OK;
+        return state.loadSave(saveFile);
     }
 
 public:
@@ -110,9 +47,9 @@ public:
         if (filePath != nullptr) { // means that the user wants to open filePath
             if (mainWindow.stateManager.historyManager.empty() && !mainWindow.hasFilePath()) {
                 // read from filePath
-                ReadResult result = readSave(mainWindow.stateManager.defaultState, filePath);
+                CanvasState::ReadResult result = readSave(mainWindow.stateManager.defaultState, filePath);
                 switch (result) {
-                case ReadResult::OK:
+                case CanvasState::ReadResult::OK:
                     // reset the translations
                     mainWindow.stateManager.deltaTrans = { 0, 0 };
                     // TODO: some intelligent translation/scale depending on dimensions of canvasstate
@@ -126,13 +63,13 @@ public:
                     mainWindow.stateManager.simulator.compile(mainWindow.stateManager.defaultState);
                     simulatorRunning = false; // don't restart the simulator
                     break;
-                case ReadResult::OUTDATED:
+                case CanvasState::ReadResult::OUTDATED:
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of Circuit Sandbox, and cannot be opened here.  Please update Circuit Sandbox and try again.", mainWindow.window);
                     break;
-                case ReadResult::CORRUPTED:
+                case CanvasState::ReadResult::CORRUPTED:
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "File is corrupted.", mainWindow.window);
                     break;
-                case ReadResult::IO_ERROR:
+                case CanvasState::ReadResult::IO_ERROR:
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file cannot be accessed.", mainWindow.window);
                     break;
                 }
