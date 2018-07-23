@@ -65,4 +65,14 @@ public:
     void reset() const {
         data = nullptr;
     }
+
+    // for transferring ownership of actions
+    using Handle = std::unique_ptr<Action>;
+    Handle steal() const noexcept {
+        return std::move(data);
+    }
+
+    void imbue(Handle&& handle) const {
+        data = std::move(handle);
+    }
 };

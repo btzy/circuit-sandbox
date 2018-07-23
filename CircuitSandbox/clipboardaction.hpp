@@ -165,8 +165,12 @@ private:
     SDL_Rect dialogArea; // the area of the dialog proper (without the translucent background), set by layoutComponents()
     Renderable* activeButton = nullptr; // dialog button that is currently being pressed
     std::optional<ext::point> mouseLocation; // the location of the mouse on the renderArea
+
+    ActionStarter::Handle preservedAction;
+    bool restorePreservedAction = false;
+
 public:
-    ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode);
+    ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode, ActionStarter::Handle&& preservedAction = ActionStarter::Handle());
 
     ~ClipboardAction() override;
 
@@ -209,10 +213,11 @@ public:
     void prevPage();
     void nextPage();
 
-    // note: selection passed by value, because the caller (SelectionAction) will have been destroyed by the action starter.
-    static inline void startCopyDialog(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter, CanvasState selection) {
-        auto& action = starter.start<ClipboardAction>(mainWindow, renderer, Mode::COPY);
-        action.selection = std::move(selection);
+    // start from a Ctrl-Shift-C from SelectionAction
+    // Existing action will be preserved
+    static inline void startCopyDialog(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter, const CanvasState& selection) {
+        auto& action = starter.start<ClipboardAction>(mainWindow, renderer, Mode::COPY, starter.steal());
+        action.selection = selection;
     }
 
     static inline void startPasteDialog(MainWindow& mainWindow, SDL_Renderer* renderer, const ActionStarter& starter) {

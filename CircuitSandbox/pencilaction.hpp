@@ -16,6 +16,7 @@
 #include "mainwindow.hpp"
 #include "canvasstate.hpp"
 #include "elements.hpp"
+#include "sdl_fast_maprgb.hpp"
 
 
 /**

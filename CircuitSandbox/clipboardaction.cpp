@@ -1,7 +1,7 @@
 #include "clipboardaction.hpp"
 #include "selectionaction.hpp"
 
-ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode) : 
+ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer, Mode mode, ActionStarter::Handle&& preservedAction) :
     StatefulAction(mainWindow), 
     MainWindowEventHook(mainWindow, mainWindow.getRenderArea()), 
     mode(mode), 
@@ -9,7 +9,8 @@ ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer,
     dialogTexture(nullptr),
     clipboardButtons{ std::apply([&](auto... index) -> std::array<ClipboardButton, NUM_CLIPBOARDS> {
         return { ClipboardButton(*this, index)... };
-    }, mainWindow.clipboard.getOrder()) } {
+    }, mainWindow.clipboard.getOrder()) },
+    preservedAction(std::move(preservedAction)) {
 
     // note: above clipboardButtons constructor works due to C++17 guaranteed copy elision.
 
@@ -25,6 +26,7 @@ ClipboardAction::ClipboardAction(MainWindow& mainWindow, SDL_Renderer* renderer,
 
 ClipboardAction::~ClipboardAction() {
     if (simulatorRunning) stateManager().startSimulator();
+    if (restorePreservedAction) mainWindow.currentAction.getStarter().imbue(std::move(preservedAction));
 }
 
 void ClipboardAction::render(SDL_Renderer* renderer) {
@@ -130,7 +132,8 @@ void ClipboardAction::layoutComponents(SDL_Renderer* renderer) {
 
 ActionEventResult ClipboardAction::processWindowMouseButtonDown(const SDL_MouseButtonEvent& event) {
     if (!ext::point_in_rect(event, dialogArea)) {
-        // select the default clipboard if the user clicked outside
+        // don't modify anything if the user clicked outside
+        restorePreservedAction = true;
         return ActionEventResult::COMPLETED;
     }
 
@@ -197,6 +200,7 @@ ActionEventResult ClipboardAction::processWindowKeyboard(const SDL_KeyboardEvent
     if (event.type == SDL_KEYDOWN) {
         switch (event.keysym.sym) {
             case SDLK_ESCAPE:
+                restorePreservedAction = true;
                 return ActionEventResult::COMPLETED;
             case SDLK_LEFT:
                 prevPage();
@@ -235,6 +239,7 @@ ActionEventResult ClipboardAction::selectClipboard(int32_t clipboardIndex) {
     switch (mode) {
     case Mode::COPY:
         mainWindow.clipboard.write(mainWindow.renderer, selection, clipboardIndex);
+        restorePreservedAction = true;
         return ActionEventResult::COMPLETED;
     case Mode::PASTE:
         SelectionAction::startByPasting(mainWindow, mainWindow.playArea, mainWindow.currentAction.getStarter(), clipboardIndex);
