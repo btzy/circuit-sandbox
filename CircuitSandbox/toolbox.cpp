@@ -161,9 +161,7 @@ template <typename Tool>
 void Toolbox::ToolRenderable<Tool>::prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& backColor) {
     textureStore.reset(nullptr);
     SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
-    const char* x = Tool::displayName;
-    const SDL_Color y = Tool::displayColor;
-    SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, x, y, backColor);
+    SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Tool::displayName, Tool::displayColor, backColor);
     SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
     SDL_SetRenderTarget(renderer, texture);
