@@ -2,8 +2,9 @@
 
 #ifndef _WIN32
 
-// use the usual shared memory object from boost
+// use the usual shared memory object from boost, but remove the shared memory from the system in the destructor.
 
+#include <string>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
@@ -12,13 +13,19 @@ namespace ext {
      * Represents a shared memory buffer that will be deleted when no longer referenced by any process.
      */
     class autoremove_shared_memory {
+    private:
         boost::interprocess::shared_memory_object shm;
         boost::interprocess::mapped_region region;
+        template <typename OpenMode>
+        autoremove_shared_memory(const char* name, OpenMode open_mode, boost::interprocess::mode_t mode) :
+            shm(open_mode, name, mode) {
+        }
     public:
         using size_type = boost::interprocess::offset_t;
         template <typename OpenMode = boost::interprocess::open_or_create_t>
         autoremove_shared_memory(const char* name, size_type size, OpenMode open_mode = boost::interprocess::open_or_create, boost::interprocess::mode_t mode = boost::interprocess::read_write) :
-            shm(open_mode, name, mode) {
+            autoremove_shared_memory(name, open_mode, mode) {
+            // as this is a delegating constructor, the destructor will be called if this constructor throws.
             size_type existing_size = 0;
             shm.get_size(existing_size);
             if (existing_size < size) {
@@ -30,8 +37,12 @@ namespace ext {
         ~autoremove_shared_memory() {
             // unbind the region
             region = boost::interprocess::mapped_region();
+            // get the name
+            std::string name(shm.get_name());
+            // destroy the shared memory
+            shm = boost::interprocess::shared_memory_object();
             // remove the memory (if possible)
-            boost::interprocess::shared_memory_object::remove(shm.get_name());
+            boost::interprocess::shared_memory_object::remove(name.c_str());
         }
         void* address() const noexcept {
             return region.get_address();
@@ -52,6 +63,7 @@ namespace ext {
     * Represents a shared memory buffer that will be deleted when no longer referenced by any process.
     */
     class autoremove_shared_memory {
+    private:
         boost::interprocess::windows_shared_memory shm;
         boost::interprocess::mapped_region region;
     public:

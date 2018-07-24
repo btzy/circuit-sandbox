@@ -154,3 +154,32 @@ inline SDL_Texture* create_fast_texture(SDL_Renderer* renderer, int access, cons
     }
     return texture;
 }
+
+inline SDL_Texture* create_fast_alpha_texture(SDL_Renderer* renderer, int access, const ext::point& size, uint32_t& format) {
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, access, size.x, size.y);
+    if (texture != nullptr) {
+        uint32_t textureFormat;
+        SDL_QueryTexture(texture, &textureFormat, nullptr, nullptr, nullptr);
+        switch (textureFormat) {
+        case SDL_PIXELFORMAT_RGBA8888: [[fallthrough]];
+        case SDL_PIXELFORMAT_ABGR8888: [[fallthrough]];
+        case SDL_PIXELFORMAT_ARGB8888: [[fallthrough]];
+        case SDL_PIXELFORMAT_BGRA8888:
+            format = textureFormat;
+            return texture;
+        default:
+            SDL_DestroyTexture(texture);
+            break;
+        }
+    }
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, access, size.x, size.y); // default texture (most widely supported)
+    if (texture != nullptr) {
+        format = SDL_PIXELFORMAT_ARGB8888;
+    }
+    return texture;
+}
+
+inline SDL_Texture* create_fast_alpha_texture(SDL_Renderer* renderer, int access, const ext::point& size) {
+    uint32_t format;
+    return create_fast_alpha_texture(renderer, access, size, format);
+}

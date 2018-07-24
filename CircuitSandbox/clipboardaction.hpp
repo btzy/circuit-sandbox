@@ -16,6 +16,7 @@
 #include "eventhook.hpp"
 #include "simulator.hpp"
 #include "sdl_automatic.hpp"
+#include "sdl_fast_maprgb.hpp"
 #include "renderable.hpp"
 #include "declarations.hpp"
 
@@ -50,38 +51,23 @@ private:
 
         inline void prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& textColor, const SDL_Color& backColor) {
             textureStore.reset(nullptr);
-            SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
+            SDL_Texture* texture = create_fast_alpha_texture(renderer, SDL_TEXTUREACCESS_TARGET, { renderArea.w, renderArea.h });
             SDL_Surface* surface = TTF_RenderText_Blended(owner.mainWindow.interfaceFont, std::to_string(index).c_str(), textColor);
             SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-            SDL_Texture* thumbnailTexture = owner.mainWindow.clipboard.getThumbnail(index);
             SDL_SetRenderTarget(renderer, texture);
 
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0); // transparent
             SDL_RenderClear(renderer);
-            // thumbnail
-            if (thumbnailTexture) {
-                int32_t xPadding = 0;
-                int32_t yPadding = 0;
-                int32_t width;
-                int32_t height;
-                SDL_QueryTexture(thumbnailTexture, nullptr, nullptr, &width, &height);
-                if (width * renderArea.h > height * renderArea.w) {
-                    yPadding = renderArea.h - renderArea.w * height / width;
-                } else {
-                    xPadding = renderArea.w - renderArea.h * width / height;
-                }
-                const SDL_Rect targetRect{ xPadding/2, yPadding/2, renderArea.w - xPadding, renderArea.h - yPadding };
-                SDL_RenderCopy(renderer, thumbnailTexture, nullptr, &targetRect);
-            }
+            
             // overlay
             {
-                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
                 SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, 125);
                 const SDL_Rect targetRect{ 0, 0, renderArea.w, renderArea.h };
                 SDL_RenderFillRect(renderer, &targetRect);
             }
             // text
             {
+                SDL_SetTextureBlendMode(textTexture, SDL_BLENDMODE_BLEND);
                 const SDL_Rect targetRect{ renderArea.w / 2 - surface->w / 2, renderArea.h / 2 - surface->h / 2, surface->w, surface->h };
                 SDL_RenderCopy(renderer, textTexture, nullptr, &targetRect);
             }
@@ -91,9 +77,11 @@ private:
                 const SDL_Rect targetRect{ 0, 0, renderArea.w, renderArea.h };
                 SDL_RenderDrawRect(renderer, &targetRect);
             }
+
             SDL_SetRenderTarget(renderer, nullptr);
             SDL_FreeSurface(surface);
             SDL_DestroyTexture(textTexture);
+            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_ADD);
             textureStore.reset(texture);
         }
 
@@ -104,6 +92,32 @@ private:
             prepareTexture(renderer, textureDefault, color, backgroundColor);
             prepareTexture(renderer, textureHover, color, hoverColor);
             prepareTexture(renderer, textureClick, hoverColor, color);
+        }
+
+        template <RenderStyle style>
+        void render(SDL_Renderer* renderer) const {
+            // thumbnail
+            SDL_Texture* thumbnailTexture = owner.mainWindow.clipboard.getThumbnail(index);
+            if (thumbnailTexture) {
+                int32_t xPadding = 0;
+                int32_t yPadding = 0;
+                int32_t width;
+                int32_t height;
+                SDL_QueryTexture(thumbnailTexture, nullptr, nullptr, &width, &height);
+                if (width * renderArea.h > height * renderArea.w) {
+                    yPadding = renderArea.h - renderArea.w * height / width;
+                }
+                else {
+                    xPadding = renderArea.w - renderArea.h * width / height;
+                }
+                const SDL_Rect targetRect{ renderArea.x + xPadding / 2, renderArea.y + yPadding / 2, renderArea.w - xPadding, renderArea.h - yPadding };
+                SDL_RenderCopy(renderer, thumbnailTexture, nullptr, &targetRect);
+            }
+            // other stuff
+            
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
+            Renderable::template render<style>(renderer);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
         }
     };
 
