@@ -51,5 +51,5 @@ Release-Profiling/
 *.user
 CodeGraphData/
 
-# Save files for Circuit Playground
-*.sav
+# Doxygen documentation
+docs/
