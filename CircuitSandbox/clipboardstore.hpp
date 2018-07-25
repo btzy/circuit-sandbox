@@ -67,7 +67,7 @@ namespace {
 template <uint32_t NumClipboards>
 class ClipboardStore {
 private:
-    inline static const char* memoryName = "CircuitSandbox-Clipboardv1";
+    inline static const char* memoryName = "CircuitSandbox_Clipboardv1";
 
     struct Clipboard {
         ext::autoremove_shared_memory memory;
@@ -85,7 +85,7 @@ private:
     SDL_Renderer* renderer;
 
     std::string getNameFromId(uint32_t id) {
-        return std::string(memoryName) + '-' + std::to_string(id);
+        return std::string(memoryName) + '_' + std::to_string(id);
     }
 
     /**
