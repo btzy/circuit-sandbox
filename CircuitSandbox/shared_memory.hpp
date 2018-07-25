@@ -54,7 +54,7 @@ namespace ext {
 
 // use the Windows shared memory object on Windows systems, so that it will be backed by kernel instead of filesystem, and have the desired lifetime.
 
-#include <exception>
+#include <stdexcept>
 #include <boost/interprocess/windows_shared_memory.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
@@ -71,7 +71,7 @@ namespace ext {
         autoremove_shared_memory(const char* name, size_type size, boost::interprocess::open_or_create_t open_mode = boost::interprocess::open_or_create, boost::interprocess::mode_t mode = boost::interprocess::read_write) :
             shm(open_mode, name, mode, size) {
             if (static_cast<size_type>(shm.get_size()) < size) {
-                throw std::exception("Existing Windows shared memory too small!");
+                throw std::runtime_error("Existing Windows shared memory too small!");
             }
             region = boost::interprocess::mapped_region(shm, mode);
         }
@@ -83,7 +83,7 @@ namespace ext {
         autoremove_shared_memory(const char* name, size_type size, boost::interprocess::open_only_t open_mode, boost::interprocess::mode_t mode = boost::interprocess::read_write) :
             shm(open_mode, name, mode) {
             if (static_cast<size_type>(shm.get_size()) < size) {
-                throw std::exception("Existing Windows shared memory too small!");
+                throw std::runtime_error("Existing Windows shared memory too small!");
             }
             region = boost::interprocess::mapped_region(shm, mode);
         }

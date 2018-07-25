@@ -18,11 +18,7 @@
  * Manages storage of clipboards in a interprocess-shareable manner.
  */
 
-template <uint32_t NumClipboards>
-class ClipboardStore {
-private:
-    inline static const char* memoryName = "CircuitSandbox-Clipboardv1";
-
+namespace {
     template <bool AlwaysLockFree>
     struct TableEntryImpl;
 
@@ -36,8 +32,8 @@ private:
 
         static_assert(std::atomic<TableEntryType>::is_always_lock_free);
 
-        std::pair<uint32_t, uint32_t> load() const noexcept {
-            auto [id, size] = data.load(std::memory_order_acquire);
+        std::pair<uint32_t, uint32_t> load() noexcept {
+            auto[id, size] = data.load(std::memory_order_acquire);
             return { id, size };
         }
         void store(uint32_t id, uint32_t size) noexcept {
@@ -54,18 +50,24 @@ private:
         };
         TableEntryType data;
 
-        std::pair<uint32_t, uint32_t> load() const noexcept {
-            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
+        std::pair<uint32_t, uint32_t> load() noexcept {
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(data.mutex);
             return { data.id, data.size };
         }
         void store(uint32_t id, uint32_t size) noexcept {
-            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(mutex);
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(data.mutex);
             data.id = id;
             data.size = size;
         }
     };
 
     using TableEntry = TableEntryImpl<std::atomic<typename TableEntryImpl<true>::TableEntryType>::is_always_lock_free>;
+}
+
+template <uint32_t NumClipboards>
+class ClipboardStore {
+private:
+    inline static const char* memoryName = "CircuitSandbox-Clipboardv1";
 
     struct Clipboard {
         ext::autoremove_shared_memory memory;
