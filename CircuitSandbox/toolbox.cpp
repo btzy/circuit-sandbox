@@ -127,7 +127,7 @@ bool Toolbox::processMouseButtonDown(const SDL_MouseButtonEvent& event) {
 
 void Toolbox::processMouseButtonUp() {
 
-    if (mouseoverToolIndex == mouseclickToolIndex) {
+    if (mouseclickToolIndex != MainWindow::EMPTY_INDEX && mouseoverToolIndex == mouseclickToolIndex) {
         mainWindow.bindTool(mouseclickInputHandle, mouseclickToolIndex);
     }
 

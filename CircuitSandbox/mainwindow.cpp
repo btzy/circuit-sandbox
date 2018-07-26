@@ -76,15 +76,8 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
     // update dpi again (in case the window was opened on something other than the default monitor)
     if (updateDpiFields()) {
         // resize the window, if the dpi changed
-        SDL_SetWindowSize(window, logicalToPhysicalSize(640), logicalToPhysicalSize(480));
+        SDL_SetWindowSize(window, logicalToPhysicalSize(960), logicalToPhysicalSize(720));
     }
-
-#ifdef _WIN32
-    // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
-    // This tries to fix this
-    // Note that this has to come *after* layoutComponents(true), so that all layout-specific stuff (e.g. fonts) has been initialized.
-    SDL_AddEventWatch(resizeEventForwarder, static_cast<void*>(this));
-#endif // _WIN32
 }
 
 
@@ -226,9 +219,23 @@ void MainWindow::start() {
     // do the layout (must be done after showing the window, otherwise pre-rendering done here won't work properly)
     layoutComponents(true);
 
-#if defined(_WIN32)
+#ifdef _WIN32
+    // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
+    // This tries to fix this
+    // Note that this has to come *after* layoutComponents(true), so that all layout-specific stuff (e.g. fonts) has been initialized.
+    // Also, we have to remember to delete the event watch before closing the window as closing the window will resize it (by disengaging fullscreen mode).
+    struct EventWatchGuard {
+        MainWindow& mainWindow;
+        EventWatchGuard(MainWindow& mainWindow) : mainWindow(mainWindow) {
+            SDL_AddEventWatch(resizeEventForwarder, static_cast<void*>(&mainWindow));
+        }
+        ~EventWatchGuard() {
+            SDL_DelEventWatch(resizeEventForwarder, static_cast<void*>(&mainWindow));
+        }
+    } eventWatchGuard(*this);
+
     SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
+#endif // _WIN32
 
     // event/drawing loop:
     while (true) {
