@@ -264,6 +264,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
                     return ActionEventResult::PROCESSED;
                 }
             }
+            return ActionEventResult::UNPROCESSED;
         case SDL_SCANCODE_X:
             if (modifiers & KMOD_CTRL) {
                 state = State::MOVED;
@@ -271,6 +272,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
                 selection = CanvasState(); // clear the selection
                 return ActionEventResult::COMPLETED; // tell playarea to end this action
             }
+            return ActionEventResult::UNPROCESSED;
         case SDL_SCANCODE_ESCAPE:
             return ActionEventResult::COMPLETED;
         default:

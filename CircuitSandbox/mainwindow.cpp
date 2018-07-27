@@ -54,7 +54,7 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
     // update dpi once first, so we can use it to create the properly sized window
     updateDpiFields(false);
 
-    window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(960), logicalToPhysicalSize(720), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    window = SDL_CreateWindow(WINDOW_TITLE_STRING, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, logicalToPhysicalSize(960), logicalToPhysicalSize(720), SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
         throw std::runtime_error("SDL_CreateWindow() failed:  "s + SDL_GetError());
     }
@@ -115,11 +115,11 @@ bool MainWindow::updateDpiFields(bool useWindow) {
     default_dpi = 144;
 #elif defined(_WIN32)
 
-#if WINVER >= _WIN32_WINNT_WINBLUE // If Windows 8.1 and above, we have the default DPI macro.
+#if defined(USER_DEFAULT_SCREEN_DPI) // If we have the default DPI macro, use it
     default_dpi = USER_DEFAULT_SCREEN_DPI; // The Windows default DPI.
 #else
     default_dpi = 96;
-#endif // WINVER
+#endif // USER_DEFAULT_SCREEN_DPI
 
 #else
     default_dpi = 96; // We don't know what OS we are on :(
@@ -152,10 +152,9 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
 void MainWindow::updateTitleBar() {
     std::string title = ((unsaved) ? "* " : "") + (filePath.empty() ? "" : getFileName(filePath.c_str()) + " "s);
-    if (title.empty()) title = WINDOW_TITLE;
+    if (title.empty()) title = WINDOW_TITLE_STRING;
     else {
-        title += u8"\u2013 ";
-        title += WINDOW_TITLE;
+        title += u8"\u2013 " WINDOW_TITLE_STRING;
     }
     SDL_SetWindowTitle(window, title.c_str());
 }
@@ -252,7 +251,7 @@ void MainWindow::start() {
                             _suppressMouseUntilNextDown = false;
                         }
                     }
-#if WINVER >= _WIN32_WINNT_WINBLUE // If Windows 8.1 and above, we have the WM_DPICHANGED message.
+#if defined(WM_DPICHANGED) // If we have the WM_DPICHANGED message, look out for it
                     else if (winMessage.msg == WM_DPICHANGED) {
                         layoutComponents(); // for safety, in case the window size didn't change, then we won't get SDL_WINDOWEVENT_RESIZED
                     }

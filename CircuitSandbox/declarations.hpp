@@ -56,6 +56,12 @@ class ScreenCommunicator;
 class FileInputCommunicator;
 class FileOutputCommunicator;
 
+// strings
+// we use compiler #defines so we can have adjacent string concatenation
+#define CIRCUIT_SANDBOX_STRING "Circuit Sandbox"
+#define CIRCUIT_SANDBOX_VERSION_STRING "v0.3" // change this when there is a new update
+#define WINDOW_TITLE_STRING CIRCUIT_SANDBOX_STRING " " CIRCUIT_SANDBOX_VERSION_STRING
+
 /**
  * The number of distinct "input handles": 5 (SDL2 supports this many mouse buttons) + 1 (for touch input)
  */

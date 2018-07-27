@@ -32,9 +32,6 @@ public:
     int TOOLBOX_WIDTH = LOGICAL_TOOLBOX_WIDTH;
     int BUTTONBAR_HEIGHT = LOGICAL_BUTTONBAR_HEIGHT;
 
-    // window title
-    constexpr static const char* WINDOW_TITLE = "Circuit Sandbox";
-
     // hairline width (for drawing separating lines)
     constexpr static int HAIRLINE_WIDTH = 1;
 
