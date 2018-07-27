@@ -106,6 +106,11 @@ public:
     #endif // _WIN32
 
     /**
+     * Starts the event loop (blocks until window is closed).
+     */
+    void startEventLoop();
+
+    /**
      * Recalculate all the 'renderArea' for all the Drawables (call after resizing)
      * Also does DPI recalculation (SDL2 will send a resize event when the dpi changes)
      */
@@ -167,8 +172,10 @@ public:
     /**
      * Shows the window to the user, and runs the event loop.
      * This function will block until the window is closed.
+     * 'filePath' overload will open the given file.
      */
     void start();
+    void start(const char* filePath);
 
     /**
      * Overwrite the current canvas state with the given file.

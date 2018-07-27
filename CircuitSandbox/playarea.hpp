@@ -29,7 +29,7 @@ private:
     ext::point translation{ 0, 0 };
 
     // length (in physical pixels) of each element; changes with zoom level
-    int32_t scale = 20;
+    int32_t scale;
 
     // point that is being mouseovered
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
@@ -69,6 +69,11 @@ public:
     PlayArea(MainWindow&);
 
     /**
+     * Called once, by mainwindow, before calling any functions in playarea.
+     */
+    void initScale();
+
+    /**
      * Renders this play area on the given area of the renderer.
      * This method is called by MainWindow
      * This method is non-const because the cached state might be updated from the simulator when rendering.
@@ -80,6 +85,7 @@ private:
 
     /**
      * Prepares the texture for use.
+     * This method must be called is the dimensions of the canvas might have changed (e.g. zoom in/out, resize window).
      * @pre renderer must not be null.
      */
     void prepareTexture(SDL_Renderer*);

@@ -50,9 +50,11 @@ int main(int argc, char* argv[]) {
         if (argc >= 2) {
             // argv[1] is the file name (if it exists)]
             char* givenFilePath = argv[1];
-            main_window.loadFile(givenFilePath);
+            main_window.start(givenFilePath); // start... with given file path
         }
-        main_window.start(); // this method will block until the window closes (or some exception is thrown)
+        else {
+            main_window.start(); // this method will block until the window closes (or some exception is thrown)
+        }
     }
     catch (const std::exception& err) {
         std::cerr << "Error thrown out of MainWindow:  " << err.what() << std::endl;

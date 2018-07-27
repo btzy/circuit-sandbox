@@ -52,9 +52,22 @@ public:
                 case CanvasState::ReadResult::OK:
                     // reset the translations
                     mainWindow.stateManager.deltaTrans = { 0, 0 };
-                    // TODO: some intelligent translation/scale depending on dimensions of canvasstate
-                    playArea.translation = { 0, 0 };
-                    playArea.scale = 20;
+                    // intelligent translation/scale depending on dimensions of canvasstate:
+                    //   place circuit in the centre of screen, at the largest possible size where the whole circuit can be seen (but clamped to reasonable bounds)
+                    {
+                        auto canvas_size = mainWindow.stateManager.defaultState.size();
+                        auto render_size = ext::point{ playArea.renderArea.w, playArea.renderArea.h };
+
+                        if (canvas_size.x != 0 && canvas_size.y != 0) {
+                            playArea.scale = std::clamp(std::min(render_size.x / canvas_size.x, render_size.y / canvas_size.y), 1, mainWindow.logicalToPhysicalSize(20));
+                            playArea.translation = (render_size - canvas_size * playArea.scale) / 2;
+                        }
+                        else {
+                            playArea.translation = { 0, 0 };
+                            playArea.scale = 20;
+                        }
+                        playArea.prepareTexture(mainWindow.renderer);
+                    }
                     // imbue the history
                     mainWindow.stateManager.historyManager.imbue(mainWindow.stateManager.defaultState);
                     mainWindow.setUnsaved(false);

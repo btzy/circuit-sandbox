@@ -78,6 +78,20 @@ MainWindow::MainWindow(const char* const processName) : stateManager(geSimulator
         // resize the window, if the dpi changed
         SDL_SetWindowSize(window, logicalToPhysicalSize(960), logicalToPhysicalSize(720));
     }
+
+    // Clear the window with a black background
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+
+    // Show the window to the user
+    SDL_ShowWindow(window);
+
+    // do the layout (must be done after showing the window, otherwise pre-rendering done here won't work properly)
+    layoutComponents(true);
+
+    // render once first, because in case file loading takes long we don't want users to stare at black/white screen
+    render();
 }
 
 
@@ -193,6 +207,7 @@ void MainWindow::layoutComponents(bool forceLayout) {
 
     // one-time initialization of renderer
     if (forceLayout) {
+        playArea.initScale();
         clipboard.setRenderer(renderer);
     }
 
@@ -206,17 +221,15 @@ void MainWindow::layoutComponents(bool forceLayout) {
 
 
 void MainWindow::start() {
+    startEventLoop();
+}
 
-    // Clear the window with a black background
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
+void MainWindow::start(const char* filePath) {
+    loadFile(filePath);
+    startEventLoop();
+}
 
-    // Show the window to the user
-    SDL_ShowWindow(window);
-
-    // do the layout (must be done after showing the window, otherwise pre-rendering done here won't work properly)
-    layoutComponents(true);
+void MainWindow::startEventLoop() {
 
 #ifdef _WIN32
     // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.

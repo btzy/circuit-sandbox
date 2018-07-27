@@ -14,7 +14,7 @@
 #include "playareaaction.hpp"
 #include "sdl_fast_maprgb.hpp"
 
-PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {};
+PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {}
 
 
 void PlayArea::render(SDL_Renderer* renderer) {
@@ -106,6 +106,10 @@ void PlayArea::prepareTexture(SDL_Renderer* renderer) {
 void PlayArea::layoutComponents(SDL_Renderer* renderer) {
     prepareTexture(renderer);
 }
+
+void PlayArea::initScale() {
+    scale = mainWindow.logicalToPhysicalSize(20);
+};
 
 
 void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t& newElement) {
