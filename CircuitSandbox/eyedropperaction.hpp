@@ -39,15 +39,15 @@ public:
         ext::point canvasOffset = playArea().canvasFromWindowOffset(event);
         size_t inputHandleIndex = resolveInputHandleIndex(event);
 
-        return std::visit(visitor{
-            [](std::monostate) {
-                return ActionEventResult::PROCESSED;
-            },
-            [&, this](const auto& element) {
-                bindToolFromElement(inputHandleIndex, element);
-                return ActionEventResult::COMPLETED;
-            }
-        }, canvas()[canvasOffset]);
+        if (canvas().contains(canvasOffset)) {
+            std::visit(visitor{
+                [](std::monostate) {},
+                [&, this](const auto& element) {
+                    bindToolFromElement(inputHandleIndex, element);
+                }
+            }, canvas()[canvasOffset]);
+        }
+        return ActionEventResult::PROCESSED;
     }
 
     ActionEventResult processWindowKeyboard(const SDL_KeyboardEvent& event) override {
