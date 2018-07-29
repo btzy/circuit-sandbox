@@ -7,6 +7,7 @@
 #include "sdl_automatic.hpp"
 #include "declarations.hpp"
 #include "clipboardstore.hpp"
+#include "declarations.hpp"
 
 struct ClipboardManager {
 private:
@@ -17,7 +18,12 @@ private:
     
     ClipboardStore<NUM_CLIPBOARDS> storage;
 
+    // for displaying notifications
+    NotificationDisplay& notificationDisplay;
+
 public:
+    ClipboardManager(NotificationDisplay& notificationDisplay) : notificationDisplay(notificationDisplay) {}
+
     /**
      * Read from a clipboard. Use the default clipboard if index is not given.
      */

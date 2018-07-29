@@ -13,11 +13,12 @@
 #include "point.hpp"
 #include "playareaaction.hpp"
 #include "sdl_fast_maprgb.hpp"
+#include "notificationdisplay.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {}
 
 
-void PlayArea::render(SDL_Renderer* renderer) {
+void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) {
     render(renderer, mainWindow.stateManager);
 }
 void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
@@ -104,6 +105,9 @@ void PlayArea::prepareTexture(SDL_Renderer* renderer) {
 }
 
 void PlayArea::layoutComponents(SDL_Renderer* renderer) {
+    // reset the description
+    changeMouseoverElement(std::monostate{});
+    // prepare a new backing texture
     prepareTexture(renderer);
 }
 
@@ -241,8 +245,11 @@ bool PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
         //SDL_Keymod modifiers = SDL_GetModState();
         switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
         case SDL_SCANCODE_T:
-            // default view is active while T is held
-            defaultView = true;
+            if (!event.repeat) {
+                // default view is active while T is held
+                defaultView = true;
+                defaultViewNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, NotificationDisplay::Data{ { "Viewing starting state", NotificationDisplay::TEXT_COLOR_STATE } });
+            }
             return true;
         default:
             break;
@@ -253,6 +260,7 @@ bool PlayArea::processKeyboard(const SDL_KeyboardEvent& event) {
         case SDL_SCANCODE_T:
             // default view is active while T is held
             defaultView = false;
+            defaultViewNotification.reset();
             return true;
         default:
             break;

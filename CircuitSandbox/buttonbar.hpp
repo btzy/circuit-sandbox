@@ -7,7 +7,7 @@
 #include "sdl_automatic.hpp"
 
 #include "declarations.hpp"
-#include "drawable.hpp"
+#include "control.hpp"
 #include "font.hpp"
 #include "buttonbaritems.hpp"
 #include "iconcodepoints.hpp"
@@ -18,7 +18,7 @@
  */
 
 
-class ButtonBar final : public Drawable {
+class ButtonBar final : public Control {
 private:
     // owner window
     MainWindow& mainWindow;
@@ -109,7 +109,7 @@ public:
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer) override {
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override {
         std::as_const(*this).render(renderer);
     }
     void render(SDL_Renderer* renderer) const;

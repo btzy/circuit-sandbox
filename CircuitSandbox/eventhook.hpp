@@ -2,7 +2,7 @@
 
 #include "mainwindow.hpp"
 #include "keyboardeventreceiver.hpp"
-#include "drawable.hpp"
+#include "control.hpp"
 
 /**
  * Helper classes for letting actions receive MainWindow events.
@@ -53,7 +53,7 @@ public:
     }
 };
 
-class MainWindowEventHook : public Drawable {
+class MainWindowEventHook : public Control {
 private:
     MainWindow& win;
 public:
@@ -61,6 +61,7 @@ public:
         this->renderArea = renderArea;
         win.keyboardEventReceivers.emplace_back(this);
         win.drawables.emplace_back(this);
+        win.controls.emplace_back(this);
     }
     ~MainWindowEventHook() {
         if (win.currentLocationTarget == this) {
@@ -69,6 +70,7 @@ public:
         if (win.currentEventTarget == this) {
             win.currentEventTarget = nullptr;
         }
+        win.controls.pop_back();
         win.drawables.pop_back();
         win.keyboardEventReceivers.pop_back();
     }
@@ -171,5 +173,5 @@ public:
     }
 
     // renderer
-    void render(SDL_Renderer* renderer) override {}
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override {}
 };

@@ -147,7 +147,7 @@ void IconButton<CodePoint>::click(ButtonBar& buttonBar) {
     }
     else if constexpr (CodePoint == IconCodePoints::RESET) {
         buttonBar.mainWindow.currentAction.reset();
-        buttonBar.mainWindow.stateManager.resetSimulator();
+        buttonBar.mainWindow.stateManager.resetSimulator(buttonBar.mainWindow);
     }
     else if constexpr (CodePoint == IconCodePoints::SPEED) {
         ChangeSimulationSpeedAction::start(buttonBar.mainWindow, buttonBar.mainWindow.renderer, buttonBar.mainWindow.currentAction.getStarter());

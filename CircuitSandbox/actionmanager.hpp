@@ -7,7 +7,7 @@
 #include "declarations.hpp"
 
 #include "action.hpp"
-#include "drawable.hpp"
+#include "control.hpp"
 
 /**
  * ActionManager holds an action and ensures that only one action can be active at any moment.
@@ -35,9 +35,5 @@ public:
 
     ActionStarter getStarter() {
         return ActionStarter(data);
-    }
-
-    const char* getStatus() const {
-        return data ? data->getStatus() : nullptr;
     }
 };

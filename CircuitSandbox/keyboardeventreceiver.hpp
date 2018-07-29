@@ -3,7 +3,7 @@
 #include <SDL.h>
 
 /**
- * Base class for classes that can receive the keyboard events
+ * Base class for classes that can receive the keyboard events.
  */
 
 class KeyboardEventReceiver {

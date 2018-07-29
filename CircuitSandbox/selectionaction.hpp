@@ -38,6 +38,8 @@ private:
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
 
+    NotificationDisplay::UniqueNotification notification;
+
     friend class ClipboardAction;
 
     /**
@@ -308,6 +310,11 @@ private:
         }
     }
 
+    // methods to set notifications:
+    void showAddAndSubtractNotification();
+    void hideNotification();
+    void leaveSelectableState(State state);
+
 public:
     SelectionAction(MainWindow& mainWindow, State state);
 
@@ -341,8 +348,4 @@ public:
 
     // rendering function, render the selection rectangle if it exists
     void renderPlayAreaDirect(SDL_Renderer* renderer) const override;
-
-    const char* getStatus() const {
-        return selection.empty() || state == State::MOVED || state == State::MOVING ? nullptr : "Hold Shift to add to the selection, Alt to subtract from it";
-    }
 };

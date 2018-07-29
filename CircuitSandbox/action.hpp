@@ -47,7 +47,6 @@ public:
     Action& operator=(const Action&) = delete;
 
     virtual ~Action() {}
-    virtual const char* getStatus() const { return nullptr; }
 };
 
 class ActionStarter {

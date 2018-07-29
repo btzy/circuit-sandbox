@@ -15,7 +15,8 @@
 #include "toolbox.hpp"
 #include "playarea.hpp"
 #include "buttonbar.hpp"
-#include "drawable.hpp"
+#include "notificationdisplay.hpp"
+#include "control.hpp"
 #include "font.hpp"
 #include "statemanager.hpp"
 #include "clipboardmanager.hpp"
@@ -52,12 +53,14 @@ private:
     Toolbox toolbox;
     PlayArea playArea;
     ButtonBar buttonBar;
+    NotificationDisplay notificationDisplay;
 
     // Note: buttonBar has to come *after* playArea for the element mouseover description to appear in the correct frame.
-    std::vector<Drawable*> drawables{ &toolbox, &playArea, &buttonBar };
+    std::vector<Drawable*> drawables{ &toolbox, &playArea, &buttonBar, &notificationDisplay };
+    std::vector<Control*> controls{ &toolbox, &playArea, &buttonBar };
     std::vector<KeyboardEventReceiver*> keyboardEventReceivers{ &toolbox, &playArea, &buttonBar };
-    Drawable* currentEventTarget; // the Drawable that the mouse was pressed down from
-    Drawable* currentLocationTarget; // the Drawable that the mouse is currently inside
+    Control* currentEventTarget; // the Control that the mouse was pressed down from
+    Control* currentLocationTarget; // the Control that the mouse is currently inside
     size_t activeInputHandleIndex; // the active input handle index associated with currentEventTarget; only valid when currentEventTarget != nullptr
 
     // High DPI stuff:
@@ -70,6 +73,8 @@ private:
 
     bool visible = true; // whether the window is visible (used to avoid rendering if window is not visible)
 
+    NotificationDisplay::UniqueNotification toggleBeginnerModeNotification; // RAII object so we can remove the old notification immediately if the user toggles multiples times in succession
+
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
 #endif
@@ -79,6 +84,14 @@ public:
     ActionManager currentAction;
     ClipboardManager clipboard;
 
+    /**
+     * Gets the render area of this window
+     */
+    const SDL_Rect& getRenderArea() const {
+        return renderArea;
+    }
+
+private:
     friend class PlayAreaAction;
     friend class KeyboardEventHook;
     friend class MainWindowEventHook;
@@ -117,13 +130,6 @@ public:
     void layoutComponents(bool forceLayout = false);
 
     /**
-     * Gets the render area of this window
-     */
-    const SDL_Rect& getRenderArea() const {
-        return renderArea;
-    }
-
-    /**
      * Update the dpi fields.  Returns true if the dpi got changed
      */
     bool updateDpiFields(bool useWindow = true);
@@ -137,6 +143,11 @@ public:
      * Update the title bar (uses the unsaved flag and the file name)
      */
     void updateTitleBar();
+
+    /**
+     * Toggle beginner mode notifications
+     */
+    void toggleBeginnerMode();
 
 public:
 
@@ -222,6 +233,10 @@ public:
 #if defined(_WIN32)
         _suppressMouseUntilNextDown = true;
 #endif
+    }
+
+    NotificationDisplay& getNotificationDisplay() {
+        return notificationDisplay;
     }
 
     /**

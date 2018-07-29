@@ -6,6 +6,8 @@
 #include "statemanager.hpp"
 #include "visitor.hpp"
 #include "sdl_fast_maprgb.hpp"
+#include "mainwindow.hpp"
+#include "notificationdisplay.hpp"
 
 StateManager::StateManager(Simulator::period_t period) {
     // compile the empty stateManager, so that simulator won't be empty
@@ -147,11 +149,12 @@ bool StateManager::simulatorRunning() const {
     return simulator.running();
 }
 
-void StateManager::resetSimulator() {
+void StateManager::resetSimulator(MainWindow& mainWindow) {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) simulator.stop();
     simulator.reset(defaultState);
     if (simulatorRunning) simulator.start();
+    mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Circuit reset to starting state", NotificationDisplay::TEXT_COLOR_ACTION } });
 }
 
 void StateManager::updateDefaultState() {

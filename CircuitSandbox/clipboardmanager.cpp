@@ -1,6 +1,8 @@
+#include <chrono>
 #include "clipboardmanager.hpp"
+#include "notificationdisplay.hpp"
 
-
+using namespace std::literals;
 
 CanvasState ClipboardManager::read(int32_t index) {
     // overwrite the default clipboard too, unless the selected clipboard is empty
@@ -16,6 +18,10 @@ void ClipboardManager::write(const CanvasState& state, int32_t index) {
     if (index) {
         // also write to the default clipboard
         storage.write(0, state);
+        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Saved to clipboard", NotificationDisplay::TEXT_COLOR_ACTION }, { ' ' + std::to_string(index), NotificationDisplay::TEXT_COLOR_KEY } });
+    }
+    else {
+        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ {"Saved to default clipboard", NotificationDisplay::TEXT_COLOR_ACTION } });
     }
 }
 

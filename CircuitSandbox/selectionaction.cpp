@@ -4,8 +4,15 @@
 #include "expandable_matrix.hpp"
 #include "clipboardaction.hpp"
 #include "clipboardmanager.hpp"
+#include "notificationdisplay.hpp"
 
-SelectionAction::SelectionAction(MainWindow& mainWindow, State state) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), state(state) {}
+
+
+SelectionAction::SelectionAction(MainWindow& mainWindow, State state) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), state(state) {
+    if (state == State::SELECTED) {
+        showAddAndSubtractNotification();
+    }
+}
 
 // destructor, called to finish the action immediately
 SelectionAction::~SelectionAction() {
@@ -86,7 +93,7 @@ ActionEventResult SelectionAction::processPlayAreaMouseDrag(const SDL_MouseMotio
         if (moveOrigin != canvasOffset) {
             selectionTrans += canvasOffset - moveOrigin;
             moveOrigin = canvasOffset;
-            state = State::MOVING;
+            leaveSelectableState(State::MOVING);
         }
         return ActionEventResult::PROCESSED;
     case State::MOVED:
@@ -173,6 +180,7 @@ ActionEventResult SelectionAction::processPlayAreaMouseButtonUp() {
     case State::SELECTING:
         state = State::SELECTED;
         if (selectRect(SDL_GetModState() & KMOD_ALT)) {
+            showAddAndSubtractNotification();
             return ActionEventResult::PROCESSED;
         }
         else {
@@ -189,30 +197,31 @@ ActionEventResult SelectionAction::processPlayAreaMouseButtonUp() {
 }
 
 ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent& event) {
+    // TODO: follow style of MainWindow's keyboard handler, so that if 'Shift' is held then things like 'H' key will be disabled.
     if (event.type == SDL_KEYDOWN) {
         SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
         switch (event.keysym.scancode) {
         case SDL_SCANCODE_H:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             selection.flipHorizontal();
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_V:
             if (!(modifiers & KMOD_CTRL)) {
-                state = State::MOVED;
+                leaveSelectableState(State::MOVED);
                 selection.flipVertical();
                 return ActionEventResult::PROCESSED;
             }
             return ActionEventResult::UNPROCESSED;
         case SDL_SCANCODE_LEFTBRACKET: // [
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             selection.rotateCounterClockwise();
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_RIGHTBRACKET: // ]
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             selection.rotateClockwise();
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_RIGHT:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             if (modifiers & KMOD_SHIFT) {
                 selectionTrans += { 4, 0 };
             }
@@ -221,7 +230,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
             }
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_LEFT:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             if (modifiers & KMOD_SHIFT) {
                 selectionTrans += { -4, 0 };
             }
@@ -230,7 +239,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
             }
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_UP:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             if (modifiers & KMOD_SHIFT) {
                 selectionTrans += { 0, -4 };
             }
@@ -239,7 +248,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
             }
             return ActionEventResult::PROCESSED;
         case SDL_SCANCODE_DOWN:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             if (modifiers & KMOD_SHIFT) {
                 selectionTrans += { 0, 4 };
             }
@@ -250,7 +259,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
         case SDL_SCANCODE_D:
             [[fallthrough]];
         case SDL_SCANCODE_DELETE:
-            state = State::MOVED;
+            leaveSelectableState(State::MOVED);
             selection = CanvasState(); // clear the selection
             return ActionEventResult::COMPLETED; // tell playarea to end this action
         case SDL_SCANCODE_C:
@@ -267,7 +276,7 @@ ActionEventResult SelectionAction::processWindowKeyboard(const SDL_KeyboardEvent
             return ActionEventResult::UNPROCESSED;
         case SDL_SCANCODE_X:
             if (modifiers & KMOD_CTRL) {
-                state = State::MOVED;
+                leaveSelectableState(State::MOVED);
                 mainWindow.clipboard.write(std::move(selection));
                 selection = CanvasState(); // clear the selection
                 return ActionEventResult::COMPLETED; // tell playarea to end this action
@@ -385,4 +394,28 @@ void SelectionAction::renderPlayAreaDirect(SDL_Renderer* renderer) const {
         }
         break;
     }
+}
+
+void SelectionAction::showAddAndSubtractNotification() {
+    // add notification
+    notification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, NotificationDisplay::Data{
+        { "Hold", NotificationDisplay::TEXT_COLOR },
+        { " Shift", NotificationDisplay::TEXT_COLOR_KEY },
+        { " to add to the selection or", NotificationDisplay::TEXT_COLOR },
+        { " Alt", NotificationDisplay::TEXT_COLOR_KEY },
+        { " to subtract from it;", NotificationDisplay::TEXT_COLOR },
+        { " double-click", NotificationDisplay::TEXT_COLOR_KEY },
+        { " to select logically connected components or", NotificationDisplay::TEXT_COLOR },
+        { " triple-click", NotificationDisplay::TEXT_COLOR_KEY },
+        { " to select all reachable elements", NotificationDisplay::TEXT_COLOR } });
+}
+
+void SelectionAction::hideNotification() {
+    notification.reset();
+}
+
+void SelectionAction::leaveSelectableState(State newState) {
+    // hides the add/subtract notification, then sets the state to something else
+    hideNotification();
+    state = newState;
 }

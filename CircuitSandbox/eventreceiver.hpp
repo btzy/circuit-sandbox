@@ -4,7 +4,7 @@
 #include "keyboardeventreceiver.hpp"
 
 /**
- * Base class for classes that can receive the keyboard/mouse events
+ * Base class for classes that can receive the keyboard/mouse events.
  */
 
 class EventReceiver : public KeyboardEventReceiver {

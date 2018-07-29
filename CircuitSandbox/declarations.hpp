@@ -13,6 +13,7 @@ class MainWindow;
 class Toolbox;
 class PlayArea;
 class ButtonBar;
+class NotificationDisplay;
 
 // all the available actions
 class Action;

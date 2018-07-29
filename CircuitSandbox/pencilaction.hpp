@@ -98,6 +98,8 @@ private:
     ext::point mousePos;
     // storage for the key points in the current pencil action
     std::vector<ext::point> keyPoints;
+    // notification
+    NotificationDisplay::UniqueNotification notification;
 
     template <typename NewPencilType = PencilType, typename ElementVariant>
     bool change(ElementVariant& element) {
@@ -110,7 +112,8 @@ private:
 
 public:
 
-    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow) {}
+    PencilAction(MainWindow& mainWindow) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow),
+        notification(mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, NotificationDisplay::Data{ { "Hold", NotificationDisplay::TEXT_COLOR },{ " Shift", NotificationDisplay::TEXT_COLOR_KEY },{ " to draw a polyline", NotificationDisplay::TEXT_COLOR } })) {}
 
 
     ~PencilAction() override {

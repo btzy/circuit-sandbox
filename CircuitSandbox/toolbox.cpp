@@ -65,19 +65,6 @@ void Toolbox::render(SDL_Renderer* renderer) const {
         renderButton<Index>(renderer);
     });
 
-    // render the status of the current action if any
-    const char* status = mainWindow.currentAction.getStatus();
-    if (status) {
-        SDL_Surface* surface = TTF_RenderText_Blended_Wrapped(mainWindow.interfaceFont, status, SDL_Color{0xFF, 0xFF, 0xFF, 0xFF}, renderArea.w - 2 * PADDING_HORIZONTAL - mainWindow.logicalToPhysicalSize(8));
-        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
-        int textureWidth, textureHeight;
-        SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
-        const SDL_Rect destRect{renderArea.x + PADDING_HORIZONTAL + BUTTON_PADDING + mainWindow.logicalToPhysicalSize(4), renderArea.y + PADDING_VERTICAL * 3 + (BUTTON_HEIGHT + BUTTON_SPACING) * static_cast<int>(tool_tags_t::size), textureWidth, textureHeight};
-        SDL_RenderCopy(renderer, texture, nullptr, &destRect);
-        SDL_DestroyTexture(texture);
-    }
-
 }
 
 
@@ -160,26 +147,29 @@ Toolbox::ToolRenderable<Tool>::ToolRenderable(Toolbox& owner) noexcept : owner(o
 template <typename Tool>
 void Toolbox::ToolRenderable<Tool>::prepareTexture(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& backColor) {
     textureStore.reset(nullptr);
-    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
-    SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Tool::displayName, Tool::displayColor, backColor);
-    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
 
-    SDL_SetRenderTarget(renderer, texture);
+    // this code avoids using SDL_TEXTUREACCESS_TARGET, due to DirectX losing all the textures when window resizes:
+    // https://forums.libsdl.org/viewtopic.php?p=40894
 
-    SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, backColor.a);
-    SDL_RenderClear(renderer);
+    SDL_Surface* surface = SDL_CreateRGBSurface(0, renderArea.w, renderArea.h, 32, 0, 0, 0, 0);
+    
+    // draw background
+    SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, backColor.r, backColor.g, backColor.b, backColor.a));
 
     // text
     {
-        const SDL_Rect targetRect{ owner.mainWindow.logicalToPhysicalSize(LOGICAL_TEXT_LEFT_PADDING), (renderArea.h - textSurface->h) / 2, textSurface->w, textSurface->h };
-        SDL_RenderCopy(renderer, textTexture, nullptr, &targetRect);
+        SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Tool::displayName, Tool::displayColor, backColor);
+        assert(textSurface && (renderArea.h - textSurface->h) / 2 >= 0 && textSurface->h <= renderArea.h);
+        SDL_Rect targetRect{ owner.mainWindow.logicalToPhysicalSize(LOGICAL_TEXT_LEFT_PADDING), (renderArea.h - textSurface->h) / 2, textSurface->w, textSurface->h };
+        SDL_BlitSurface(textSurface, nullptr, surface, &targetRect);
+        SDL_FreeSurface(textSurface);
     }
 
-    SDL_SetRenderTarget(renderer, nullptr);
-    SDL_DestroyTexture(textTexture);
-    SDL_FreeSurface(textSurface);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
     textureStore.reset(texture);
 }
+
 template <typename Tool>
 void Toolbox::ToolRenderable<Tool>::layoutComponents(SDL_Renderer* renderer, const SDL_Rect& render_area) {
     renderArea = render_area;

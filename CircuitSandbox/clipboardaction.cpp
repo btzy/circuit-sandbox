@@ -29,7 +29,7 @@ ClipboardAction::~ClipboardAction() {
     if (restorePreservedAction) mainWindow.currentAction.getStarter().imbue(std::move(preservedAction));
 }
 
-void ClipboardAction::render(SDL_Renderer* renderer) {
+void ClipboardAction::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) {
     // draw the translucent background
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // set the blend mode
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0x99);

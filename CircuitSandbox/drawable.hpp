@@ -1,20 +1,22 @@
 #pragma once
 
 /**
- * Base class for drawable objects
+ * Base class for drawable objects.
+ * Drawables have a renderArea and can be rendered to screen.
  */
+
+#include <chrono>
 
 #include <SDL.h>
 
-#include "eventreceiver.hpp"
-
-
-class Drawable : public EventReceiver {
+class Drawable {
 public:
     SDL_Rect renderArea; // this is a physical size
 
-    virtual void render(SDL_Renderer*) = 0;
-    virtual void layoutComponents(SDL_Renderer*) {}
-    
-};
+    // a steady clock used for rendering
+    using RenderClock = std::chrono::steady_clock;
 
+    virtual void render(SDL_Renderer*, RenderClock::time_point) = 0;
+    virtual void layoutComponents(SDL_Renderer*) {}
+
+};

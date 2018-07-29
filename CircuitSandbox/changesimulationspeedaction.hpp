@@ -114,7 +114,7 @@ public:
         }
     }
 
-    void render(SDL_Renderer* renderer) override {
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override {
         // draw the translucent background
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // set the blend mode
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0x99);

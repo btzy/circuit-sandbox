@@ -14,6 +14,7 @@
 #include "elements.hpp"
 #include "canvasstate.hpp"
 #include "fileutils.hpp"
+#include "notificationdisplay.hpp"
 
 class FileSaveAction final : public Action {
 private:
@@ -51,6 +52,7 @@ public:
                 mainWindow.setUnsaved(false);
                 mainWindow.setFilePath(filePath);
                 mainWindow.stateManager.historyManager.setSaved();
+                mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "File saved", NotificationDisplay::TEXT_COLOR_ACTION } });
                 break;
             case CanvasState::WriteResult::IO_ERROR:
                 SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Save File", "This file cannot be written to.", mainWindow.window);

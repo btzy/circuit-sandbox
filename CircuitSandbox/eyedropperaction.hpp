@@ -9,9 +9,12 @@
 #include "playarea.hpp"
 #include "mainwindow.hpp"
 #include "visitor.hpp"
+#include "notificationdisplay.hpp"
 
 class EyedropperAction final : public PlayAreaAction, public KeyboardEventHook {
 private:
+    // notification
+    NotificationDisplay::UniqueNotification notification;
 
     template <typename Element>
     void bindToolFromElement(size_t inputHandleIndex, Element element) {
@@ -27,7 +30,11 @@ private:
     }
 
 public:
-    EyedropperAction(MainWindow& mainWindow, SDL_Renderer* renderer) : PlayAreaAction(mainWindow), KeyboardEventHook(mainWindow) {}
+    EyedropperAction(MainWindow& mainWindow, SDL_Renderer* renderer) : PlayAreaAction(mainWindow), KeyboardEventHook(mainWindow), 
+        notification(mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, NotificationDisplay::Data{
+            {"Eyedropper active", NotificationDisplay::TEXT_COLOR_STATE },
+            { ": Click any element to select that corresponding tool", NotificationDisplay::TEXT_COLOR }
+            })) {}
 
     ~EyedropperAction() {}
 
@@ -43,9 +50,9 @@ public:
             std::visit(visitor{
                 [](std::monostate) {},
                 [&, this](const auto& element) {
-                    bindToolFromElement(inputHandleIndex, element);
-                }
-            }, canvas()[canvasOffset]);
+                bindToolFromElement(inputHandleIndex, element);
+            }
+                }, canvas()[canvasOffset]);
         }
         return ActionEventResult::PROCESSED;
     }
@@ -57,9 +64,5 @@ public:
             }
         }
         return ActionEventResult::PROCESSED;
-    }
-
-    const char* getStatus() const override {
-        return "Eyedropper active";
     }
 };

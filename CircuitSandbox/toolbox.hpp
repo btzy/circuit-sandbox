@@ -10,11 +10,11 @@
 #include <SDL.h>
 
 #include "declarations.hpp"
-#include "drawable.hpp"
+#include "control.hpp"
 #include "renderable.hpp"
 
 
-class Toolbox final : public Drawable {
+class Toolbox final : public Control {
 private:
     constexpr static SDL_Color clickColor{ 0x66, 0x66, 0x66, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
@@ -89,7 +89,7 @@ public:
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer) override {
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override {
         std::as_const(*this).render(renderer);
     }
     void render(SDL_Renderer* renderer) const;

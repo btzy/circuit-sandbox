@@ -7,12 +7,13 @@
 #include <SDL.h>
 
 #include "declarations.hpp"
-#include "drawable.hpp"
+#include "control.hpp"
 #include "statemanager.hpp"
 #include "point.hpp"
 #include "playareaactionmanager.hpp"
 #include "sdl_automatic.hpp"
 #include "elementdescriptionutils.hpp"
+#include "notificationdisplay.hpp"
 
 /**
  * Represents the play area - the part of the window where the user can draw on.
@@ -20,7 +21,7 @@
  * This class owns the StateManager object (which stores the 2d current drawing state, including HIGH/LOW voltage state), and the CommandManager object.
  */
 
-class PlayArea final : public Drawable {
+class PlayArea final : public Control {
 private:
     // owner window
     MainWindow& mainWindow;
@@ -48,6 +49,7 @@ private:
     ext::point pixelTextureSize;
 
     bool defaultView = false; // whether default view (instead of live view) is being rendered
+    NotificationDisplay::UniqueNotification defaultViewNotification;
 
     PlayAreaActionManager currentAction; // current action that receives playarea events, might be nullptr
 
@@ -79,7 +81,7 @@ public:
      * This method is non-const because the cached state might be updated from the simulator when rendering.
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer) override;
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override;
 private:
     void render(SDL_Renderer* renderer, StateManager& stateManager);
 

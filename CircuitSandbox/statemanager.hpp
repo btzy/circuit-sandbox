@@ -119,7 +119,7 @@ public:
      * Reset all elements in the simulation to their default state.
      * This will work even if simulator is running.
      */
-    void resetSimulator();
+    void resetSimulator(MainWindow&);
 
     /**
      * Update defaultState with a new snapshot from the simulator.

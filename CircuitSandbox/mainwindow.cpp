@@ -46,7 +46,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : stateManager(geSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : stateManager(geSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), notificationDisplay(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), clipboard(notificationDisplay), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -173,6 +173,22 @@ void MainWindow::updateTitleBar() {
     SDL_SetWindowTitle(window, title.c_str());
 }
 
+void MainWindow::toggleBeginnerMode() {
+    // get existing flags
+    NotificationFlags::Type flags = notificationDisplay.getVisibleFlags();
+    // toggle the BEGINNER flag
+    notificationDisplay.setVisibleFlags(flags ^ NotificationFlags::BEGINNER);
+    // write notifications
+    if (flags & NotificationFlags::BEGINNER) {
+        // beginner mode was disabled
+        toggleBeginnerModeNotification = notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Beginner mode disabled", NotificationDisplay::TEXT_COLOR_CANCEL } });
+    }
+    else {
+        // beginner mode was enabled
+        toggleBeginnerModeNotification = notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Beginner mode enabled", NotificationDisplay::TEXT_COLOR_ACTION } });
+    }
+}
+
 
 void MainWindow::layoutComponents(bool forceLayout) {
 
@@ -193,7 +209,7 @@ void MainWindow::layoutComponents(bool forceLayout) {
     playArea.renderArea = SDL_Rect{0, 0, renderArea.w - TOOLBOX_WIDTH - HAIRLINE_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     toolbox.renderArea = SDL_Rect{ renderArea.w - TOOLBOX_WIDTH, 0, TOOLBOX_WIDTH, renderArea.h - BUTTONBAR_HEIGHT - HAIRLINE_WIDTH};
     buttonBar.renderArea = SDL_Rect{0, renderArea.h - BUTTONBAR_HEIGHT, renderArea.w, BUTTONBAR_HEIGHT};
-
+    notificationDisplay.renderArea = playArea.renderArea;
 
 
     if (dpiChanged || forceLayout) {
@@ -357,17 +373,17 @@ void MainWindow::processMouseMotionEvent(const SDL_MouseMotionEvent& event) {
     }
 
     // determine new currentLocationTarget
-    for (Drawable* drawable : ext::reverse(drawables)) {
-        if (drawable == currentLocationTarget) {
+    for (Control* control : ext::reverse(controls)) {
+        if (control == currentLocationTarget) {
             break;
         }
-        if (SDL_PointInRect(&position, &drawable->renderArea)) {
-            // found a new Drawable that isn't currently being hovered
+        if (SDL_PointInRect(&position, &control->renderArea)) {
+            // found a new Control that isn't currently being hovered
             if (currentLocationTarget != nullptr) {
                 currentLocationTarget->processMouseLeave();
                 currentLocationTarget = nullptr;
             }
-            currentLocationTarget = drawable;
+            currentLocationTarget = control;
             break;
         }
     }
@@ -399,10 +415,10 @@ void MainWindow::processMouseButtonEvent(const SDL_MouseButtonEvent& event) {
         // ensure only one input handle can be down at any moment
         stopMouseDrag();
         activeInputHandleIndex = inputHandleIndex;
-        for (Drawable* drawable : ext::reverse(drawables)) {
-            if (SDL_PointInRect(&position, &drawable->renderArea)){
-                currentEventTarget = drawable;
-                if (drawable->processMouseButtonDown(event)) {
+        for (Control* control : ext::reverse(controls)) {
+            if (SDL_PointInRect(&position, &control->renderArea)){
+                currentEventTarget = control;
+                if (control->processMouseButtonDown(event)) {
                     SDL_CaptureMouse(SDL_TRUE);
                     break;
                 }
@@ -432,8 +448,8 @@ void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
     SDL_Point position;
     // poll the mouse position since it's not reflected in the event
     SDL_GetMouseState(&position.x, &position.y);
-    for (Drawable* drawable : ext::reverse(drawables)) {
-        if (SDL_PointInRect(&position, &drawable->renderArea) && drawable->processMouseWheel(event)) {
+    for (Control* control : ext::reverse(controls)) {
+        if (SDL_PointInRect(&position, &control->renderArea) && control->processMouseWheel(event)) {
             break;
         }
     }
@@ -441,7 +457,7 @@ void MainWindow::processMouseWheelEvent(const SDL_MouseWheelEvent& event) {
 
 
 void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
-    // invoke the handlers for all drawables and see if they want to stop event propagation
+    // invoke the handlers for all controls and see if they want to stop event propagation
     for (KeyboardEventReceiver* receiver : ext::reverse(keyboardEventReceivers)) {
         if (receiver->processKeyboard(event)) {
             return;
@@ -452,19 +468,34 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
         SDL_Keymod modifiers = static_cast<SDL_Keymod>(event.keysym.mod);
         if (modifiers & KMOD_CTRL) {
             // In alphabetical order
+            if (!event.repeat) {
+                switch (event.keysym.scancode) {
+                case SDL_SCANCODE_A: // Select all
+                    SelectionAction::startBySelectingAll(*this, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_N: // Spawn new instance
+                    FileNewAction::start(*this, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_O: // Open file
+                    FileOpenAction::start(*this, playArea, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_S: // Save file
+                    FileSaveAction::start(*this, modifiers, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_Y: // Redo
+                    HistoryAction::startByRedoing(*this, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_Z: // Undo
+                    HistoryAction::startByUndoing(*this, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_SPACE: // Change simulation speed
+                    ChangeSimulationSpeedAction::start(*this, renderer, currentAction.getStarter());
+                    return;
+                default:
+                    break;
+                }
+            }
             switch (event.keysym.scancode) {
-            case SDL_SCANCODE_A: // Select all
-                SelectionAction::startBySelectingAll(*this, currentAction.getStarter());
-                return;
-            case SDL_SCANCODE_N: // Spawn new instance
-                FileNewAction::start(*this, currentAction.getStarter());
-                return;
-            case SDL_SCANCODE_O: // Open file
-                FileOpenAction::start(*this, playArea, currentAction.getStarter());
-                return;
-            case SDL_SCANCODE_S: // Save file
-                FileSaveAction::start(*this, modifiers, currentAction.getStarter());
-                return;
             case SDL_SCANCODE_V: // Paste
                 if (modifiers & KMOD_SHIFT) {
                     ClipboardAction::startPasteDialog(*this, renderer, currentAction.getStarter());
@@ -473,35 +504,36 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                     SelectionAction::startByPasting(*this, playArea, currentAction.getStarter());
                 }
                 return;
-            case SDL_SCANCODE_Y: // Redo
-                HistoryAction::startByRedoing(*this, currentAction.getStarter());
-                return;
-            case SDL_SCANCODE_Z: // Undo
-                HistoryAction::startByUndoing(*this, currentAction.getStarter());
-                return;
-            case SDL_SCANCODE_SPACE: // Change simulation speed
-                ChangeSimulationSpeedAction::start(*this, renderer, currentAction.getStarter());
-                return;
             default:
                 break;
             }
         }
         else {
+            if (!event.repeat) {
+                // things that should only work if its a non-repeat keydown
+                switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
+                case SDL_SCANCODE_R: // Reset simulator
+                    currentAction.reset();
+                    stateManager.resetSimulator(*this);
+                    return;
+                case SDL_SCANCODE_SPACE: // Start/stop simulator
+                    currentAction.reset();
+                    stateManager.startOrStopSimulator();
+                    return;
+                case SDL_SCANCODE_E:
+                    EyedropperAction::start(*this, renderer, currentAction.getStarter());
+                    return;
+                case SDL_SCANCODE_B:
+                    toggleBeginnerMode();
+                    return;
+                default:
+                    break;
+                }
+            }
             switch (event.keysym.scancode) { // using the scancode layout so that keys will be in the same position if the user has a non-qwerty keyboard
-            case SDL_SCANCODE_R: // Reset simulator
-                currentAction.reset();
-                stateManager.resetSimulator();
-                return;
-            case SDL_SCANCODE_SPACE: // Start/stop simulator
-                currentAction.reset();
-                stateManager.startOrStopSimulator();
-                return;
             case SDL_SCANCODE_RIGHT: // Step simulator
                 currentAction.reset();
                 stateManager.stepSimulator();
-                return;
-            case SDL_SCANCODE_E:
-                EyedropperAction::start(*this, renderer, currentAction.getStarter());
                 return;
             default:
                 break;
@@ -511,7 +543,7 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
 }
 
 void MainWindow::processTextInputEvent(const SDL_TextInputEvent& event) {
-    // invoke the handlers for all drawables and see if they want to stop event propagation
+    // invoke the handlers for all controls and see if they want to stop event propagation
     for (KeyboardEventReceiver* receiver : ext::reverse(keyboardEventReceivers)) {
         if (receiver->processTextInput(event)) {
             return;
@@ -522,6 +554,7 @@ void MainWindow::processTextInputEvent(const SDL_TextInputEvent& event) {
 
 // TODO: needs some way to use the old data when resizing, for consistency?
 void MainWindow::render() {
+    Drawable::RenderClock::time_point renderTime = Drawable::RenderClock::now();
 
     // Clear the window with a black background
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
@@ -537,7 +570,7 @@ void MainWindow::render() {
         // set clip rect to clip off parts of the surface outside renderArea
         SDL_RenderSetClipRect(renderer, &drawable->renderArea);
         // render the stuff
-        drawable->render(renderer);
+        drawable->render(renderer, renderTime);
     }
     // reset the clip rect
     SDL_RenderSetClipRect(renderer, nullptr);

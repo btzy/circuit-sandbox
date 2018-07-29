@@ -22,6 +22,9 @@ public:
             action.deltaTrans = mainWindow.stateManager.historyManager.undo(action.canvas());
             starter.reset(); // terminate the action immediately
         }
+        else {
+            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Can't undo", NotificationDisplay::TEXT_COLOR_ERROR } });
+        }
     }
 
     static inline void startByRedoing(MainWindow& mainWindow, const ActionStarter& starter) {
@@ -29,6 +32,9 @@ public:
             auto& action = starter.start<HistoryAction>(mainWindow);
             action.deltaTrans = mainWindow.stateManager.historyManager.redo(action.canvas());
             starter.reset(); // terminate the action immediately
+        }
+        else {
+            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Can't redo", NotificationDisplay::TEXT_COLOR_ERROR } });
         }
     }
 };
