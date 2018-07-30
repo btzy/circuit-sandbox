@@ -20,3 +20,7 @@ inline SDL_Surface* create_alpha_surface(int32_t width, int32_t height) {
 #endif
     return SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
 }
+
+inline SDL_Surface* create_surface(int32_t width, int32_t height) {
+    return SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
+}

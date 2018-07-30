@@ -18,7 +18,9 @@
 #include "simulator.hpp"
 #include "font.hpp"
 #include "sdl_automatic.hpp"
+#include "sdl_surface_create.hpp"
 #include "renderable.hpp"
+#include "drawing.hpp"
 
 class ChangeSimulationSpeedAction final : public StatefulAction, public MainWindowEventHook {
 private:
@@ -41,27 +43,26 @@ private:
         DialogButton(ChangeSimulationSpeedAction& owner) :owner(owner) {}
         inline void drawButton(SDL_Renderer* renderer, UniqueTexture& textureStore, const SDL_Color& textColor, const SDL_Color& backColor) {
             textureStore.reset(nullptr);
-            SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, renderArea.w, renderArea.h);
-            SDL_Surface* surface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Okay ? "OK" : "Cancel", textColor, backColor);
-            SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, surface);
-            SDL_SetRenderTarget(renderer, texture);
+
+            SDL_Surface* surface = create_surface(renderArea.w, renderArea.h);
+
+            // clear surface with background color
+            SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, backColor.r, backColor.g, backColor.b, backColor.a));
+
+            // draw text
             {
-                SDL_SetRenderDrawColor(renderer, backColor.r, backColor.g, backColor.b, backColor.a);
-                SDL_RenderClear(renderer);
+                SDL_Surface* textSurface = TTF_RenderText_Shaded(owner.mainWindow.interfaceFont, Okay ? "OK" : "Cancel", textColor, backColor);
+                SDL_Rect targetRect{ renderArea.w / 2 - textSurface->w / 2, renderArea.h / 2 - textSurface->h / 2, textSurface->w, textSurface->h };
+                SDL_BlitSurface(textSurface, nullptr, surface, &targetRect);
+                SDL_FreeSurface(textSurface);
             }
-            {
-                const SDL_Rect targetRect{ renderArea.w / 2 - surface->w / 2, renderArea.h / 2 - surface->h / 2, surface->w, surface->h };
-                SDL_RenderCopy(renderer, textTexture, nullptr, &targetRect);
-            }
-            {
-                SDL_SetRenderDrawColor(renderer, foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a);
-                const SDL_Rect targetRect{ 0, 0, renderArea.w, renderArea.h };
-                SDL_RenderDrawRect(renderer, &targetRect);
-            }
-            SDL_SetRenderTarget(renderer, nullptr);
+
+            // draw rectangle border
+            ext::drawBorder(surface, 0, 0, renderArea.w, renderArea.h, owner.mainWindow.logicalToPhysicalSize(1), foregroundColor);
+
+            // create and save the texture
+            textureStore.reset(SDL_CreateTextureFromSurface(renderer, surface));
             SDL_FreeSurface(surface);
-            SDL_DestroyTexture(textTexture);
-            textureStore.reset(texture);
         }
         void layoutComponents(SDL_Renderer* renderer, const SDL_Rect& render_area) {
             renderArea = render_area;
@@ -179,35 +180,37 @@ public:
         // draw all the stuff that don't change (unless the layout changes)
         SDL_Surface* surface1 = TTF_RenderText_Shaded(mainWindow.interfaceFont, "Enter simulation speed (FPS):", foregroundColor, backgroundColor);
         SDL_Surface* surface2 = TTF_RenderText_Shaded(mainWindow.interfaceFont, "(0 = as fast as possible)", detailColor, backgroundColor);
-        SDL_Texture* texture1 = SDL_CreateTextureFromSurface(renderer, surface1);
-        SDL_Texture* texture2 = SDL_CreateTextureFromSurface(renderer, surface2);
+        
         ext::point textureSize = TEXTBOX_SIZE + PADDING * 2;
         textureSize.y += surface1->h + surface2->h + PADDING.y * 2 + BUTTON_HEIGHT;
         dialogArea = { renderArea.x + renderArea.w / 2 - textureSize.x / 2, renderArea.y + renderArea.h / 2 - textureSize.y / 2, textureSize.x, textureSize.y };
-        auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, textureSize.x, textureSize.y);
-        SDL_SetRenderTarget(renderer, texture);
-        SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a);
-        { // outer box
-            const SDL_Rect target{ 0, 0, textureSize.x, textureSize.y };
-            SDL_RenderDrawRect(renderer, &target);
+
+        SDL_Surface* surface = create_surface(textureSize.x, textureSize.y);
+        
+        // fill background
+        SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a));
+        //SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, 255,255,255,255));
+        
+        // outer box
+        ext::drawBorder(surface, 0, 0, textureSize.x, textureSize.y, mainWindow.logicalToPhysicalSize(1), foregroundColor);
+
+        // first line of text
+        {
+            SDL_Rect target{ PADDING.x, PADDING.y, surface1->w, surface1->h };
+            SDL_BlitSurface(surface1, nullptr, surface, &target);
         }
-        { // first line of text
-            const SDL_Rect target{ PADDING.x, PADDING.y, surface1->w, surface1->h };
-            SDL_RenderCopy(renderer, texture1, nullptr, &target);
+
+        // second line of text
+        {
+            SDL_Rect target{ PADDING.x, PADDING.y + surface1->h, surface2->w, surface2->h };
+            SDL_BlitSurface(surface2, nullptr, surface, &target);
         }
-        { // second line of text
-            const SDL_Rect target{ PADDING.x, PADDING.y + surface1->h, surface2->w, surface2->h };
-            SDL_RenderCopy(renderer, texture2, nullptr, &target);
-        }
-        { // text box outline
+
+        // text box outline
+        {
             const SDL_Rect target{ PADDING.x, PADDING.y * 2 + surface1->h + surface2->h, TEXTBOX_SIZE.x, TEXTBOX_SIZE.y };
-            SDL_RenderDrawRect(renderer, &target);
+            ext::drawBorder(surface, target, mainWindow.logicalToPhysicalSize(1), foregroundColor);
         }
-        SDL_SetRenderTarget(renderer, nullptr);
-        SDL_DestroyTexture(texture1);
-        SDL_DestroyTexture(texture2);
 
         // save the offsets so that the render() function can do its job
         ext::point textBoxTopLeftOffset = { renderArea.x + renderArea.w / 2 - textureSize.x / 2 + PADDING.x, renderArea.y + renderArea.h / 2 - textureSize.y / 2 + PADDING.y * 2 + surface1->h + surface2->h };
@@ -224,7 +227,8 @@ public:
         okayButton.layoutComponents(renderer, SDL_Rect{ textBoxTopLeftOffset.x, buttonY, buttonWidth, BUTTON_HEIGHT });
         cancelButton.layoutComponents(renderer, SDL_Rect{ textBoxTopLeftOffset.x + TEXTBOX_SIZE.x - buttonWidth, buttonY, buttonWidth, BUTTON_HEIGHT });
 
-        dialogTexture.reset(texture);
+        dialogTexture.reset(SDL_CreateTextureFromSurface(renderer, surface));
+        SDL_FreeSurface(surface);
     }
 
     ActionEventResult processWindowMouseButtonDown(const SDL_MouseButtonEvent& event) override {

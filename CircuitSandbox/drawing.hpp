@@ -1,8 +1,40 @@
 #pragma once
 
+#include <array>
+#include <cassert>
+
 #include <SDL.h>
 
 namespace ext {
+
+    // Surface functions
+
+    /**
+     * Draw a border on a surface.
+     * The specified rectangle includes the border thickness.
+     */
+    inline void drawBorder(SDL_Surface* surface, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t thickness, SDL_Color color) {
+        assert(surface);
+        assert(x1 + thickness <= x2);
+        assert(y1 + thickness <= y2);
+        std::array<SDL_Rect, 4> rects{ {
+            { x1, y1, x2 - x1, thickness },
+            { x1, y1, thickness, y2 - y1 },
+            { x1, y2 - thickness, x2 - x1, thickness },
+            { x2 - thickness, y1, thickness, y2 - y1 }
+            } };
+        SDL_FillRects(surface, rects.data(), 4, SDL_MapRGBA(surface->format, color.r, color.g, color.b, color.a));
+    }
+
+    /**
+    * Draw a border on a surface.
+    * The specified rectangle includes the border thickness.
+    */
+    inline void drawBorder(SDL_Surface* surface, const SDL_Rect& rect, int32_t thickness, SDL_Color color) {
+        drawBorder(surface, rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, thickness, color);
+    }
+
+    // Render functions
 
     inline void renderDrawDashedHorizontalLine(SDL_Renderer* renderer, int32_t x1, int32_t x2, int32_t y) {
         const int32_t segmentLength = 4;
