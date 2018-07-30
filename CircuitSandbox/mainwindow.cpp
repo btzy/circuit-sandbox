@@ -214,7 +214,7 @@ void MainWindow::layoutComponents(bool forceLayout) {
 
     if (dpiChanged || forceLayout) {
         // set min window size
-        SDL_SetWindowMinimumSize(window, toolbox.renderArea.w + logicalToPhysicalSize(100), buttonBar.renderArea.h + logicalToPhysicalSize(100));
+        SDL_SetWindowMinimumSize(window, logicalToPhysicalSize(480), logicalToPhysicalSize(480));
 
         // update font sizes
         updateFonts();
