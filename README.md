@@ -14,9 +14,9 @@ If you are on Windows 8.1, you might need to install the [Windows 10 Universal C
 
 For other operating systems, you'll have to build it from source.
 
-## Getting started
+## How to play
 
-For now, [this](https://docs.google.com/document/d/1dKjbmgO7EBqCwt_AE16uNaEf27A4whcjDIfv10dvZqk/edit?usp=sharing) is the best user documentation we have.
+Read the [user manual](https://btzy.github.io/circuit-sandbox/manuals/latest.pdf) for an introduction to Circuit Sandbox.
 
 There are also sample circuits in the `samples` folder of this repository.
 
