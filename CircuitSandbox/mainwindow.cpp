@@ -31,14 +31,26 @@
 using namespace std::literals::string_literals; // gives the 's' suffix for strings
 
 #ifdef _WIN32
+#define SIZE_MOVE_TIMER_ID 1
 // hack for issue with window resizing on Windows not giving live events
 int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
+    MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
-        MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
         if (event_window == main_window->window) {
             main_window->layoutComponents();
             main_window->render();
+        }
+    }
+    else if (event->type == SDL_SYSWMEVENT) {
+        const auto& winMessage = event->syswm.msg->msg.win;
+        if (winMessage.msg == WM_ENTERSIZEMOVE) {
+            main_window->_sizeMoveTimerRunning = SetTimer(GetActiveWindow(), SIZE_MOVE_TIMER_ID, USER_TIMER_MINIMUM, nullptr);
+        }
+        else if (winMessage.msg == WM_TIMER) {
+            if (winMessage.wParam == SIZE_MOVE_TIMER_ID) {
+                main_window->render();
+            }
         }
     }
     return 0;
@@ -273,6 +285,10 @@ void MainWindow::startEventLoop() {
             SDL_Event event;
             if (visible ? SDL_PollEvent(&event) : SDL_WaitEvent(&event)) {
 #if defined(_WIN32)
+                if (_sizeMoveTimerRunning) {
+                    KillTimer(GetActiveWindow(), SIZE_MOVE_TIMER_ID);
+                    _sizeMoveTimerRunning = false;
+                }
                 if (event.type == SDL_SYSWMEVENT) {
                     const auto& winMessage = event.syswm.msg->msg.win;
                     if (winMessage.msg == WM_LBUTTONDOWN) {

@@ -77,6 +77,7 @@ private:
 
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
+    bool _sizeMoveTimerRunning = false;
 #endif
 
 public:
