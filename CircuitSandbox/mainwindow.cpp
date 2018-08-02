@@ -353,6 +353,23 @@ void MainWindow::processWindowEvent(const SDL_WindowEvent& event) {
     case SDL_WINDOWEVENT_RESIZED: // window got resized by window manager or by user (will NOT be triggered by programmatic resize, e.g. SDL_SetWindowSize)
         layoutComponents();
         break;
+    case SDL_WINDOWEVENT_ENTER:
+        {
+            int32_t x, y;
+            auto state = SDL_GetMouseState(&x, &y);
+            processMouseMotionEvent({
+                SDL_MOUSEMOTION, /* type */
+                event.timestamp, /* timestamp */
+                event.windowID, /* windowID */
+                0, /* which (we assume only one mouse) */
+                state, /* state */
+                x, /* x */
+                y, /* y */
+                0, /* xrel */
+                0 /* yrel */
+                });
+        }
+        break;
     case SDL_WINDOWEVENT_LEAVE:
         if (currentLocationTarget != nullptr) {
             currentLocationTarget->processMouseLeave();
