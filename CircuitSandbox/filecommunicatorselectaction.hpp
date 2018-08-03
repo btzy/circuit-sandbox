@@ -33,6 +33,12 @@ public:
         }
         if (outPath != nullptr) {
             comm.setFile(outPath);
+
+            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{
+                { "Communicator linked to ", NotificationDisplay::TEXT_COLOR },
+                { getFileName(outPath), NotificationDisplay::TEXT_COLOR_FILE }
+            });
+
             free(outPath);
 
             // save to history, but never recompile

@@ -551,7 +551,7 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                     return;
                 case SDL_SCANCODE_SPACE: // Start/stop simulator
                     currentAction.reset();
-                    stateManager.startOrStopSimulator();
+                    stateManager.startOrStopSimulator(*this);
                     return;
                 case SDL_SCANCODE_E:
                     EyedropperAction::start(*this, renderer, currentAction.getStarter());

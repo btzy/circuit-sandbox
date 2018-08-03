@@ -31,9 +31,9 @@ private:
     constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
     constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
     constexpr static SDL_Color detailColor{ 0x99, 0x99, 0x99, 0xFF };
-    constexpr static SDL_Color inputColor{ 0xFF, 0xFF, 0x66, 0xFF };
-    constexpr static SDL_Color okayColor{ 0, 0xFF, 0, 0xFF };
-    constexpr static SDL_Color cancelColor{ 0xFF, 0, 0, 0xFF };
+    constexpr static SDL_Color inputColor = BRIGHT_YELLOW;
+    constexpr static SDL_Color okayColor = BRIGHT_GREEN;
+    constexpr static SDL_Color cancelColor = BRIGHT_RED;
 
     template <bool Okay>
     class DialogButton final : public Renderable {

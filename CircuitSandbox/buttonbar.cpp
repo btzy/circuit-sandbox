@@ -182,10 +182,10 @@ const char* IconButton<CodePoint>::description(const ButtonBar& buttonBar) const
         return "Set simulation speed (Ctrl-Space)";
     }
     else if constexpr (CodePoint == IconCodePoints::UNDO) {
-        return "Undo the last action (Ctrl-Z)";
+        return "Undo the last change (Ctrl-Z)";
     }
     else if constexpr (CodePoint == IconCodePoints::REDO) {
-        return "Redo the last action (Ctrl-Y)";
+        return "Redo the last change (Ctrl-Y)";
     }
 }
 
@@ -298,7 +298,7 @@ void PlayPauseButton::setHeight(SDL_Renderer* renderer, const ButtonBar& buttonB
 
 void PlayPauseButton::click(ButtonBar& buttonBar) {
     buttonBar.mainWindow.currentAction.reset();
-    buttonBar.mainWindow.stateManager.startOrStopSimulator();
+    buttonBar.mainWindow.stateManager.startOrStopSimulator(buttonBar.mainWindow);
 }
 
 const char* PlayPauseButton::description(const ButtonBar& buttonBar) const {

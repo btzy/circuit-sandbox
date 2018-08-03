@@ -23,7 +23,7 @@ public:
             starter.reset(); // terminate the action immediately
         }
         else {
-            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Can't undo", NotificationDisplay::TEXT_COLOR_ERROR } });
+            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to undo", NotificationDisplay::TEXT_COLOR_ERROR } });
         }
     }
 
@@ -34,7 +34,7 @@ public:
             starter.reset(); // terminate the action immediately
         }
         else {
-            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Can't redo", NotificationDisplay::TEXT_COLOR_ERROR } });
+            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to redo", NotificationDisplay::TEXT_COLOR_ERROR } });
         }
     }
 };

@@ -77,17 +77,6 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
 
     // ask current action to render itself directly if necessary
     currentAction.renderPlayAreaDirect(renderer);
-
-    if (defaultView) {
-        SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
-        SDL_Rect squareBox {
-            renderArea.x,
-            renderArea.y,
-            mainWindow.logicalToPhysicalSize(10),
-            mainWindow.logicalToPhysicalSize(10)
-        };
-        SDL_RenderFillRect(renderer, &squareBox);
-    }
 }
 
 void PlayArea::prepareTexture(SDL_Renderer* renderer) {

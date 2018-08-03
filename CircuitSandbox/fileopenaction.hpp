@@ -77,13 +77,13 @@ public:
                     simulatorRunning = false; // don't restart the simulator
                     break;
                 case CanvasState::ReadResult::OUTDATED:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file was created by a newer version of " CIRCUIT_SANDBOX_STRING ", and cannot be opened here.  Please update " CIRCUIT_SANDBOX_STRING " and try again.", mainWindow.window);
+                    mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Error opening file: This file was created by a newer version of " CIRCUIT_SANDBOX_STRING ", and cannot be opened here.  Please update " CIRCUIT_SANDBOX_STRING " and try again.", NotificationDisplay::TEXT_COLOR_ERROR } });
                     break;
                 case CanvasState::ReadResult::CORRUPTED:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "File is corrupted.", mainWindow.window);
+                    mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Error opening file: This file is corrupted.", NotificationDisplay::TEXT_COLOR_ERROR } });
                     break;
                 case CanvasState::ReadResult::IO_ERROR:
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Open File", "This file cannot be accessed.", mainWindow.window);
+                    mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Error opening file: This file cannot be accessed.", NotificationDisplay::TEXT_COLOR_ERROR } });
                     break;
                 }
             }

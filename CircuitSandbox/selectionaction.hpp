@@ -39,6 +39,7 @@ private:
     ext::point moveOrigin; // in canvas coordinates
 
     NotificationDisplay::UniqueNotification notification;
+    bool notificationActive = false;
 
     friend class ClipboardAction;
 

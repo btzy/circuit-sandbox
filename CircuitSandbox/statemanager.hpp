@@ -81,7 +81,7 @@ public:
     /**
      * Toggle between running and pausing the simulator.
      */
-    void startOrStopSimulator();
+    void startOrStopSimulator(MainWindow& mainWindow);
 
     /**
      * Stops the simulator.

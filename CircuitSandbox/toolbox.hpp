@@ -64,12 +64,12 @@ private:
      * The colour of the each handle
      */
     constexpr static SDL_Color selectorHandleColors[NUM_INPUT_HANDLES] = {
-        { 0xFF, 0xFF, 0, SDL_ALPHA_OPAQUE },
-        { 0xFF, 0, 0, SDL_ALPHA_OPAQUE },
-        { 0, 0xFF, 0, SDL_ALPHA_OPAQUE },
-        { 0x55, 0x55, 0xFF, SDL_ALPHA_OPAQUE },
-        { 0, 0xCC, 0xFF, SDL_ALPHA_OPAQUE },
-        { 0xCC, 0, 0xFF, SDL_ALPHA_OPAQUE }
+        BRIGHT_YELLOW,
+        BRIGHT_RED,
+        BRIGHT_GREEN,
+        BRIGHT_BLUE,
+        BRIGHT_CYAN,
+        BRIGHT_MAGENTA
     };
 
     template <size_t Index>

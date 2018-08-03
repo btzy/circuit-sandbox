@@ -57,6 +57,24 @@ class ScreenCommunicator;
 class FileInputCommunicator;
 class FileOutputCommunicator;
 
+// colors
+constexpr static SDL_Color BLACK          { 0x1d, 0x1e, 0x21, 0xFF };
+constexpr static SDL_Color RED            { 0xa5, 0x20, 0x20, 0xFF };
+constexpr static SDL_Color GREEN          { 0x71, 0x94, 0x40, 0xFF };
+constexpr static SDL_Color YELLOW         { 0xea, 0x87, 0x15, 0xFF };
+constexpr static SDL_Color BLUE           { 0x44, 0x75, 0x9d, 0xFF };
+constexpr static SDL_Color MAGENTA        { 0x79, 0x4e, 0x87, 0xFF };
+constexpr static SDL_Color CYAN           { 0x43, 0x86, 0x7e, 0xFF };
+constexpr static SDL_Color WHITE          { 0xbd, 0xc1, 0xbf, 0xFF };
+constexpr static SDL_Color BRIGHT_BLACK   { 0x43, 0x48, 0x4f, 0xFF };
+constexpr static SDL_Color BRIGHT_RED     { 0xf1, 0x6e, 0x6e, 0xFF };
+constexpr static SDL_Color BRIGHT_GREEN   { 0xa4, 0xe5, 0x45, 0xFF };
+constexpr static SDL_Color BRIGHT_YELLOW  { 0xfa, 0xd3, 0x35, 0xFF };
+constexpr static SDL_Color BRIGHT_BLUE    { 0xa7, 0xc2, 0xeb, 0xFF };
+constexpr static SDL_Color BRIGHT_MAGENTA { 0xd6, 0x8e, 0xeb, 0xFF };
+constexpr static SDL_Color BRIGHT_CYAN    { 0x62, 0xdd, 0xd7, 0xFF };
+constexpr static SDL_Color BRIGHT_WHITE   { 0xed, 0xf0, 0xee, 0xFF };
+
 // strings
 // we use compiler #defines so we can have adjacent string concatenation
 #define CIRCUIT_SANDBOX_STRING "Circuit Sandbox"

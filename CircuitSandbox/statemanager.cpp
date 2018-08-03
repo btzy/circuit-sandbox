@@ -107,12 +107,14 @@ void StateManager::startSimulatorUnchecked() {
     simulator.start();
 }
 
-void StateManager::startOrStopSimulator() {
+void StateManager::startOrStopSimulator(MainWindow& mainWindow) {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) {
+        mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation paused", NotificationDisplay::TEXT_COLOR_ACTION } });
         stopSimulatorUnchecked();
     }
     else {
+        mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation running", NotificationDisplay::TEXT_COLOR_ACTION } });
         startSimulatorUnchecked();
     }
 }

@@ -55,7 +55,7 @@ public:
                 mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "File saved", NotificationDisplay::TEXT_COLOR_ACTION } });
                 break;
             case CanvasState::WriteResult::IO_ERROR:
-                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cannot Save File", "This file cannot be written to.", mainWindow.window);
+                mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Error saving file: This file cannot be written to.", NotificationDisplay::TEXT_COLOR_ERROR } });
                 break;
             }
         }

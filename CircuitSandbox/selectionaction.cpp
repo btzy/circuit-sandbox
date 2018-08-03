@@ -397,17 +397,20 @@ void SelectionAction::renderPlayAreaDirect(SDL_Renderer* renderer) const {
 }
 
 void SelectionAction::showAddAndSubtractNotification() {
-    // add notification
-    notification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, NotificationDisplay::Data{
-        { "Hold", NotificationDisplay::TEXT_COLOR },
-        { " Shift", NotificationDisplay::TEXT_COLOR_KEY },
-        { " to add to the selection or", NotificationDisplay::TEXT_COLOR },
-        { " Alt", NotificationDisplay::TEXT_COLOR_KEY },
-        { " to subtract from it;", NotificationDisplay::TEXT_COLOR },
-        { " double-click", NotificationDisplay::TEXT_COLOR_KEY },
-        { " to select logically connected components or", NotificationDisplay::TEXT_COLOR },
-        { " triple-click", NotificationDisplay::TEXT_COLOR_KEY },
-        { " to select all reachable elements", NotificationDisplay::TEXT_COLOR } });
+    if (!notificationActive) {
+        notificationActive = true;
+        // add notification
+        notification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, NotificationDisplay::Data{
+            { "Hold", NotificationDisplay::TEXT_COLOR },
+            { " Shift", NotificationDisplay::TEXT_COLOR_KEY },
+            { " to add to the selection or", NotificationDisplay::TEXT_COLOR },
+            { " Alt", NotificationDisplay::TEXT_COLOR_KEY },
+            { " to subtract from it;", NotificationDisplay::TEXT_COLOR },
+            { " double-click", NotificationDisplay::TEXT_COLOR_KEY },
+            { " to select logically connected components or", NotificationDisplay::TEXT_COLOR },
+            { " triple-click", NotificationDisplay::TEXT_COLOR_KEY },
+            { " to select all reachable elements", NotificationDisplay::TEXT_COLOR } });
+    }
 }
 
 void SelectionAction::hideNotification() {
