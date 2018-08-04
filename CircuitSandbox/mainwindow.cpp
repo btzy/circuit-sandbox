@@ -19,6 +19,7 @@
 #include "eyedropperaction.hpp"
 #include "changesimulationspeedaction.hpp"
 #include "clipboardaction.hpp"
+#include "launch_browser.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -558,6 +559,12 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                     return;
                 case SDL_SCANCODE_B:
                     toggleBeginnerMode();
+                    return;
+                case SDL_SCANCODE_F1: [[fallthrough]];
+                case SDL_SCANCODE_HELP:
+                    if (WebResource::launch(WebResource::USER_MANUAL)) {
+                        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, "Opening user manual in browser ...");
+                    }
                     return;
                 default:
                     break;
