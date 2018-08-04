@@ -11,6 +11,7 @@
 namespace ext {
     /**
      * Represents a shared memory buffer that will be deleted when no longer referenced by any process.
+     * New memory is zeroed by POSIX ftruncate().
      */
     class autoremove_shared_memory {
     private:
@@ -60,8 +61,9 @@ namespace ext {
 
 namespace ext {
     /**
-    * Represents a shared memory buffer that will be deleted when no longer referenced by any process.
-    */
+     * Represents a shared memory buffer that will be deleted when no longer referenced by any process.
+     * New memory is zeroed by Windows API CreateFileMappingA().
+     */
     class autoremove_shared_memory {
     private:
         boost::interprocess::windows_shared_memory shm;

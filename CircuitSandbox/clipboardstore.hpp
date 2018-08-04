@@ -67,13 +67,13 @@ namespace {
 template <uint32_t NumClipboards>
 class ClipboardStore {
 private:
-    inline static const char* memoryName = "CircuitSandbox_Clipboardv1";
+    constexpr inline static const char* memoryName = "CircuitSandbox_Clipboardv1";
 
     struct Clipboard {
         ext::autoremove_shared_memory memory;
         uint32_t id;
         std::string buffer;
-        UniqueTexture thumbnail;
+        std::optional<UniqueTexture> thumbnail;
         template <typename OpenMode>
         Clipboard(const char* clipboardMemoryName, uint32_t size, uint32_t id, OpenMode open_mode = boost::interprocess::open_or_create, boost::interprocess::mode_t mode = boost::interprocess::read_write) : memory(clipboardMemoryName, size, open_mode, mode), id(id) {}
         Clipboard() noexcept {}
@@ -114,7 +114,7 @@ private:
                 catch (std::exception& ex) {
                     // perhaps the memory doesn't exist, or has the wrong size, or something else
                     std::cout << "Cannot load clipboard " << index << " from shared memory: " << ex.what() << std::endl;
-                    // set the memory to zero
+                    // set the memory to zero (since we can't read it)
                     table[index].store(0, 0);
                     bool ret = clipboards[index] != std::nullopt;
                     clipboards[index] = std::nullopt;
@@ -130,9 +130,10 @@ private:
 
     /**
      * Generate the thumbnail to be used in the clipboard action interface.
+     * Uses data from `buffer` only.
      */
     void generateThumbnail(Clipboard& clipboard) {
-        clipboard.thumbnail.reset(nullptr);
+        assert(!clipboard.thumbnail);
         CanvasState state;
         std::istringstream stream(clipboard.buffer);
         if (state.loadSave(stream) == CanvasState::ReadResult::OK) {
@@ -140,7 +141,7 @@ private:
             state.fillSurface(reinterpret_cast<uint32_t*>(surface->pixels));
             SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
-            clipboard.thumbnail.reset(texture);
+            clipboard.thumbnail.emplace(texture);
         }
     }
 
@@ -192,7 +193,6 @@ public:
                     auto& clipboard = clipboards[index].emplace(memName.c_str(), buffer_size, id, boost::interprocess::create_only);
                     std::copy(buffer.begin(), buffer.end(), static_cast<char*>(clipboard.memory.address()));
                     clipboard.buffer = std::move(buffer);
-                    generateThumbnail(clipboard);
                     break;
                 }
                 catch (std::exception& ex) {
@@ -206,7 +206,6 @@ public:
                 // no shared memory, so we just save locally.
                 auto& clipboard = clipboards[index].emplace();
                 clipboard.buffer = std::move(buffer);
-                generateThumbnail(clipboard);
             }
             else {
                 // add to the table
@@ -220,9 +219,13 @@ public:
      * Get the thumbnail for the given clipboard (might be nullptr!).
      */
     SDL_Texture* getThumbnail(uint32_t index) {
-        if (reload(index) && clipboards[index]) {
-            generateThumbnail(*clipboards[index]);
+        reload(index);
+        if (clipboards[index]) {
+            if (!clipboards[index]->thumbnail) {
+                generateThumbnail(*clipboards[index]);
+            }
+            return (*(clipboards[index]->thumbnail)).get(); // could be nullptr (if clipboard file is corrupted), but okay
         }
-        return clipboards[index] ? clipboards[index]->thumbnail.get() : nullptr;
+        return nullptr;
     }
 };
