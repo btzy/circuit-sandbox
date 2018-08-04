@@ -29,7 +29,7 @@ private:
     constexpr static ext::point LOGICAL_TEXT_PADDING{ 4, 4 };
     constexpr static int32_t LOGICAL_BUTTON_HEIGHT = 24;
     constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
-    constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    constexpr static SDL_Color foregroundColor = BRIGHT_WHITE;
     constexpr static SDL_Color detailColor{ 0x99, 0x99, 0x99, 0xFF };
     constexpr static SDL_Color inputColor = BRIGHT_YELLOW;
     constexpr static SDL_Color okayColor = BRIGHT_GREEN;

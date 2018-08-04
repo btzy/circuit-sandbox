@@ -33,7 +33,7 @@ private:
     constexpr static ext::point LOGICAL_NAVIGATION_BUTTON_SIZE{ 32, LOGICAL_HEADER_HEIGHT };
 
     constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
-    constexpr static SDL_Color foregroundColor{ 0xFF, 0xFF, 0xFF, 0xFF };
+    constexpr static SDL_Color foregroundColor = BRIGHT_WHITE;
 
     enum class Mode {
         COPY,

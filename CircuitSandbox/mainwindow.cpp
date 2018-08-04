@@ -594,9 +594,11 @@ void MainWindow::render() {
     SDL_RenderClear(renderer);
 
     // draw the separators
-    SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
-    SDL_RenderDrawLine(renderer, toolbox.renderArea.x - 1, 0, toolbox.renderArea.x - 1, buttonBar.renderArea.y - 2);
-    SDL_RenderDrawLine(renderer, 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w - 1, buttonBar.renderArea.y - 1);
+    SDL_SetRenderDrawColor(renderer, BLACK.r, BLACK.g, BLACK.b, BLACK.a);
+    SDL_Rect toolbarRect{ toolbox.renderArea.x - 1, 0, toolbox.renderArea.w, toolbox.renderArea.h };
+    SDL_Rect buttonBarRect{ 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w, buttonBar.renderArea.h };
+    SDL_RenderFillRect(renderer, &toolbarRect);
+    SDL_RenderFillRect(renderer, &buttonBarRect);
 
     // draw everything to the screen - buttons, status info, play area, etc.
     for (Drawable* drawable : drawables) {

@@ -35,6 +35,8 @@ private:
     // in State::SELECTED and State::MOVING, these are the translations of selection, relative to defaultState
     ext::point selectionTrans = { 0, 0 }; // in canvas coordinates
 
+    bool hasInitialSelection = false;
+
     // in State::MOVING, this was the previous point of the mouse
     ext::point moveOrigin; // in canvas coordinates
 

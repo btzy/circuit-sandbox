@@ -10,6 +10,7 @@
 
 SelectionAction::SelectionAction(MainWindow& mainWindow, State state) :SaveableAction(mainWindow), KeyboardEventHook(mainWindow), state(state) {
     if (state == State::SELECTED) {
+        hasInitialSelection = true;
         showAddAndSubtractNotification();
     }
 }
@@ -127,6 +128,7 @@ ActionEventResult SelectionAction::processPlayAreaMouseButtonDown(const SDL_Mous
             {
                 SDL_Keymod modifiers = SDL_GetModState();
                 if (event.clicks == 1) {
+                    hasInitialSelection = true;
                     // check if only one of shift or alt is held down
                     if (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT)) {
                         state = State::SELECTING;
@@ -141,11 +143,13 @@ ActionEventResult SelectionAction::processPlayAreaMouseButtonDown(const SDL_Mous
                 }
                 else if (event.clicks >= 2) {
                     // select connected components if clicking outside the current selection or if shift/alt is held
-                    if (event.clicks == 2) {
-                        selectConnectedComponent<false>(canvasOffset, modifiers & KMOD_ALT);
-                    }
-                    else {
-                        selectConnectedComponent<true>(canvasOffset, modifiers & KMOD_ALT);
+                    if (!hasInitialSelection || (!!(modifiers & KMOD_SHIFT) ^ !!(modifiers & KMOD_ALT))) {
+                        if (event.clicks == 2) {
+                            selectConnectedComponent<false>(canvasOffset, modifiers & KMOD_ALT);
+                        }
+                        else {
+                            selectConnectedComponent<true>(canvasOffset, modifiers & KMOD_ALT);
+                        }
                     }
                 }
                 moveOrigin = canvasOffset;

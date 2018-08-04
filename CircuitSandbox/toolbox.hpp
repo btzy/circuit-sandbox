@@ -18,7 +18,7 @@ class Toolbox final : public Control {
 private:
     constexpr static SDL_Color clickColor{ 0x66, 0x66, 0x66, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
-    constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
+    constexpr static SDL_Color backgroundColor = BLACK;
 
     // logical units
     constexpr static int LOGICAL_BUTTON_HEIGHT = 24;
