@@ -73,13 +73,13 @@ private:
 public:
     using NotificationHandle = std::weak_ptr<Notification>;
 
-    static constexpr SDL_Color TEXT_COLOR = BRIGHT_WHITE;
-    static constexpr SDL_Color TEXT_COLOR_KEY = BRIGHT_CYAN;
-    static constexpr SDL_Color TEXT_COLOR_ACTION = BRIGHT_GREEN;
+    static constexpr SDL_Color TEXT_COLOR = WHITE;
+    static constexpr SDL_Color TEXT_COLOR_KEY = CYAN;
+    static constexpr SDL_Color TEXT_COLOR_ACTION = GREEN;
     static constexpr SDL_Color TEXT_COLOR_CANCEL = YELLOW;
-    static constexpr SDL_Color TEXT_COLOR_ERROR = BRIGHT_RED;
-    static constexpr SDL_Color TEXT_COLOR_STATE = BRIGHT_BLUE;
-    static constexpr SDL_Color TEXT_COLOR_FILE = BRIGHT_MAGENTA;
+    static constexpr SDL_Color TEXT_COLOR_ERROR = RED;
+    static constexpr SDL_Color TEXT_COLOR_STATE = BLUE;
+    static constexpr SDL_Color TEXT_COLOR_FILE = MAGENTA;
 
     /**
      * Class for RAII notification handles.

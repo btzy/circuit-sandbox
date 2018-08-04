@@ -34,8 +34,8 @@ private:
     ext::point descriptionSize;
     int32_t descriptionOffset; // in physical pixels, from left of screen
 
-    constexpr static SDL_Color backgroundColor = BLACK;
-    constexpr static SDL_Color foregroundColor = BRIGHT_WHITE;
+    constexpr static SDL_Color backgroundColor = DARK_GREY;
+    constexpr static SDL_Color foregroundColor = WHITE;
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
 
     const std::array<std::unique_ptr<ButtonBarItem>, 12> items{

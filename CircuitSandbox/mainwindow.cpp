@@ -594,7 +594,7 @@ void MainWindow::render() {
     SDL_RenderClear(renderer);
 
     // draw the separators
-    SDL_SetRenderDrawColor(renderer, BLACK.r, BLACK.g, BLACK.b, BLACK.a);
+    SDL_SetRenderDrawColor(renderer, DARK_GREY.r, DARK_GREY.g, DARK_GREY.b, DARK_GREY.a);
     SDL_Rect toolbarRect{ toolbox.renderArea.x - 1, 0, toolbox.renderArea.w, toolbox.renderArea.h };
     SDL_Rect buttonBarRect{ 0, buttonBar.renderArea.y - 1, buttonBar.renderArea.w, buttonBar.renderArea.h };
     SDL_RenderFillRect(renderer, &toolbarRect);

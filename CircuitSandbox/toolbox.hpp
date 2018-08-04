@@ -18,7 +18,7 @@ class Toolbox final : public Control {
 private:
     constexpr static SDL_Color clickColor{ 0x66, 0x66, 0x66, 0xFF };
     constexpr static SDL_Color hoverColor{ 0x44, 0x44, 0x44, 0xFF };
-    constexpr static SDL_Color backgroundColor = BLACK;
+    constexpr static SDL_Color backgroundColor = DARK_GREY;
 
     // logical units
     constexpr static int LOGICAL_BUTTON_HEIGHT = 24;
@@ -64,12 +64,12 @@ private:
      * The colour of the each handle
      */
     constexpr static SDL_Color selectorHandleColors[NUM_INPUT_HANDLES] = {
-        BRIGHT_YELLOW,
-        BRIGHT_RED,
-        BRIGHT_GREEN,
-        BRIGHT_BLUE,
-        BRIGHT_CYAN,
-        BRIGHT_MAGENTA
+        YELLOW,
+        RED,
+        GREEN,
+        BLUE,
+        CYAN,
+        MAGENTA
     };
 
     template <size_t Index>

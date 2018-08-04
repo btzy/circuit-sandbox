@@ -28,12 +28,12 @@ private:
     constexpr static ext::point LOGICAL_PADDING{ 8, 8 };
     constexpr static ext::point LOGICAL_TEXT_PADDING{ 4, 4 };
     constexpr static int32_t LOGICAL_BUTTON_HEIGHT = 24;
-    constexpr static SDL_Color backgroundColor{ 0, 0, 0, 0xFF };
-    constexpr static SDL_Color foregroundColor = BRIGHT_WHITE;
+    constexpr static SDL_Color backgroundColor = BLACK;
+    constexpr static SDL_Color foregroundColor = WHITE;
     constexpr static SDL_Color detailColor{ 0x99, 0x99, 0x99, 0xFF };
-    constexpr static SDL_Color inputColor = BRIGHT_YELLOW;
-    constexpr static SDL_Color okayColor = BRIGHT_GREEN;
-    constexpr static SDL_Color cancelColor = BRIGHT_RED;
+    constexpr static SDL_Color inputColor = YELLOW;
+    constexpr static SDL_Color okayColor = GREEN;
+    constexpr static SDL_Color cancelColor = RED;
 
     template <bool Okay>
     class DialogButton final : public Renderable {

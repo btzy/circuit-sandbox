@@ -246,27 +246,27 @@ constexpr inline void resetLogicLevel(ElementVariant& v) {
  */
 
 struct Selector {
-    static constexpr SDL_Color displayColor = BRIGHT_WHITE;
+    static constexpr SDL_Color displayColor = WHITE;
     static constexpr const char* displayName = "Selector";
 };
 
 struct Panner {
-    static constexpr SDL_Color displayColor = BRIGHT_WHITE;
+    static constexpr SDL_Color displayColor = WHITE;
     static constexpr const char* displayName = "Panner";
 };
 
 struct Interactor {
-    static constexpr SDL_Color displayColor = BRIGHT_WHITE;
+    static constexpr SDL_Color displayColor = WHITE;
     static constexpr const char* displayName = "Interactor";
 };
 
 struct Eraser : public Pencil {
-    static constexpr SDL_Color displayColor = BRIGHT_WHITE;
+    static constexpr SDL_Color displayColor = WHITE;
     static constexpr const char* displayName = "Eraser";
 };
 
 struct ConductiveWire : public ElementBase<ConductiveWire>, public RenderLogicLevelElementBase<ConductiveWire> {
-    static constexpr SDL_Color displayColor = WHITE;
+    static constexpr SDL_Color displayColor = LIGHT_GREY;
     static constexpr const char* displayName = "Conductive Wire";
 
     ConductiveWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<ConductiveWire>(logicLevel, startingLogicLevel) {}
@@ -274,7 +274,7 @@ struct ConductiveWire : public ElementBase<ConductiveWire>, public RenderLogicLe
 
 struct InsulatedWire : public ElementBase<InsulatedWire>, public RenderLogicLevelElementBase<InsulatedWire> {
     // previously was: {0xCC, 0x99, 0x66, 0xFF};
-    static constexpr SDL_Color displayColor = CYAN;
+    static constexpr SDL_Color displayColor = DARK_GREEN;
     static constexpr const char* displayName = "Insulated Wire";
 
     InsulatedWire(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<InsulatedWire>(logicLevel, startingLogicLevel) {}
@@ -282,7 +282,7 @@ struct InsulatedWire : public ElementBase<InsulatedWire>, public RenderLogicLeve
 
 
 struct Signal : public ElementBase<Signal>, public RenderLogicLevelElementBase<Signal> {
-    static constexpr SDL_Color displayColor = BRIGHT_YELLOW;
+    static constexpr SDL_Color displayColor = YELLOW;
     static constexpr const char* displayName = "Signal";
 
     Signal(bool logicLevel = false, bool startingLogicLevel = false) noexcept : RenderLogicLevelElementBase<Signal>(logicLevel, startingLogicLevel) {}
@@ -294,7 +294,7 @@ struct Signal : public ElementBase<Signal>, public RenderLogicLevelElementBase<S
 
 
 struct Source : public ElementBase<Source> {
-    static constexpr SDL_Color displayColor = BRIGHT_GREEN;
+    static constexpr SDL_Color displayColor = GREEN;
     static constexpr const char* displayName = "Source";
 
     Source() noexcept {}
@@ -317,7 +317,7 @@ struct AndGate : public LogicGateBase<AndGate> {
 
 
 struct OrGate : public LogicGateBase<OrGate> {
-    static constexpr SDL_Color displayColor = BRIGHT_MAGENTA;
+    static constexpr SDL_Color displayColor = PURPLE;
     static constexpr const char* displayName = "OR Gate";
 
     OrGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<OrGate>(logicLevel, startingLogicLevel) {}
@@ -333,7 +333,7 @@ struct NandGate : public LogicGateBase<NandGate> {
 
 
 struct NorGate : public LogicGateBase<NorGate> {
-    static constexpr SDL_Color displayColor = BRIGHT_BLUE;
+    static constexpr SDL_Color displayColor = INDIGO;
     static constexpr const char* displayName = "NOR Gate";
 
     NorGate(bool logicLevel = false, bool startingLogicLevel = false) noexcept : LogicGateBase<NorGate>(logicLevel, startingLogicLevel) {}
@@ -341,7 +341,7 @@ struct NorGate : public LogicGateBase<NorGate> {
 
 
 struct PositiveRelay : public RelayBase<PositiveRelay> {
-    static constexpr SDL_Color displayColor = YELLOW;
+    static constexpr SDL_Color displayColor = ORANGE;
     static constexpr const char* displayName = "Positive Relay";
 
     PositiveRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : RelayBase<PositiveRelay>(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
@@ -349,14 +349,14 @@ struct PositiveRelay : public RelayBase<PositiveRelay> {
 
 
 struct NegativeRelay : public RelayBase<NegativeRelay> {
-    static constexpr SDL_Color displayColor = BRIGHT_RED;
+    static constexpr SDL_Color displayColor = RED;
     static constexpr const char* displayName = "Negative Relay";
 
     NegativeRelay(bool logicLevel = false, bool startingLogicLevel = false, bool conductiveState = false, bool startingConductiveState = false) noexcept : RelayBase<NegativeRelay>(logicLevel, startingLogicLevel, conductiveState, startingConductiveState) {}
 };
 
 struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunicatorElement, ScreenCommunicator> {
-    static constexpr SDL_Color displayColor = RED;
+    static constexpr SDL_Color displayColor = MAROON;
     static constexpr const char* displayName = "Screen I/O";
 
     ScreenCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<ScreenCommunicatorElement, ScreenCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
@@ -373,7 +373,7 @@ struct ScreenCommunicatorElement : public CommunicatorElementBase<ScreenCommunic
 };
 
 struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCommunicatorElement, FileInputCommunicator> {
-    static constexpr SDL_Color displayColor = RED;
+    static constexpr SDL_Color displayColor = MAROON;
     static constexpr const char* displayName = "File Input";
 
     FileInputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileInputCommunicatorElement, FileInputCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
@@ -390,7 +390,7 @@ struct FileInputCommunicatorElement : public CommunicatorElementBase<FileInputCo
 };
 
 struct FileOutputCommunicatorElement : public CommunicatorElementBase<FileOutputCommunicatorElement, FileOutputCommunicator> {
-    static constexpr SDL_Color displayColor = RED;
+    static constexpr SDL_Color displayColor = MAROON;
     static constexpr const char* displayName = "File Output";
 
     FileOutputCommunicatorElement(bool logicLevel = false, bool startingLogicLevel = false, bool transmitState = false) noexcept : CommunicatorElementBase<FileOutputCommunicatorElement, FileOutputCommunicator>(logicLevel, startingLogicLevel, transmitState) {}
