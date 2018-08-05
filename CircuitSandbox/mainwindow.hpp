@@ -39,7 +39,7 @@ public:
     std::string displayedSimulationFPS = "5"; // the FPS as displayed in the dialog box (has to be defined before stateManager)
 
     // throws std::logic_error or its derived classes
-    static Simulator::period_t geSimulatorPeriodFromFPS(long double fps);
+    static Simulator::period_t getSimulatorPeriodFromFPS(long double fps);
 
     // game state
     StateManager stateManager;
@@ -73,7 +73,11 @@ private:
 
     bool visible = true; // whether the window is visible (used to avoid rendering if window is not visible)
 
-    NotificationDisplay::UniqueNotification toggleBeginnerModeNotification; // RAII object so we can remove the old notification immediately if the user toggles multiples times in succession
+    // RAII object so we can remove the old notification immediately if the user toggles multiples times in succession
+    NotificationDisplay::UniqueNotification toggleBeginnerModeNotification;
+    NotificationDisplay::UniqueNotification noUndoNotification;
+    NotificationDisplay::UniqueNotification noRedoNotification;
+    NotificationDisplay::UniqueNotification changeSpeedNotification;
 
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
@@ -97,7 +101,9 @@ private:
     friend class KeyboardEventHook;
     friend class MainWindowEventHook;
     friend void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t&);
-    friend class ClipboardAction; // TODO: proper encapsulation
+    friend class ClipboardAction;
+    friend class HistoryAction;
+    friend class ChangeSimulationSpeedAction;
 
     /**
      * Process the event that has occurred (called by start())

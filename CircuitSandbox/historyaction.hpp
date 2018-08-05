@@ -4,7 +4,6 @@
 #include "mainwindow.hpp"
 
 class HistoryAction final : public EditAction {
-
 public:
 
     HistoryAction(MainWindow& mainWindow) : EditAction(mainWindow) {
@@ -23,7 +22,7 @@ public:
             starter.reset(); // terminate the action immediately
         }
         else {
-            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to undo", NotificationDisplay::TEXT_COLOR_ERROR } });
+            mainWindow.noUndoNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to undo", NotificationDisplay::TEXT_COLOR_ERROR } });
         }
     }
 
@@ -34,7 +33,7 @@ public:
             starter.reset(); // terminate the action immediately
         }
         else {
-            mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to redo", NotificationDisplay::TEXT_COLOR_ERROR } });
+            mainWindow.noRedoNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "No change to redo", NotificationDisplay::TEXT_COLOR_ERROR } });
         }
     }
 };

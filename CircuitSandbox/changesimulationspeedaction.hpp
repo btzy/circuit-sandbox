@@ -311,20 +311,35 @@ public:
         // try to parse and save the fps of the simulator
         try {
             size_t len;
-            long double fps = std::stold(text, &len);
+            long double fps = std::stold(text, &len); // note that stold throws on empty string
             if (len != text.size()) {
-                throw std::logic_error("We could not interpret the FPS you have entered as a number.");
+                throw std::logic_error("");
             }
-            Simulator::period_t period = MainWindow::geSimulatorPeriodFromFPS(fps);
-            mainWindow.displayedSimulationFPS = std::move(text);
+            Simulator::period_t period = MainWindow::getSimulatorPeriodFromFPS(fps);
             stateManager().simulator.setPeriod(period);
+            std::string fpsText;
+            if (fps == 0.0) {
+                fpsText = "max";
+                mainWindow.displayedSimulationFPS = "0";
+            }
+            else {
+                // truncate trailing zeros and decimal point
+                fpsText = std::to_string(fps);
+                fpsText.erase(fpsText.find_last_not_of('0') + 1, std::string::npos);
+                fpsText.erase(fpsText.find_last_not_of('.') + 1, std::string::npos);
+                mainWindow.displayedSimulationFPS = fpsText;
+            }
+            NotificationDisplay::Data notificationData{
+                { "Simulation speed set to "s, NotificationDisplay::TEXT_COLOR },
+                { fpsText, NotificationDisplay::TEXT_COLOR_KEY },
+                { " fps", NotificationDisplay::TEXT_COLOR },
+            };
+            mainWindow.changeSpeedNotification = mainWindow.notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, notificationData);
             return ActionEventResult::COMPLETED;
         }
-        catch (const std::logic_error& ex) {
-            std::string message = ex.what();
-            message += " Please try again.";
-            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Invalid Input", message.c_str(), mainWindow.window);
-            return ActionEventResult::PROCESSED;
+        catch (const std::logic_error&) {
+            mainWindow.changeSpeedNotification = mainWindow.notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Invalid input: Entered FPS is not a number", NotificationDisplay::TEXT_COLOR_ERROR } });
+            return ActionEventResult::CANCELLED;
         }
     }
 

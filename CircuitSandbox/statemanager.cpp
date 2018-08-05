@@ -110,11 +110,11 @@ void StateManager::startSimulatorUnchecked() {
 void StateManager::startOrStopSimulator(MainWindow& mainWindow) {
     bool simulatorRunning = simulator.running();
     if (simulatorRunning) {
-        mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation paused", NotificationDisplay::TEXT_COLOR_ACTION } });
+        runningNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation paused", NotificationDisplay::TEXT_COLOR_ACTION },  });
         stopSimulatorUnchecked();
     }
     else {
-        mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation running", NotificationDisplay::TEXT_COLOR_ACTION } });
+        runningNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation running", NotificationDisplay::TEXT_COLOR_ACTION } });
         startSimulatorUnchecked();
     }
 }
@@ -156,7 +156,7 @@ void StateManager::resetSimulator(MainWindow& mainWindow) {
     if (simulatorRunning) simulator.stop();
     simulator.reset(defaultState);
     if (simulatorRunning) simulator.start();
-    mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Circuit reset to starting state", NotificationDisplay::TEXT_COLOR_ACTION } });
+    resetNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Simulation reset ", NotificationDisplay::TEXT_COLOR_ACTION }, { "to starting state", NotificationDisplay::TEXT_COLOR } });
 }
 
 void StateManager::updateDefaultState() {

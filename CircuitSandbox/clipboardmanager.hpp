@@ -8,6 +8,7 @@
 #include "declarations.hpp"
 #include "clipboardstore.hpp"
 #include "declarations.hpp"
+#include "notificationdisplay.hpp"
 
 struct ClipboardManager {
 private:
@@ -15,11 +16,13 @@ private:
         CanvasState state;
         UniqueTexture thumbnail;
     };
-    
+
     ClipboardStore<NUM_CLIPBOARDS> storage;
 
     // for displaying notifications
     NotificationDisplay& notificationDisplay;
+
+    NotificationDisplay::UniqueNotification emptyNotification;
 
 public:
     ClipboardManager(NotificationDisplay& notificationDisplay) : notificationDisplay(notificationDisplay) {}

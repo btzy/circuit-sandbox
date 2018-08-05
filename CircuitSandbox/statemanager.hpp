@@ -9,6 +9,7 @@
 #include "canvasstate.hpp"
 #include "simulator.hpp"
 #include "historymanager.hpp"
+#include "notificationdisplay.hpp"
 
 
 /**
@@ -26,6 +27,9 @@ private:
     bool hasSelection = false; // whether selection/base contain meaningful data (neccessary to prevent overwriting defaultState)
 
     HistoryManager historyManager; // stores the undo/redo stack
+
+    NotificationDisplay::UniqueNotification resetNotification;
+    NotificationDisplay::UniqueNotification runningNotification;
 
     /**
      * Explicitly scans the current gamestate to determine if it changed. Updates 'changed'.

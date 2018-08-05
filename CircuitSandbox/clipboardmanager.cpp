@@ -1,15 +1,24 @@
 #include <chrono>
 #include "clipboardmanager.hpp"
-#include "notificationdisplay.hpp"
 
 using namespace std::literals;
 
 CanvasState ClipboardManager::read(int32_t index) {
     // overwrite the default clipboard too, unless the selected clipboard is empty
     CanvasState state = storage.read(index);
-    if (index && !state.empty()) {
-        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Pasted from clipboard", NotificationDisplay::TEXT_COLOR_ACTION }, { ' ' + std::to_string(index), NotificationDisplay::TEXT_COLOR_KEY } });
-        storage.write(0, state);
+    if (index) {
+        if (state.empty()) {
+            emptyNotification = notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Clipboard empty", NotificationDisplay::TEXT_COLOR_ERROR } });
+        }
+        else {
+            NotificationDisplay::Data notificationData{
+                { "Pasted", NotificationDisplay::TEXT_COLOR_ACTION },
+                { " from clipboard", NotificationDisplay::TEXT_COLOR },
+                { ' ' + std::to_string(index), NotificationDisplay::TEXT_COLOR_KEY }
+            };
+            notificationDisplay.add(NotificationFlags::DEFAULT, 5s, notificationData);
+            storage.write(0, state);
+        }
     }
     return state;
 }
@@ -19,7 +28,12 @@ void ClipboardManager::write(const CanvasState& state, int32_t index) {
     if (index) {
         // also write to the default clipboard
         storage.write(0, state);
-        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{ { "Saved to clipboard", NotificationDisplay::TEXT_COLOR_ACTION }, { ' ' + std::to_string(index), NotificationDisplay::TEXT_COLOR_KEY } });
+        NotificationDisplay::Data notificationData {
+            { "Copied", NotificationDisplay::TEXT_COLOR_ACTION },
+            { " to clipboard", NotificationDisplay::TEXT_COLOR },
+            { ' ' + std::to_string(index), NotificationDisplay::TEXT_COLOR_KEY }
+        };
+        notificationDisplay.add(NotificationFlags::DEFAULT, 5s, notificationData);
     }
 }
 

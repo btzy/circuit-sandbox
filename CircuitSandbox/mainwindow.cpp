@@ -59,7 +59,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #endif // _WIN32
 
 
-MainWindow::MainWindow(const char* const processName) : stateManager(geSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), notificationDisplay(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), clipboard(notificationDisplay), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
+MainWindow::MainWindow(const char* const processName) : stateManager(getSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), notificationDisplay(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), clipboard(notificationDisplay), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
 
     // unset all the input handle selection state
     std::fill_n(selectedToolIndices, NUM_INPUT_HANDLES, EMPTY_INDEX);
@@ -665,7 +665,7 @@ void MainWindow::bindTool(size_t inputHandleIndex, size_t tool_index) {
 }
 
 // throws std::logic_error or its derived classes
-Simulator::period_t MainWindow::geSimulatorPeriodFromFPS(long double fps) {
+Simulator::period_t MainWindow::getSimulatorPeriodFromFPS(long double fps) {
     // try to parse and save the fps of the simulator
     using rep = Simulator::period_t::rep;
     rep period;
