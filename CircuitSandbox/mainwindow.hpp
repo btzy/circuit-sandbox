@@ -7,6 +7,7 @@
 #include <variant>
 #include <optional>
 #include <vector>
+#include <tuple>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -20,6 +21,7 @@
 #include "font.hpp"
 #include "statemanager.hpp"
 #include "clipboardmanager.hpp"
+#include "tag_tuple.hpp"
 
 
 class MainWindow {
@@ -85,9 +87,105 @@ private:
 #endif
 
 public:
+    class Registrar {
+    private:
+        using types = ext::tag_tuple<Drawable, Control, KeyboardEventReceiver>;
+        template <typename T>
+        struct item {
+            // items to add
+            typename std::vector<T*> add;
+            // number of items to remove (remove *before* adding!)
+            typename std::vector<T*>::size_type remove;
+        };
+        typename types::transform<item>::instantiate<std::tuple> data;
+
+        friend class MainWindow;
+
+        template <typename T>
+        auto& get_real_list(MainWindow& mainWindow) {
+            if constexpr(std::is_same_v<T, Drawable>) {
+                return mainWindow.drawables;
+            }
+            else if constexpr(std::is_same_v<T, Control>) {
+                return mainWindow.controls;
+            }
+            else if constexpr(std::is_same_v<T, KeyboardEventReceiver>) {
+                return mainWindow.keyboardEventReceivers;
+            }
+            else {
+                static_assert(std::is_same_v<T, T>, "Unknown list type.");
+            }
+        }
+
+        // do necessary cleanup before removal
+        template <typename T, typename Container>
+        void pre_remove(MainWindow& mainWindow, Container& container) {
+            if constexpr(std::is_same_v<T, Control>) {
+                auto removed_pointer = container.back();
+                if (mainWindow.currentLocationTarget == removed_pointer) {
+                    mainWindow.currentLocationTarget = nullptr;
+                }
+                if (mainWindow.currentEventTarget == removed_pointer) {
+                    mainWindow.currentEventTarget = nullptr;
+                }
+            }
+            else {}
+        }
+
+        // called by main window at a safe time to update its lists
+        void update(MainWindow& mainWindow) {
+            types::for_each([&](auto type_tag, auto) {
+                using type = typename decltype(type_tag)::type;
+                // get mainWindow's real list
+                auto& real_list = get_real_list<type>(mainWindow);
+
+                auto& curr_item = std::get<item<type>>(data);
+                
+                // update mainWindow's real list
+                for (; curr_item.remove > 0; --curr_item.remove) {
+                    assert(!real_list.empty());
+                    pre_remove<type>(mainWindow, real_list);
+                    real_list.pop_back();
+                }
+
+                for (type* obj : curr_item.add) {
+                    real_list.push_back(obj);
+                }
+                curr_item.add.clear();
+            });
+        }
+
+    public:
+        template <typename... T, typename Obj>
+        void push(Obj* obj) {
+            ext::tag_tuple<T...>::for_each([&](auto type_tag, auto) {
+                // store this object in the add list
+                std::get<item<typename decltype(type_tag)::type>>(data).add.push_back(obj);
+            });
+        }
+        template <typename... T, typename Obj>
+        void pop(Obj* obj) {
+            ext::tag_tuple<T...>::for_each([&](auto type_tag, auto) {
+                auto& curr_item = std::get<item<typename decltype(type_tag)::type>>(data);
+                if (!curr_item.add.empty()) {
+                    // if the add list is not empty, we should remove from it first
+
+                    curr_item.add.pop_back();
+                }
+                else {
+                    // if theres nothing to remove, then we add to the remove count
+                    curr_item.remove++;
+                }
+            });
+        }
+    };
+
+    friend class Registrar;
+
     // action state
     ActionManager currentAction;
     ClipboardManager clipboard;
+    Registrar registrar;
 
     /**
      * Gets the render area of this window

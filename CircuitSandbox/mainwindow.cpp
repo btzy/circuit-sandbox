@@ -343,6 +343,7 @@ void MainWindow::processEvent(const SDL_Event& event) {
         processTextInputEvent(event.text);
         break;
     }
+    registrar.update(*this);
 }
 
 

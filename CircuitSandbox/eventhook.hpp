@@ -33,10 +33,10 @@ private:
     MainWindow& win;
 public:
     KeyboardEventHook(MainWindow& mainWindow) : win(mainWindow) {
-        win.keyboardEventReceivers.emplace_back(this);
+        win.registrar.push<KeyboardEventReceiver>(this);
     }
     ~KeyboardEventHook() {
-        win.keyboardEventReceivers.pop_back();
+        win.registrar.pop<KeyboardEventReceiver>(this);
     }
 
     bool processKeyboard(const SDL_KeyboardEvent& event) override {
@@ -59,9 +59,7 @@ private:
 public:
     MainWindowEventHook(MainWindow& mainWindow, const SDL_Rect& renderArea) : win(mainWindow) {
         this->renderArea = renderArea;
-        win.keyboardEventReceivers.emplace_back(this);
-        win.drawables.emplace_back(this);
-        win.controls.emplace_back(this);
+        win.registrar.push<Drawable, Control, KeyboardEventReceiver>(this);
     }
     ~MainWindowEventHook() {
         if (win.currentLocationTarget == this) {
@@ -70,9 +68,7 @@ public:
         if (win.currentEventTarget == this) {
             win.currentEventTarget = nullptr;
         }
-        win.controls.pop_back();
-        win.drawables.pop_back();
-        win.keyboardEventReceivers.pop_back();
+        win.registrar.pop<Drawable, Control, KeyboardEventReceiver>(this);
     }
 
     void processMouseHover(const SDL_MouseMotionEvent& event) override {
