@@ -85,8 +85,10 @@ public:
      * Class for RAII notification handles.
      */
     struct UniqueNotification {
+    private:
         NotificationDisplay* display;
         NotificationHandle handle;
+    public:
         UniqueNotification(NotificationDisplay& display, NotificationHandle handle) noexcept : display(&display), handle(std::move(handle)) {}
         UniqueNotification() noexcept : display(nullptr) {}
         UniqueNotification(const UniqueNotification&) = delete;
@@ -104,6 +106,17 @@ public:
         void reset() noexcept {
             _pre_destruct();
             display = nullptr;
+        }
+        template <typename... Args>
+        UniqueNotification orElse(Args&&... args) && {
+            assert(display);
+            if (handle.expired()) {
+                // this notification is not shown due to having no visible flags
+                return display->uniqueAdd(std::forward<Args>(args)...);
+            }
+            else {
+                return std::move(*this);
+            }
         }
     private:
         inline void _pre_destruct() noexcept {
