@@ -95,7 +95,7 @@ public:
             // items to add
             typename std::vector<T*> add;
             // number of items to remove (remove *before* adding!)
-            typename std::vector<T*>::size_type remove;
+            typename std::vector<T*>::size_type remove = 0;
         };
         typename types::transform<item>::instantiate<std::tuple> data;
 

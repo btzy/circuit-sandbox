@@ -334,7 +334,7 @@ public:
                 { fpsText, NotificationDisplay::TEXT_COLOR_KEY },
                 { " fps", NotificationDisplay::TEXT_COLOR },
             };
-            mainWindow.changeSpeedNotification = mainWindow.notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, notificationData);
+            mainWindow.changeSpeedNotification = mainWindow.notificationDisplay.uniqueAdd(NotificationFlags::DEFAULT, 5s, std::move(notificationData));
             return ActionEventResult::COMPLETED;
         }
         catch (const std::logic_error&) {

@@ -159,7 +159,7 @@ void PlayArea::saveZoom() {
         { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY },
         { " (" + std::to_string(savedScale[savedScaleIndex]) + ")", NotificationDisplay::TEXT_COLOR }
     };
-    saveZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, 5s, beginnerNotificationData).orElse(NotificationFlags::DEFAULT, 5s, notificationData);
+    saveZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, 5s, std::move(beginnerNotificationData)).orElse(NotificationFlags::DEFAULT, 5s, std::move(notificationData));
 }
 
 void PlayArea::toggleZoom() {
@@ -188,7 +188,7 @@ void PlayArea::toggleZoom() {
             { "Zoom: ", NotificationDisplay::TEXT_COLOR },
             { std::to_string(zoomScaleEnd), NotificationDisplay::TEXT_COLOR_KEY }
         };
-        toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, notificationData);
+        toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, std::move(notificationData));
     }
 }
 
