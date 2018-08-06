@@ -28,16 +28,18 @@ void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point 
     static constexpr Drawable::RenderClock::duration zoomAnimationDuration = 100ms;
     if (zoomAnimationStartTime <= now) {
         if (now < zoomAnimationStartTime + zoomAnimationDuration) {
-            renderScale = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, static_cast<double>(zoomScaleStart), static_cast<double>(zoomScaleEnd), now);
-            renderTranslation.x = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.x, zoomTranslationEnd.x, now);
-            renderTranslation.y = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.y, zoomTranslationEnd.y, now);
+            renderScale = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, static_cast<double>(zoomScaleStart), static_cast<double>(scale), now);
+            renderTranslation.x = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.x, translation.x, now);
+            renderTranslation.y = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.y, translation.y, now);
         }
         else {
             // set the actual scale and translation after the animation completes
             zoomAnimationStartTime = Drawable::RenderClock::time_point::max();
-            scale = renderScale = zoomScaleEnd;
-            translation = renderTranslation = zoomTranslationEnd;
-            prepareTexture(renderer);
+            renderScale = scale;
+            renderTranslation = translation;
+            if (scale > zoomScaleStart) {
+                prepareTexture(renderer, scale);
+            }
         }
     }
 
@@ -98,12 +100,16 @@ void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point 
 }
 
 void PlayArea::prepareTexture(SDL_Renderer* renderer) {
+    prepareTexture(renderer, zoomAnimationStartTime == Drawable::RenderClock::time_point::max() ? scale : std::min(scale, zoomScaleStart));
+}
+
+void PlayArea::prepareTexture(SDL_Renderer* renderer, int32_t textureScale) {
     // free the old texture first (if any)
     pixelTexture.reset(nullptr);
 
     // calculate the required texture size - the maximum size necessary for *any* possible translation.
-    pixelTextureSize.x = (renderArea.w - 2) / scale + 2;
-    pixelTextureSize.y = (renderArea.h - 2) / scale + 2;
+    pixelTextureSize.x = (renderArea.w - 2) / textureScale + 2;
+    pixelTextureSize.y = (renderArea.h - 2) / textureScale + 2;
 
     pixelTexture.reset(create_fast_texture(renderer, SDL_TEXTUREACCESS_STREAMING, pixelTextureSize, pixelFormat));
     if (pixelTexture == nullptr) {
@@ -168,25 +174,26 @@ void PlayArea::toggleZoom() {
         if (scale == savedScale[savedScaleIndex]) {
             savedScaleIndex ^= 1;
         }
-        zoomScaleEnd = savedScale[savedScaleIndex];
+        scale = savedScale[savedScaleIndex];
+
+        // TODO: Everything below this line should probably be put in a separate function, so zooming with the mousewheel can also have animations.
+        // Note: When doing the refractor, also take into consideration the possibility that an existing zoom animation is still going on.
 
         // if zooming out, load the larger texture size (smaller scale) first
-        if (scale > zoomScaleEnd) {
-            scale = zoomScaleEnd;
-            prepareTexture(mainWindow.renderer);
-            scale = zoomScaleStart;
+        if (zoomScaleStart > scale) {
+            prepareTexture(mainWindow.renderer, scale);
         }
 
-        zoomTranslationStart = zoomTranslationEnd = translation;
+        zoomTranslationStart = translation;
 
-        ext::point canvasPt = ext::div_floor(*mouseoverPoint - zoomTranslationStart, zoomScaleStart);
-        zoomTranslationEnd -= canvasPt * zoomScaleEnd - (*mouseoverPoint - zoomTranslationStart) + (*mouseoverPoint - zoomTranslationStart) % zoomScaleStart * zoomScaleEnd / zoomScaleStart;
+        ext::point canvasPt = ext::div_floor((*mouseoverPoint - zoomTranslationStart) * scale + ext::point{ scale / 2, scale / 2 }, zoomScaleStart);
+        translation = *mouseoverPoint - canvasPt;
 
         zoomAnimationStartTime = Drawable::RenderClock::now();
 
         NotificationDisplay::Data notificationData{
             { "Zoom: ", NotificationDisplay::TEXT_COLOR },
-            { std::to_string(zoomScaleEnd), NotificationDisplay::TEXT_COLOR_KEY }
+            { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY }
         };
         toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, std::move(notificationData));
     }

@@ -12,7 +12,7 @@ namespace ext {
     template <typename WidenedType, typename Source, typename Target>
     inline Target interpolate(Source source_begin, Source source_end, Target target_begin, Target target_end, Source source_value) {
         assert(source_begin != source_end);
-        return ((static_cast<WidenedType>(target_begin) * source_end - static_cast<WidenedType>(target_end) * source_begin) + source_value * static_cast<WidenedType>(target_end - target_begin)) / (source_end - source_begin);
+        return ((static_cast<WidenedType>(target_begin) * source_end - static_cast<WidenedType>(target_end) * source_begin) + static_cast<WidenedType>(target_end - target_begin) * source_value) / (source_end - source_begin);
     }
 
     template <typename Source, typename Target>

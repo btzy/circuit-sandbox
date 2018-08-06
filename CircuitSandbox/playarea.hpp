@@ -38,11 +38,10 @@ private:
     NotificationDisplay::UniqueNotification toggleZoomNotification;
 
     // variables used for zoom animations
+    // if there's animation going on, `scale` and `translation` always refers to the end (i.e. target) values.
     Drawable::RenderClock::time_point zoomAnimationStartTime = Drawable::RenderClock::time_point::max();
     int32_t zoomScaleStart; // scale at the start of zoom animation
-    int32_t zoomScaleEnd; // scale at the end of zoom animation
     ext::point zoomTranslationStart; // translation at the start of zoom animation
-    ext::point zoomTranslationEnd; // translation at the end of zoom animation
 
     // point that is being mouseovered
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
@@ -103,6 +102,7 @@ private:
      * @pre renderer must not be null.
      */
     void prepareTexture(SDL_Renderer*);
+    void prepareTexture(SDL_Renderer*, int32_t textureScale);
 
 public:
     /**
