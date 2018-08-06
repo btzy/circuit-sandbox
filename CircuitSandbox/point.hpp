@@ -40,6 +40,11 @@ namespace ext {
             y /= scale;
             return *this;
         }
+        constexpr point& operator%=(const int32_t& scale) noexcept {
+            x %= scale;
+            y %= scale;
+            return *this;
+        }
 
         // arithmetic operators
         constexpr point operator+(const point& other) const noexcept {
@@ -60,6 +65,11 @@ namespace ext {
         constexpr point operator/(const int32_t& scale) const noexcept {
             point ret = *this;
             ret /= scale;
+            return ret;
+        }
+        constexpr point operator%(const int32_t& scale) const noexcept {
+            point ret = *this;
+            ret %= scale;
             return ret;
         }
 
@@ -104,6 +114,9 @@ namespace ext {
     }
     inline point div_ceil(point pt, int32_t scale) noexcept {
         return { ext::div_ceil(pt.x, scale), ext::div_ceil(pt.y, scale) };
+    }
+    inline point div_round(point pt, int32_t scale) noexcept {
+        return { ext::div_round(pt.x, scale), ext::div_round(pt.y, scale) };
     }
 
     // top-left bound of two points

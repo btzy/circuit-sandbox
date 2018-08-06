@@ -32,6 +32,18 @@ private:
     // length (in physical pixels) of each element; changes with zoom level
     int32_t scale;
 
+    std::array<int32_t, 2> savedScale{ 1, 20 }; // saved zoom levels to toggle between
+    size_t savedScaleIndex = 0; // index used by toggleZoom()
+    NotificationDisplay::UniqueNotification saveZoomNotification;
+    NotificationDisplay::UniqueNotification toggleZoomNotification;
+
+    // variables used for zoom animations
+    Drawable::RenderClock::time_point zoomAnimationStartTime = Drawable::RenderClock::time_point::max();
+    int32_t zoomScaleStart; // scale at the start of zoom animation
+    int32_t zoomScaleEnd; // scale at the end of zoom animation
+    ext::point zoomTranslationStart; // translation at the start of zoom animation
+    ext::point zoomTranslationEnd; // translation at the end of zoom animation
+
     // point that is being mouseovered
     // (in display coordinates, so that it will still work if the user zooms without moving the mouse)
     std::optional<ext::point> mouseoverPoint;
@@ -83,7 +95,7 @@ public:
      */
     void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override;
 private:
-    void render(SDL_Renderer* renderer, StateManager& stateManager);
+    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now, StateManager& stateManager);
 
     /**
      * Prepares the texture for use.
@@ -110,6 +122,12 @@ public:
      * Sets mouseoverElement field and updates description in button bar if necessary.
      */
     void changeMouseoverElement(const CanvasState::element_variant_t& newElement);
+
+    /**
+     * Save and toggle between two zoom levels.
+     */
+    void saveZoom();
+    void toggleZoom();
 
     /**
      * Processing of events.

@@ -551,6 +551,14 @@ void MainWindow::processKeyboardEvent(const SDL_KeyboardEvent& event) {
                     currentAction.reset();
                     stateManager.resetSimulator(*this);
                     return;
+                case SDL_SCANCODE_Z:
+                    if (modifiers & KMOD_SHIFT) {
+                        playArea.saveZoom();
+                    }
+                    else {
+                        playArea.toggleZoom();
+                    }
+                    return;
                 case SDL_SCANCODE_SPACE: // Start/stop simulator
                     currentAction.reset();
                     stateManager.startOrStopSimulator(*this);

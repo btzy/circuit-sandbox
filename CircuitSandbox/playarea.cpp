@@ -14,18 +14,37 @@
 #include "playareaaction.hpp"
 #include "sdl_fast_maprgb.hpp"
 #include "notificationdisplay.hpp"
+#include "interpolate.hpp"
 
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {}
 
 
-void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) {
-    render(renderer, mainWindow.stateManager);
+void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now) {
+    render(renderer, now, mainWindow.stateManager);
 }
-void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
+void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now, StateManager& stateManager) {
+    double renderScale = scale;
+    ext::point renderTranslation = translation;
+    static constexpr Drawable::RenderClock::duration zoomAnimationDuration = 100ms;
+    if (zoomAnimationStartTime <= now) {
+        if (now < zoomAnimationStartTime + zoomAnimationDuration) {
+            renderScale = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, static_cast<double>(zoomScaleStart), static_cast<double>(zoomScaleEnd), now);
+            renderTranslation.x = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.x, zoomTranslationEnd.x, now);
+            renderTranslation.y = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, zoomTranslationStart.y, zoomTranslationEnd.y, now);
+        }
+        else {
+            // set the actual scale and translation after the animation completes
+            zoomAnimationStartTime = Drawable::RenderClock::time_point::max();
+            scale = renderScale = zoomScaleEnd;
+            translation = renderTranslation = zoomTranslationEnd;
+            prepareTexture(renderer);
+        }
+    }
+
     // calculate the rectangle (in canvas coordinates) that we will be drawing:
     SDL_Rect surfaceRect;
-    surfaceRect.x = ext::div_floor(-translation.x, scale);
-    surfaceRect.y = ext::div_floor(-translation.y, scale);
+    surfaceRect.x = std::floor(-renderTranslation.x/ renderScale);
+    surfaceRect.y = std::floor(-renderTranslation.y/ renderScale);
     surfaceRect.w = pixelTextureSize.x;
     surfaceRect.h = pixelTextureSize.y;
 
@@ -48,23 +67,22 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
     // scale and translate the surface according to the the pan and zoom level
     // the section of the surface enclosed within surfaceRect is mapped to dstRect
     const SDL_Rect dstRect {
-        renderArea.x + surfaceRect.x * scale + translation.x,
-        renderArea.y + surfaceRect.y * scale + translation.y,
-        surfaceRect.w * scale,
-        surfaceRect.h * scale
+        renderArea.x + static_cast<int>(surfaceRect.x * renderScale) + renderTranslation.x,
+        renderArea.y + static_cast<int>(surfaceRect.y * renderScale) + renderTranslation.y,
+        static_cast<int>(surfaceRect.w * renderScale),
+        static_cast<int>(surfaceRect.h * renderScale)
     };
     SDL_RenderCopy(renderer, pixelTexture.get(), nullptr, &dstRect);
 
-    
     if (mouseoverPoint) {
         ext::point canvasPoint = canvasFromWindowOffset(*mouseoverPoint);
 
         // render a mouseover rectangle (if the mouseoverPoint is non-empty)
         SDL_Rect mouseoverRect{
-            canvasPoint.x * scale + translation.x,
-            canvasPoint.y * scale + translation.y,
-            scale,
-            scale
+            static_cast<int>(canvasPoint.x * renderScale) + renderTranslation.x,
+            static_cast<int>(canvasPoint.y * renderScale) + renderTranslation.y,
+            static_cast<int>(renderScale),
+            static_cast<int>(renderScale)
         };
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0x44);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
@@ -82,11 +100,11 @@ void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
 void PlayArea::prepareTexture(SDL_Renderer* renderer) {
     // free the old texture first (if any)
     pixelTexture.reset(nullptr);
-    
+
     // calculate the required texture size - the maximum size necessary for *any* possible translation.
     pixelTextureSize.x = (renderArea.w - 2) / scale + 2;
     pixelTextureSize.y = (renderArea.h - 2) / scale + 2;
-    
+
     pixelTexture.reset(create_fast_texture(renderer, SDL_TEXTUREACCESS_STREAMING, pixelTextureSize, pixelFormat));
     if (pixelTexture == nullptr) {
         throw std::runtime_error("Renderer does not support any 32-bit ARGB textures!");
@@ -122,6 +140,57 @@ void PlayArea::changeMouseoverElement(const CanvasState::element_variant_t& newE
     }
 }
 
+void PlayArea::saveZoom() {
+    savedScale[savedScaleIndex] = scale;
+    savedScaleIndex ^= 1;
+    NotificationDisplay::Data beginnerNotificationData{
+        { "Saved zoom: ", NotificationDisplay::TEXT_COLOR },
+        { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY },
+        { " (Press ", NotificationDisplay::TEXT_COLOR },
+        { "Z", NotificationDisplay::TEXT_COLOR_KEY },
+        { " to toggle between zoom levels ", NotificationDisplay::TEXT_COLOR },
+        { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY},
+        { " and ", NotificationDisplay::TEXT_COLOR },
+        { std::to_string(savedScale[savedScaleIndex]), NotificationDisplay::TEXT_COLOR_KEY },
+        { ")", NotificationDisplay::TEXT_COLOR }
+    };
+    NotificationDisplay::Data notificationData{
+        { "Saved zoom: ", NotificationDisplay::TEXT_COLOR },
+        { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY },
+        { " (" + std::to_string(savedScale[savedScaleIndex]) + ")", NotificationDisplay::TEXT_COLOR }
+    };
+    saveZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::BEGINNER, 5s, beginnerNotificationData).orElse(NotificationFlags::DEFAULT, 5s, notificationData);
+}
+
+void PlayArea::toggleZoom() {
+    if (mouseoverPoint) {
+        zoomScaleStart = scale;
+        if (scale == savedScale[savedScaleIndex]) {
+            savedScaleIndex ^= 1;
+        }
+        zoomScaleEnd = savedScale[savedScaleIndex];
+
+        // if zooming out, load the larger texture size (smaller scale) first
+        if (scale > zoomScaleEnd) {
+            scale = zoomScaleEnd;
+            prepareTexture(mainWindow.renderer);
+            scale = zoomScaleStart;
+        }
+
+        zoomTranslationStart = zoomTranslationEnd = translation;
+
+        ext::point canvasPt = ext::div_floor(*mouseoverPoint - zoomTranslationStart, zoomScaleStart);
+        zoomTranslationEnd -= canvasPt * zoomScaleEnd - (*mouseoverPoint - zoomTranslationStart) + (*mouseoverPoint - zoomTranslationStart) % zoomScaleStart * zoomScaleEnd / zoomScaleStart;
+
+        zoomAnimationStartTime = Drawable::RenderClock::now();
+
+        NotificationDisplay::Data notificationData{
+            { "Zoom: ", NotificationDisplay::TEXT_COLOR },
+            { std::to_string(zoomScaleEnd), NotificationDisplay::TEXT_COLOR_KEY }
+        };
+        toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, notificationData);
+    }
+}
 
 void PlayArea::processMouseHover(const SDL_MouseMotionEvent& event) {
 
