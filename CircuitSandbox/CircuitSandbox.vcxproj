@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Profiling|Win32">
+      <Configuration>Release-Profiling</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Profiling|x64">
+      <Configuration>Release-Profiling</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{857FE407-3E42-4E6F-AB3C-60DEE2FD9629}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="CircuitSandbox.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|x64'">
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <OmitFramePointers />
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Debug_x86);$(SDL_Lib_Release_x86);$(SDLTTF_Lib_Release_x86);$(NFD_Lib_Debug_x86)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd_d.lib</AdditionalDependencies>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x86)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <ConformanceMode>true</ConformanceMode>
+      <OmitFramePointers />
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Release_x86);$(SDL_Lib_Release_x86);$(SDLTTF_Lib_Release_x86);$(NFD_Lib_Release_x86)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd.lib</AdditionalDependencies>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x86)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <AdditionalManifestFiles>manifest\additional.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <ConformanceMode>true</ConformanceMode>
+      <OmitFramePointers>
+      </OmitFramePointers>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Release_x86);$(SDL_Lib_Release_x86);$(SDLTTF_Lib_Release_x86);$(NFD_Lib_Release_x86)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd.lib</AdditionalDependencies>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x86)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x86)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Debug_x64);$(SDL_Lib_Release_x64);$(SDLTTF_Lib_Release_x64);$(NFD_Lib_Debug_x64)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd_d.lib</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x64)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <AdditionalManifestFiles>manifest\additional.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Release_x64);$(SDL_Lib_Release_x64);$(SDLTTF_Lib_Release_x64);$(NFD_Lib_Release_x64)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x64)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <AdditionalManifestFiles>manifest\additional.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Profiling|x64'">
+    <ClCompile>
+      <StringPooling>true</StringPooling>
+      <AdditionalIncludeDirectories>$(Boost_Include);$(SDL_Include);$(SDLTTF_Include);$(NFD_Include)</AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(Boost_Lib_Release_x64);$(SDL_Lib_Release_x64);$(SDLTTF_Lib_Release_x64);$(NFD_Lib_Release_x64)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2main.lib;SDL2.lib;SDL2_ttf.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;nfd.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+    <CustomBuildStep>
+      <Command>XCOPY $(SDL_Lib_Release_x64)\SDL2.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\SDL2_ttf.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\libfreetype-6.dll $(OutDir) /D /Y
+XCOPY $(SDLTTF_Lib_Release_x64)\zlib1.dll $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\OpenSans-Bold.ttf $(OutDir) /D /Y
+XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
+      <Outputs>SDL2.dll;SDL2_ttf.dll;libfreetype-6.dll;zlib1.dll;OpenSans-Bold.ttf;ButtonIcons.ttf;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <AdditionalManifestFiles>manifest\additional.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="buttonbar.cpp" />
+    <ClCompile Include="clipboardaction.cpp" />
+    <ClCompile Include="clipboardmanager.cpp" />
+    <ClCompile Include="launch_browser.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mainwindow.cpp" />
+    <ClCompile Include="notificationdisplay.cpp" />
+    <ClCompile Include="playareaactionmanager.cpp" />
+    <ClCompile Include="selectionaction.cpp" />
+    <ClCompile Include="statemanager.cpp" />
+    <ClCompile Include="playarea.cpp" />
+    <ClCompile Include="simulator.cpp" />
+    <ClCompile Include="toolbox.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="action.hpp" />
+    <ClInclude Include="actionmanager.hpp" />
+    <ClInclude Include="algorithm.hpp" />
+    <ClInclude Include="baseaction.hpp" />
+    <ClInclude Include="buttonbar.hpp" />
+    <ClInclude Include="buttonbaritems.hpp" />
+    <ClInclude Include="clipboardaction.hpp" />
+    <ClInclude Include="clipboardmanager.hpp" />
+    <ClInclude Include="clipboardstore.hpp" />
+    <ClInclude Include="communicator.hpp" />
+    <ClInclude Include="concurrent_fixed_queue.hpp" />
+    <ClInclude Include="concurrent_queue.hpp" />
+    <ClInclude Include="cstring.hpp" />
+    <ClInclude Include="drawable.hpp" />
+    <ClInclude Include="drawing.hpp" />
+    <ClInclude Include="editaction.hpp" />
+    <ClInclude Include="elementdescriptionutils.hpp" />
+    <ClInclude Include="eventhook.hpp" />
+    <ClInclude Include="eventreceiver.hpp" />
+    <ClInclude Include="eyedropperaction.hpp" />
+    <ClInclude Include="filecommunicatorselectaction.hpp" />
+    <ClInclude Include="fileinputcommunicator.hpp" />
+    <ClInclude Include="fileoutputcommunicator.hpp" />
+    <ClInclude Include="fileutils.hpp" />
+    <ClInclude Include="filenewaction.hpp" />
+    <ClInclude Include="filesaveaction.hpp" />
+    <ClInclude Include="fileopenaction.hpp" />
+    <ClInclude Include="flushable_fixed_queue.hpp" />
+    <ClInclude Include="font.hpp" />
+    <ClInclude Include="historyaction.hpp" />
+    <ClInclude Include="historycanvasstate.hpp" />
+    <ClInclude Include="historymanager.hpp" />
+    <ClInclude Include="iconcodepoints.hpp" />
+    <ClInclude Include="interpolate.hpp" />
+    <ClInclude Include="launch_browser.hpp" />
+    <ClInclude Include="notificationdisplay.hpp" />
+    <ClInclude Include="screencommunicator.hpp" />
+    <ClInclude Include="screeninputaction.hpp" />
+    <ClInclude Include="keyboardeventreceiver.hpp" />
+    <ClInclude Include="changesimulationspeedaction.hpp" />
+    <ClInclude Include="pencilaction.hpp" />
+    <ClInclude Include="expandable_matrix.hpp" />
+    <ClInclude Include="playareaactionmanager.hpp" />
+    <ClInclude Include="reduce.hpp" />
+    <ClInclude Include="reverse_adaptor.hpp" />
+    <ClInclude Include="saveableaction.hpp" />
+    <ClInclude Include="sdl_automatic.hpp" />
+    <ClInclude Include="sdl_fast_maprgb.hpp" />
+    <ClInclude Include="sdl_surface_create.hpp" />
+    <ClInclude Include="selectionaction.hpp" />
+    <ClInclude Include="canvasstate.hpp" />
+    <ClInclude Include="declarations.hpp" />
+    <ClInclude Include="control.hpp" />
+    <ClInclude Include="elements.hpp" />
+    <ClInclude Include="heap_matrix.hpp" />
+    <ClInclude Include="integral_division.hpp" />
+    <ClInclude Include="mainwindow.hpp" />
+    <ClInclude Include="renderable.hpp" />
+    <ClInclude Include="shared_memory.hpp" />
+    <ClInclude Include="simulator_compile.hpp" />
+    <ClInclude Include="statefulaction.hpp" />
+    <ClInclude Include="statemanager.hpp" />
+    <ClInclude Include="playarea.hpp" />
+    <ClInclude Include="point.hpp" />
+    <ClInclude Include="simulator.hpp" />
+    <ClInclude Include="tag_tuple.hpp" />
+    <ClInclude Include="toolbox.hpp" />
+    <ClInclude Include="unicode.hpp" />
+    <ClInclude Include="unrolled_linked_list_queue.hpp" />
+    <ClInclude Include="visitor.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="playareaaction.hpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
