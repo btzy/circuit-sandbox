@@ -66,7 +66,7 @@ void NotificationDisplay::render(SDL_Renderer* renderer, Drawable::RenderClock::
     }
 }
 
-NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, std::vector<ColorText> description) {
+NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description) {
     if (visibleFlags & flags) {
         std::shared_ptr<Notification> notification = std::make_shared<Notification>(std::move(description), flags, now, expire);
         notification->layout(mainWindow.renderer, *this);
@@ -75,7 +75,30 @@ NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Dr
         return handle;
     }
     else {
-        return NotificationDisplay::NotificationHandle();
+        return NotificationHandle();
+    }
+}
+
+void NotificationDisplay::remove(const NotificationHandle& data) noexcept {
+    std::shared_ptr<Notification> notification = data.lock();
+    if (notification && notification->expireTime >= Drawable::RenderClock::now()) {
+        // set to expire now if it isn't already expired
+        notification->expireTime = Drawable::RenderClock::now();
+    }
+}
+
+NotificationDisplay::NotificationHandle NotificationDisplay::modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description) {
+    std::shared_ptr<Notification> notification = data.lock();
+    if (notification && notification->expireTime >= Drawable::RenderClock::now()) {
+        // modify, since it is not already removed
+        assert(notification.flags == flags);
+        notification->data = std::move(description);
+        notification->expireTime = expire;
+        notification->layout(mainWindow.renderer, *this);
+        return data;
+    }
+    else {
+        return add(flags, now, expire, std::move(description));
     }
 }
 

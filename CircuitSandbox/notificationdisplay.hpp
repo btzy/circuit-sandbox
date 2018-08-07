@@ -107,6 +107,9 @@ public:
             _pre_destruct();
             display = nullptr;
         }
+        explicit operator bool() const noexcept {
+            return display != nullptr;
+        }
         template <typename... Args>
         UniqueNotification orElse(Args&&... args) && {
             assert(display);
@@ -117,6 +120,11 @@ public:
             else {
                 return std::move(*this);
             }
+        }
+        template <typename... Args>
+        void modify(Args&&... args) {
+            assert(display);
+            handle = display->modifyOrAdd(handle, std::forward<Args>(args)...);
         }
     private:
         inline void _pre_destruct() noexcept {
@@ -145,7 +153,7 @@ public:
      */
     NotificationHandle add(Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description);
 
-    NotificationHandle add(Flags flags, std::vector<ColorText> description) {
+    NotificationHandle add(Flags flags, Data description) {
         return add(flags, Drawable::RenderClock::now(), Drawable::RenderClock::time_point::max(), std::move(description));
     }
 
@@ -164,8 +172,8 @@ public:
     }
 
     /**
-    * Add a notification to the display, returning an RAII notification handle.
-    */
+     * Add a notification to the display, returning an RAII notification handle.
+     */
     template <typename... Args>
     UniqueNotification uniqueAdd(Args&&... args) {
         return UniqueNotification(*this, add(std::forward<Args>(args)...));
@@ -174,11 +182,33 @@ public:
     /**
      * Remove a notification from the display.
      */
-    void remove(const NotificationHandle& data) noexcept {
-        std::shared_ptr<Notification> notification = data.lock();
-        if (notification) {
-            // set to expire now if it isn't already expired
-            notification->expireTime = std::min(notification->expireTime, Drawable::RenderClock::now());
+    void remove(const NotificationHandle& data) noexcept;
+
+    /**
+     * Modifies an object if it isn't removed yet, or add a new object if it is already removed.
+     */
+    NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description);
+
+    NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::duration duration, Data description) {
+        auto now = Drawable::RenderClock::now();
+        return modifyOrAdd(data, flags, now, now + duration, std::move(description));
+    }
+
+    NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Data description) {
+        return modifyOrAdd(data, flags, Drawable::RenderClock::now(), Drawable::RenderClock::time_point::max(), std::move(description));
+    }
+
+    /**
+     * Add a notification to the display, returning an RAII notification handle.
+     */
+    template <typename... Args>
+    UniqueNotification uniqueModify(UniqueNotification&& uniqueNotif, Args&&... args) {
+        if (uniqueNotif) {
+            uniqueNotif.modify(std::forward<Args>(args)...);
+            return std::move(uniqueNotif);
+        }
+        else {
+            return uniqueAdd(std::forward<Args>(args)...);
         }
     }
 

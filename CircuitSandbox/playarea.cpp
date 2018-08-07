@@ -195,7 +195,7 @@ void PlayArea::toggleZoom() {
             { "Zoom: ", NotificationDisplay::TEXT_COLOR },
             { std::to_string(scale), NotificationDisplay::TEXT_COLOR_KEY }
         };
-        toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueAdd(NotificationFlags::DEFAULT, 5s, std::move(notificationData));
+        toggleZoomNotification = mainWindow.getNotificationDisplay().uniqueModify(std::move(toggleZoomNotification), NotificationFlags::DEFAULT, 5s, std::move(notificationData));
     }
 }
 
