@@ -42,14 +42,12 @@ private:
         UniqueTexture texture;
         ext::point textureSize;
         Flags flags;
-        Drawable::RenderClock::time_point addTime;
         // when the notification should disappear
         Drawable::RenderClock::time_point expireTime;
 
-        Notification(std::vector<ColorText>&& data, Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expireTime = Drawable::RenderClock::time_point::max()) noexcept :
+        Notification(std::vector<ColorText>&& data, Flags flags, Drawable::RenderClock::time_point expireTime = Drawable::RenderClock::time_point::max()) noexcept :
             data(std::move(data)),
             flags(flags),
-            addTime(now),
             expireTime(expireTime) {}
 
         // sets texture and textureSize from the data
@@ -136,7 +134,7 @@ public:
 
     NotificationDisplay(MainWindow&, Flags visibleFlags = NotificationFlags::DEFAULT);
 
-    void render(SDL_Renderer*, Drawable::RenderClock::time_point) override;
+    void render(SDL_Renderer*) override;
 
     /**
      * Draw all the notifications.
@@ -151,10 +149,10 @@ public:
      * Add a notification to the display.
      * When adding notification: leading spaces allowed, but trailing spaces prohibited in description.
      */
-    NotificationHandle add(Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description);
+    NotificationHandle add(Flags flags, Drawable::RenderClock::time_point expire, Data description);
 
     NotificationHandle add(Flags flags, Data description) {
-        return add(flags, Drawable::RenderClock::now(), Drawable::RenderClock::time_point::max(), std::move(description));
+        return add(flags, Drawable::RenderClock::time_point::max(), std::move(description));
     }
 
     NotificationHandle add(Flags flags, std::string description) {
@@ -163,8 +161,7 @@ public:
 
     template <typename... Args>
     NotificationHandle add(Flags flags, Drawable::RenderClock::duration duration, Data description) {
-        auto now = Drawable::RenderClock::now();
-        return add(flags, now, now + duration, std::move(description));
+        return add(flags, Drawable::renderTime + duration, std::move(description));
     }
 
     NotificationHandle add(Flags flags, Drawable::RenderClock::duration duration, std::string description) {
@@ -187,15 +184,14 @@ public:
     /**
      * Modifies an object if it isn't removed yet, or add a new object if it is already removed.
      */
-    NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description);
+    NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point expire, Data description);
 
     NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::duration duration, Data description) {
-        auto now = Drawable::RenderClock::now();
-        return modifyOrAdd(data, flags, now, now + duration, std::move(description));
+        return modifyOrAdd(data, flags, Drawable::renderTime + duration, std::move(description));
     }
 
     NotificationHandle modifyOrAdd(const NotificationHandle& data, Flags flags, Data description) {
-        return modifyOrAdd(data, flags, Drawable::RenderClock::now(), Drawable::RenderClock::time_point::max(), std::move(description));
+        return modifyOrAdd(data, flags, Drawable::RenderClock::time_point::max(), std::move(description));
     }
 
     /**

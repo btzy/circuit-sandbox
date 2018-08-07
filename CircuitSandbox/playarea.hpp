@@ -92,9 +92,9 @@ public:
      * This method is non-const because the cached state might be updated from the simulator when rendering.
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override;
+    void render(SDL_Renderer* renderer) override;
 private:
-    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now, StateManager& stateManager);
+    void render(SDL_Renderer* renderer, StateManager& stateManager);
 
     /**
      * Prepares the texture for use.

@@ -15,7 +15,7 @@
 
 NotificationDisplay::NotificationDisplay(MainWindow& mainWindow, Flags visibleFlags) : mainWindow(mainWindow), visibleFlags(visibleFlags) {}
 
-void NotificationDisplay::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now) {
+void NotificationDisplay::render(SDL_Renderer* renderer) {
     // from bottom-left corner
     ext::point currOffset = mainWindow.logicalToPhysicalSize(LOGICAL_OFFSET);
     for (size_t i = 0; i != notifications.size(); ++i) {
@@ -28,6 +28,7 @@ void NotificationDisplay::render(SDL_Renderer* renderer, Drawable::RenderClock::
                 notification.textureSize.x,
                 notification.textureSize.y
             };
+            const auto& now = Drawable::renderTime;
             if (now < notification.expireTime) {
                 // non-expired notification
                 // TODO: entry effects
@@ -66,9 +67,9 @@ void NotificationDisplay::render(SDL_Renderer* renderer, Drawable::RenderClock::
     }
 }
 
-NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description) {
+NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Drawable::RenderClock::time_point expire, Data description) {
     if (visibleFlags & flags) {
-        std::shared_ptr<Notification> notification = std::make_shared<Notification>(std::move(description), flags, now, expire);
+        std::shared_ptr<Notification> notification = std::make_shared<Notification>(std::move(description), flags, expire);
         notification->layout(mainWindow.renderer, *this);
         NotificationHandle handle(notification);
         notifications.emplace_back(std::move(notification));
@@ -81,24 +82,24 @@ NotificationDisplay::NotificationHandle NotificationDisplay::add(Flags flags, Dr
 
 void NotificationDisplay::remove(const NotificationHandle& data) noexcept {
     std::shared_ptr<Notification> notification = data.lock();
-    if (notification && notification->expireTime >= Drawable::RenderClock::now()) {
+    if (notification && notification->expireTime >= Drawable::renderTime) {
         // set to expire now if it isn't already expired
-        notification->expireTime = Drawable::RenderClock::now();
+        notification->expireTime = Drawable::renderTime;
     }
 }
 
-NotificationDisplay::NotificationHandle NotificationDisplay::modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point now, Drawable::RenderClock::time_point expire, Data description) {
+NotificationDisplay::NotificationHandle NotificationDisplay::modifyOrAdd(const NotificationHandle& data, Flags flags, Drawable::RenderClock::time_point expire, Data description) {
     std::shared_ptr<Notification> notification = data.lock();
-    if (notification && notification->expireTime >= Drawable::RenderClock::now()) {
+    if (notification && notification->expireTime >= Drawable::renderTime) {
         // modify, since it is not already removed
-        assert(notification.flags == flags);
+        assert(notification->flags == flags);
         notification->data = std::move(description);
         notification->expireTime = expire;
         notification->layout(mainWindow.renderer, *this);
         return data;
     }
     else {
-        return add(flags, now, expire, std::move(description));
+        return add(flags, expire, std::move(description));
     }
 }
 

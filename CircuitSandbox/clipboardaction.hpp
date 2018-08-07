@@ -201,7 +201,7 @@ public:
         }
     }
 
-    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override;
+    void render(SDL_Renderer* renderer) override;
 
     /**
      * Initialise the parameters for render()

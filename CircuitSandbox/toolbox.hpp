@@ -89,7 +89,7 @@ public:
      * This method is called by MainWindow
      * @pre renderer must not be null.
      */
-    void render(SDL_Renderer* renderer, Drawable::RenderClock::time_point) override {
+    void render(SDL_Renderer* renderer) override {
         std::as_const(*this).render(renderer);
     }
     void render(SDL_Renderer* renderer) const;

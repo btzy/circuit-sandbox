@@ -19,13 +19,14 @@
 PlayArea::PlayArea(MainWindow& main_window) : mainWindow(main_window), currentAction(mainWindow.currentAction, mainWindow, *this) {}
 
 
-void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now) {
-    render(renderer, now, mainWindow.stateManager);
+void PlayArea::render(SDL_Renderer* renderer) {
+    render(renderer, mainWindow.stateManager);
 }
-void PlayArea::render(SDL_Renderer* renderer, Drawable::RenderClock::time_point now, StateManager& stateManager) {
+void PlayArea::render(SDL_Renderer* renderer, StateManager& stateManager) {
     double renderScale = scale;
     ext::point renderTranslation = translation;
     static constexpr Drawable::RenderClock::duration zoomAnimationDuration = 100ms;
+    const auto& now = Drawable::renderTime;
     if (zoomAnimationStartTime <= now) {
         if (now < zoomAnimationStartTime + zoomAnimationDuration) {
             renderScale = ext::interpolate_time(zoomAnimationStartTime, zoomAnimationStartTime + zoomAnimationDuration, static_cast<double>(zoomScaleStart), static_cast<double>(scale), now);
@@ -189,7 +190,7 @@ void PlayArea::toggleZoom() {
         ext::point canvasPt = ext::div_floor((*mouseoverPoint - zoomTranslationStart) * scale + ext::point{ scale / 2, scale / 2 }, zoomScaleStart);
         translation = *mouseoverPoint - canvasPt;
 
-        zoomAnimationStartTime = Drawable::RenderClock::now();
+        zoomAnimationStartTime = Drawable::renderTime;
 
         NotificationDisplay::Data notificationData{
             { "Zoom: ", NotificationDisplay::TEXT_COLOR },

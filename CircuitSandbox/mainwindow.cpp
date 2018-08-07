@@ -603,7 +603,7 @@ void MainWindow::processTextInputEvent(const SDL_TextInputEvent& event) {
 
 // TODO: needs some way to use the old data when resizing, for consistency?
 void MainWindow::render() {
-    Drawable::RenderClock::time_point renderTime = Drawable::RenderClock::now();
+    Drawable::renderTime = Drawable::RenderClock::now();
 
     // Clear the window with a black background
     SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
@@ -621,7 +621,7 @@ void MainWindow::render() {
         // set clip rect to clip off parts of the surface outside renderArea
         SDL_RenderSetClipRect(renderer, &drawable->renderArea);
         // render the stuff
-        drawable->render(renderer, renderTime);
+        drawable->render(renderer);
     }
     // reset the clip rect
     SDL_RenderSetClipRect(renderer, nullptr);
