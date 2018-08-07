@@ -33,10 +33,39 @@ It probably also compiles on Mac OSX with Clang, but this is untested.
 ### Dependencies
 
 * [Boost libraries](https://www.boost.org/)
-  * Headers: Tribool, Process, Endian
+  * Headers: Tribool, Process, Endian, Interprocess
   * Link Libraries: System, Filesystem
 * [SDL2](https://www.libsdl.org/download-2.0.php)
 * [SDL2_ttf](https://www.libsdl.org/projects/SDL_ttf/)
-* [Native File Dialog](https://github.com/mlabbe/nativefiledialog)
+* [Native File Dialog](https://github.com/mlabbe/nativefiledialog) (NFD)
 
-Remember to add the relevant compiler and linker settings so that the `#include`s and link libraries are discoverable.
+### Building on Windows (Visual Studio 2017)
+
+The Windows releases are built with Boost 1.67.0, SDL2 2.0.8, SDL2_ttf 2.0.14, and the latest NFD from its master branch.  Boost and NFD are statically linked to Circuit Sandbox; SDL2 and SDL2_ttf are dynamically linked as recommended by SDL2.  The C and C++ runtimes are dynamically linked.  To avoid unexpected issues, it is best to build it in the same way.
+
+1. Set-up all the dependencies:
+
+    1. Download Boost and follow [these instructions](https://www.boost.org/doc/libs/1_67_0/more/getting_started/windows.html) to compile Boost on your computer.  Make sure you compile it using the correct toolset (`toolset=msvc-14.1`).  You might also want to build static libraries (`link=static`).
+    2. Download SDL2 and SDL2_ttf, making sure you get the development libraries (not the runtime binaries), and that they are for Visual Studio (not MinGW).  Those downloads contain binaries (.dll and .lib), so there is nothing to build.  Just unzip the files and place them somewhere on your computer.
+    3. Download or clone NFD onto your computer, and use the Visual Studio solution and project files  provided by NFD to build it.  You don't need to configure anything - they should build correctly out of the box.
+
+2. Open the solution file for Circuit Sandbox in Visual Studio, and define the following [property macros](https://docs.microsoft.com/en-us/cpp/ide/working-with-project-properties#bkmkPropertySheets) that point to the include directories and linker search directories from step 1 (their values will depend on where you have placed the dependencies):
+
+    * `Boost_Include`
+    * `SDL_Include`
+    * `SDLTTF_Include`
+    * `NFD_Include`
+    * `Boost_Lib_Debug_x86`
+    * `Boost_Lib_Release_x86`
+    * `SDL_Lib_Release_x86`
+    * `SDLTTF_Lib_Release_x86`
+    * `NFD_Lib_Debug_x86`
+    * `NFD_Lib_Release_x86`
+    * `Boost_Lib_Debug_x64`
+    * `Boost_Lib_Release_x64`
+    * `SDL_Lib_Release_x64`
+    * `SDLTTF_Lib_Release_x64`
+    * `NFD_Lib_Debug_x64`
+    * `NFD_Lib_Release_x64`
+
+3. Build Circuit Sandbox; it should work!
