@@ -377,15 +377,23 @@ public:
         IO_ERROR // file cannot be opened or read
     };
 
+private:
+    // determine if it is CORRUPTED or IO_ERROR, use immediately after std::istream::read
+    inline static ReadResult resolveLoadError(std::istream& saveFile) {
+        assert(!saveFile);
+        return saveFile.eof() ? ReadResult::CORRUPTED : ReadResult::IO_ERROR;
+    }
+
+public:
     inline ReadResult loadSave(std::istream& saveFile) {
         // read the magic sequence
         char data[4];
-        saveFile.read(data, 4);
+        if (!saveFile.read(data, 4)) return resolveLoadError(saveFile);
         if (!std::equal(data, data + 4, CCSB_FILE_MAGIC)) return ReadResult::CORRUPTED;
 
         // read the version number
         int32_t version;
-        saveFile.read(reinterpret_cast<char*>(&version), sizeof version);
+        if(!saveFile.read(reinterpret_cast<char*>(&version), sizeof version)) return resolveLoadError(saveFile);
         boost::endian::little_to_native_inplace(version);
         if (version != 0) return ReadResult::OUTDATED;
 
@@ -393,6 +401,7 @@ public:
         int32_t matrixWidth, matrixHeight;
         saveFile.read(reinterpret_cast<char*>(&matrixWidth), sizeof matrixWidth);
         saveFile.read(reinterpret_cast<char*>(&matrixHeight), sizeof matrixHeight);
+        if(!saveFile) return resolveLoadError(saveFile);
         boost::endian::little_to_native_inplace(matrixWidth);
         boost::endian::little_to_native_inplace(matrixHeight);
         if (matrixWidth < 0 || matrixHeight < 0 || static_cast<int64_t>(matrixWidth) * matrixHeight > std::numeric_limits<int32_t>::max()) return ReadResult::CORRUPTED;
@@ -403,7 +412,8 @@ public:
         for (int32_t y = 0; y != canvasData.height(); ++y) {
             for (int32_t x = 0; x != canvasData.width(); ++x) {
                 uint8_t elementData;
-                saveFile.read(reinterpret_cast<char*>(&elementData), 1);
+                static_assert(sizeof elementData == 1);
+                if(!saveFile.read(reinterpret_cast<char*>(&elementData), 1)) return resolveLoadError(saveFile);
                 size_t element_index = elementData >> 2;
                 bool logicLevel = elementData & 0b10;
                 bool defaultLogicLevel = elementData & 0b01;
@@ -439,7 +449,7 @@ public:
 
     enum class WriteResult : char {
         OK,
-        IO_ERROR // file cannot be opened or read
+        IO_ERROR // file cannot be opened or written to
     };
 
     WriteResult writeSave(std::ostream& saveFile) const {
@@ -493,6 +503,8 @@ public:
             }
         }
 
-        return WriteResult::OK;
+        // flush the stream, so failbit will be set if the stream cannot be written to.
+        saveFile.flush();
+        return saveFile ? WriteResult::OK : WriteResult::IO_ERROR;
     }
 };
