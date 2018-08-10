@@ -47,5 +47,9 @@ Release-Profiling/
 .vs/
 *.props
 
+# XCode files
+.DS_Store
+xcuserdata/
+
 # Doxygen documentation
 documentation/

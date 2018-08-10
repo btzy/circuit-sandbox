@@ -22,7 +22,7 @@ protected:
 
 public:
 
-    EditAction(MainWindow& mainWindow) : PlayAreaAction(mainWindow), deltaTrans({ 0, 0 }), simulatorRunning(stateManager().simulator.running()) {
+    EditAction(MainWindow& mainWindow) : PlayAreaAction(mainWindow), deltaTrans(ext::point{ 0, 0 }), simulatorRunning(stateManager().simulator.running()) {
         // stop the simulator if running
         if (simulatorRunning) stateManager().stopSimulatorUnchecked();
         changed() = boost::indeterminate;

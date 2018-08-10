@@ -104,7 +104,8 @@ void Simulator::compile(CanvasState& gameState) {
                                 using positive_one_t = std::integral_constant<int32_t, 1>;
                                 using negative_one_t = std::integral_constant<int32_t, -1>;
                                 using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
-                                directions_t::for_each([&](auto direction_tag_t, auto) {
+                                // verbose capture due to clang 6.0.0 issue with structured bindings
+                                directions_t::for_each([&, &currPt = currPt, &currDir = currDir](auto direction_tag_t, auto) {
                                     ext::point newPt = currPt;
                                     if (currDir == 0) {
                                         newPt.x += decltype(direction_tag_t)::type::value;

@@ -137,7 +137,7 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
     int default_dpi;
 #if defined(__APPLE__)
-    default_dpi = 72;
+    default_dpi = 96; // for some reason apple is 96 dpi
 #elif defined(__linux__)
     default_dpi = 144;
 #elif defined(_WIN32)

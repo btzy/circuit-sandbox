@@ -227,7 +227,10 @@ private:
                 using positive_one_t = std::integral_constant<int32_t, 1>;
                 using negative_one_t = std::integral_constant<int32_t, -1>;
                 using directions_t = ext::tag_tuple<negative_one_t, positive_one_t>;
-                directions_t::for_each([&](auto direction_tag_t, auto) {
+                // verbose lambda capture for pt and axis because clang 6.0.0 doesn't allow lambda capture of structured bindings:
+                // see https://www.reddit.com/r/cpp/comments/68vhir/whats_the_rationale_for_this_reference_to_local/
+                // see https://stackoverflow.com/questions/46114214/lambda-implicit-capture-fails-with-variable-declared-from-structured-binding
+                directions_t::for_each([&, &pt = pt, &axis = axis](auto direction_tag_t, auto) {
                     auto[x, y] = pt;
                     if (axis == 0) {
                         x += decltype(direction_tag_t)::type::value;

@@ -77,11 +77,15 @@ private:
         }
     }
     template <size_t Index, typename Tuple, typename... Args>
-    inline void _setDescriptionSurface(Tuple& arr, const char* description, SDL_Color color = ButtonBar::foregroundColor, Args&&... args) {
+    inline void _setDescriptionSurface(Tuple& arr, const char* description, SDL_Color color, Args&&... args) {
         std::get<Index>(arr) = TTF_RenderText_Shaded(getInterfaceFont(), description, color, ButtonBar::backgroundColor);
         if constexpr(sizeof...(Args) > 0) {
             _setDescriptionSurface<Index + 1>(arr, std::forward<Args>(args)...);
         }
+    }
+    template <size_t Index, typename Tuple, typename... Args>
+    inline void _setDescriptionSurface(Tuple& arr, const char* description) {
+        _setDescriptionSurface(arr, description, ButtonBar::foregroundColor);
     }
     template <size_t Index, typename Tuple>
     inline void _setDescriptionCopyAndFree(SDL_Surface* surface, Tuple& arr, int32_t offsetWidth) {
@@ -119,7 +123,7 @@ public:
      * setDescription() has the ability to set text in multiple colours.
      */
     template <typename... Args>
-    void setDescription(const char* description, SDL_Color color = ButtonBar::foregroundColor, Args&&... args) {
+    void setDescription(const char* description, SDL_Color color, Args&&... args) {
         assert(description);
         if constexpr (sizeof...(args) > 0) {
             std::array<SDL_Surface*, (sizeof...(args) + 3) / 2> surfaces;
@@ -143,6 +147,10 @@ public:
                 SDL_FreeSurface(surface);
             }
         }
+    }
+    template <typename... Args>
+    void setDescription(const char* description) {
+        setDescription(description, ButtonBar::foregroundColor);
     }
     void clearDescription() {
         descriptionTexture = nullptr;
