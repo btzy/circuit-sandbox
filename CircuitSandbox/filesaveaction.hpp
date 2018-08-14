@@ -6,7 +6,7 @@
 
 #include <boost/process/spawn.hpp>
 #include <SDL.h>
-#include <nfd.h>
+#include <nfd.hpp>
 
 #include "visitor.hpp"
 #include "action.hpp"
@@ -33,14 +33,14 @@ public:
         bool simulatorRunning = mainWindow.stateManager.simulator.running();
         if (simulatorRunning) mainWindow.stateManager.simulator.stop();
 
-        char* properPath = nullptr;
-        char* outPath = nullptr;
+        NFD::UniquePath outPath;
         if (filePath == nullptr) {
-            nfdresult_t result = NFD_SaveDialog(CCSB_FILE_EXTENSION, nullptr, &outPath);
+            nfdfilteritem_t fileFilter{ CCSB_FILE_FRIENDLY_NAME, CCSB_FILE_EXTENSION };
+            nfdresult_t result = NFD::SaveDialog(&fileFilter, 1, nullptr, outPath);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
-                properPath = new char[std::strlen(outPath) + 6];
-                filePath = addExtensionIfNecessary(outPath, properPath);
+                // no adding file extension; NFD::SaveDialog does that on supported platforms
+                filePath = outPath.get();
             }
         }
 
@@ -62,14 +62,6 @@ public:
 
         // start the simulator if necessary
         if (simulatorRunning) mainWindow.stateManager.simulator.start();
-
-        // free the memory
-        if (outPath != nullptr) {
-            free(outPath); // note: freeing memory that was acquired by NFD library
-        }
-        if (properPath != nullptr) {
-            delete[] properPath;
-        }
     };
 
     static inline void start(MainWindow& mainWindow, const SDL_Keymod& modifiers, const ActionStarter& starter, const char* filePath = nullptr) {

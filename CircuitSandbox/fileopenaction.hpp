@@ -8,7 +8,7 @@
 
 #include <boost/process/spawn.hpp>
 #include <SDL.h>
-#include <nfd.h>
+#include <nfd.hpp>
 
 #include "action.hpp"
 #include "mainwindow.hpp"
@@ -35,12 +35,14 @@ public:
 
 
         // show the file dialog if necessary
-        char* outPath = nullptr;
+        NFD::UniquePath outPath;
         if (filePath == nullptr) {
-            nfdresult_t result = NFD_OpenDialog(CCSB_FILE_EXTENSION, nullptr, &outPath);
+            // create (single) filter
+            nfdfilteritem_t fileFilter{ CCSB_FILE_FRIENDLY_NAME, CCSB_FILE_EXTENSION };
+            nfdresult_t result = NFD::OpenDialog(&fileFilter, 1, nullptr, outPath);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
-                filePath = outPath;
+                filePath = outPath.get();
             }
         }
 
@@ -96,10 +98,6 @@ public:
         // start the simulator if necessary
         if (simulatorRunning) mainWindow.stateManager.simulator.start();
 
-        // free the memory
-        if (outPath != nullptr) {
-            free(outPath); // note: freeing memory that was acquired by NFD library
-        }
     };
 
     static inline void start(MainWindow& mainWindow, PlayArea& playArea, const ActionStarter& starter, const char* filePath = nullptr) {

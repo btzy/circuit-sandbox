@@ -2,7 +2,7 @@
 
 #include <variant>
 #include <SDL.h>
-#include <nfd.h>
+#include <nfd.hpp>
 #include "point.hpp"
 #include "playarea.hpp"
 #include "mainwindow.hpp"
@@ -16,30 +16,25 @@ public:
     template <typename FileCommunicator>
     FileCommunicatorSelectAction(MainWindow& mainWindow, FileCommunicator& comm) :PlayAreaAction(mainWindow) {
         // select file
-        char* outPath = nullptr;
+        NFD::UniquePath outPath;
         nfdresult_t result;
         if constexpr(std::is_same_v<FileInputCommunicator, FileCommunicator>) {
-            result = NFD_OpenDialog(nullptr, nullptr, &outPath);
+            result = NFD::OpenDialog(nullptr, 0, nullptr, outPath);
         }
         else if constexpr(std::is_same_v<FileOutputCommunicator, FileCommunicator>) {
-            result = NFD_SaveDialog(nullptr, nullptr, &outPath);
+            result = NFD::SaveDialog(nullptr, 0, nullptr, outPath);
         }
         else {
             static_assert(std::is_same_v<FileCommunicator, FileCommunicator>, "Unrecognized communicator type");
         }
         mainWindow.suppressMouseUntilNextDown();
-        if (result != NFD_OKAY) {
-            outPath = nullptr;
-        }
-        if (outPath != nullptr) {
-            comm.setFile(outPath);
+        if (outPath) {
+            comm.setFile(outPath.get());
 
             mainWindow.getNotificationDisplay().add(NotificationFlags::DEFAULT, 5s, NotificationDisplay::Data{
                 { "Communicator linked to ", NotificationDisplay::TEXT_COLOR },
-                { getFileName(outPath), NotificationDisplay::TEXT_COLOR_FILE }
+                { getFileName(outPath.get()), NotificationDisplay::TEXT_COLOR_FILE }
             });
-
-            free(outPath);
 
             // save to history, but never recompile
             changed() = true;

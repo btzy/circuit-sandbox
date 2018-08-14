@@ -13,15 +13,7 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #include <SDL.h>
 #include <SDL_ttf.h>
-#if defined(__linux__)
-#include <gtk/gtk.h>
-#elif defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-// see https://developercommunity.visualstudio.com/content/problem/185399/error-c2760-in-combaseapih-with-windows-sdk-81-and.html
-struct IUnknown; // Workaround for "combaseapi.h(229): error C2187: syntax error: 'identifier' was unexpected here" when using /permissive-
-#include <objbase.h>
-#endif
+#include <nfd.h>
 
 #include "mainwindow.hpp"
 
@@ -39,14 +31,15 @@ struct InitGuard {
             throw std::runtime_error("TTF_Init() failed:  "s + TTF_GetError());
         }
 
-#if defined(__linux__)
-        gtk_init_check(nullptr, nullptr); // TODO: modify NFD to have a NFD_Init() and NFD_Quit() like SDL
-#elif defined(_WIN32)
-        // Launching the browser using ShellExecuteA() might require COM to be initialized.
-        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-#endif
+        if (NFD_Init() != NFD_OKAY) {
+            throw std::runtime_error("NFD_Init() failed:  "s + NFD_GetError());
+            // Note 1: NFD_Init() does `gtk_init_check(nullptr, nullptr)` on Linux, without which UTF-8 characters in the title bar won't work.
+            // Node 2: NFD_Init() does `CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);` on Windows, which might be required for launching the browser using ShellExecuteA().
+        }
     }
     ~InitGuard() {
+        // quit everything in the reverse order of initialization
+        NFD_Quit();
         TTF_Quit();
         SDL_Quit();
     }
