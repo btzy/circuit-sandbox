@@ -37,7 +37,7 @@ It probably also compiles on Mac OSX with Clang, but this is untested.
   * Link Libraries: System, Filesystem
 * [SDL2](https://www.libsdl.org/download-2.0.php)
 * [SDL2_ttf](https://www.libsdl.org/projects/SDL_ttf/)
-* [Native File Dialog](https://github.com/mlabbe/nativefiledialog) (NFD)
+* [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) (NFD)
 
 ### Building on Windows (Visual Studio 2017)
 
