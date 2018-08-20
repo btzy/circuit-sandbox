@@ -17,6 +17,9 @@ public:
     virtual void setHeight(SDL_Renderer* renderer, const ButtonBar& buttonBar, int32_t height) = 0;
     virtual void click(ButtonBar& buttonBar) {}
     virtual const char* description(const ButtonBar& buttonBar) const { return nullptr; };
+    
+    // virtual destructor, so ButtonBar::items will be destroyed properly
+    virtual ~ButtonBarItem() {}
 };
 
 template <uint16_t CodePoint>

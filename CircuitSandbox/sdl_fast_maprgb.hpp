@@ -121,12 +121,7 @@ inline auto invoke_RGB_format(const uint32_t& pixelFormat, Callback&& callback) 
 
 template <typename Callback>
 inline auto invoke_bool(bool value, Callback&& callback) {
-    switch (value) {
-    case false:
-        return std::forward<Callback>(callback)(std::bool_constant<false>{});
-    case true:
-        return std::forward<Callback>(callback)(std::bool_constant<true>{});
-    }
+    return value ? std::forward<Callback>(callback)(std::bool_constant<true>{}) : std::forward<Callback>(callback)(std::bool_constant<false>{});
 }
 
 inline SDL_Texture* create_fast_texture(SDL_Renderer* renderer, int access, const ext::point& size, uint32_t& format) {

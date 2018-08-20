@@ -56,7 +56,7 @@ void SelectionAction::startBySelectingAll(MainWindow& mainWindow, const ActionSt
     if (mainWindow.stateManager.defaultState.empty()) return;
 
     auto& action = starter.start<SelectionAction>(mainWindow, State::SELECTED);
-    action.selection = std::move(action.canvas().splice(0, 0, action.canvas().width(), action.canvas().height()));
+    action.selection = action.canvas().splice(0, 0, action.canvas().width(), action.canvas().height());
     action.selectionTrans = { 0, 0 };
     // action.selectionOrigin = { 0, 0 };
     // action.selectionEnd = action.selection.size() - ext::point{ 1, 1 };

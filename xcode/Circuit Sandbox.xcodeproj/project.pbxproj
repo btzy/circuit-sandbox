@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A113394B212AC4D6005280D7 /* launch_browser.mm in Sources */ = {isa = PBXBuildFile; fileRef = A113394A212AC4D5005280D7 /* launch_browser.mm */; };
 		A15DA687211DCE92007A0A4F /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15DA686211DCE92007A0A4F /* SDL2.framework */; };
 		A15DA689211DCEA0007A0A4F /* SDL2_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A15DA688211DCEA0007A0A4F /* SDL2_ttf.framework */; };
 		A15DA6E5211DD3DE007A0A4F /* clipboardaction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A15DA694211DD3D1007A0A4F /* clipboardaction.cpp */; };
@@ -42,6 +43,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A113394A212AC4D5005280D7 /* launch_browser.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = launch_browser.mm; path = ../CircuitSandbox/launch_browser.mm; sourceTree = "<group>"; };
 		A15DA67B211DCE3F007A0A4F /* Circuit Sandbox */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Circuit Sandbox"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A15DA686211DCE92007A0A4F /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
 		A15DA688211DCEA0007A0A4F /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_ttf.framework; path = ../../../../../../Library/Frameworks/SDL2_ttf.framework; sourceTree = "<group>"; };
@@ -150,6 +152,7 @@
 		A15DA672211DCE3F007A0A4F = {
 			isa = PBXGroup;
 			children = (
+				A113394A212AC4D5005280D7 /* launch_browser.mm */,
 				A15DA6F7211DDF90007A0A4F /* ButtonIcons.ttf */,
 				A15DA6F8211DDF90007A0A4F /* OpenSans-Bold.ttf */,
 				A15DA6E0211DD3DD007A0A4F /* action.hpp */,
@@ -323,6 +326,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A15DA6E5211DD3DE007A0A4F /* clipboardaction.cpp in Sources */,
+				A113394B212AC4D6005280D7 /* launch_browser.mm in Sources */,
 				A15DA6F1211DD3DE007A0A4F /* selectionaction.cpp in Sources */,
 				A15DA6E8211DD3DE007A0A4F /* statemanager.cpp in Sources */,
 				A15DA6E6211DD3DE007A0A4F /* notificationdisplay.cpp in Sources */,
@@ -395,7 +399,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-lnfd_d";
@@ -452,7 +456,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				LLVM_LTO = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_LDFLAGS = "-lnfd";
 				SDKROOT = macosx;
@@ -473,12 +478,13 @@
 					/Users/Bernard/Documents/boost_1_68_0,
 					/Library/Frameworks/SDL2.framework/headers,
 					/Library/Frameworks/SDL2_ttf.framework/headers,
-					/Users/Bernard/Documents/nativefiledialog/src/include,
+					"/Users/Bernard/Documents/GitHub/nativefiledialog-extended/src/include",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
 					/Users/Bernard/Documents/libboost_1_68_0/lib,
-					/Users/Bernard/Documents/nativefiledialog/build/lib/Debug,
+					"/Users/Bernard/Documents/GitHub/nativefiledialog-extended/build/lib-xcode/Debug/x64",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -498,12 +504,13 @@
 					/Users/Bernard/Documents/boost_1_68_0,
 					/Library/Frameworks/SDL2.framework/headers,
 					/Library/Frameworks/SDL2_ttf.framework/headers,
-					/Users/Bernard/Documents/nativefiledialog/src/include,
+					"/Users/Bernard/Documents/GitHub/nativefiledialog-extended/src/include",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
 					/Users/Bernard/Documents/libboost_1_68_0/lib,
-					/Users/Bernard/Documents/nativefiledialog/build/lib/Release,
+					"/Users/Bernard/Documents/GitHub/nativefiledialog-extended/build/lib-xcode/Release/x64",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

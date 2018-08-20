@@ -14,6 +14,8 @@ namespace WebResource {
 }
 
 
+#elif defined(__APPLE__)
+// don't do anything, because theres an objective-c++ file for apple bindings
 #else
 
 
