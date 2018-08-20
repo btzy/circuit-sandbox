@@ -8,6 +8,7 @@
 #include <optional>
 #include <vector>
 #include <tuple>
+#include <thread>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -81,6 +82,10 @@ private:
     NotificationDisplay::UniqueNotification noRedoNotification;
     NotificationDisplay::UniqueNotification changeSpeedNotification;
 
+#if defined(_WIN32) || defined(__APPLE__)
+    std::thread::id mainThreadId;
+#endif
+    
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
     bool _sizeMoveTimerRunning = false;
@@ -218,8 +223,8 @@ private:
      * Renders everything to the screen
      */
     void render();
-    #ifdef _WIN32
-    // hack for issue with window resizing on Windows not giving live events
+    #if defined(_WIN32) || defined(__APPLE__)
+    // hack for issue with window resizing on Windows and Mac not giving live events
     friend int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event);
     #endif // _WIN32
 

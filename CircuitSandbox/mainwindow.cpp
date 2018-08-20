@@ -39,8 +39,11 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         if (event_window == main_window->window) {
-            main_window->layoutComponents();
-            main_window->render();
+            // only do stuff if we are called from the main thread
+            if (main_window->mainThreadId == std::this_thread::get_id()) {
+                main_window->layoutComponents();
+                main_window->render();
+            }
         }
     }
     else if (event->type == SDL_SYSWMEVENT) {
@@ -50,13 +53,36 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
         }
         else if (winMessage.msg == WM_TIMER) {
             if (winMessage.wParam == SIZE_MOVE_TIMER_ID) {
-                main_window->render();
+                // only do stuff if we are called from the main thread
+                if (main_window->mainThreadId == std::this_thread::get_id()) {
+                    main_window->render();
+                }
             }
         }
     }
-    return 0;
+    return 1;
 }
 #endif // _WIN32
+
+#ifdef __APPLE__
+// hack for issue with window resizing on MacOS not giving live events
+// https://stackoverflow.com/questions/34967628/sdl2-window-turns-black-on-resize
+int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
+    MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
+    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
+        SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
+        if (event_window == main_window->window) {
+            // This is dangerous if SDL_PollEvent() can return while we are doing layout/rendering.
+            // But it seems to work well in practice.
+            //if (main_window->mainThreadId == std::this_thread::get_id()) {
+                main_window->layoutComponents();
+                main_window->render();
+            //}
+        }
+    }
+    return 1;
+}
+#endif // __APPLE__
 
 
 MainWindow::MainWindow(const char* const processName) : stateManager(getSimulatorPeriodFromFPS(std::stold(displayedSimulationFPS))), closing(false), toolbox(*this), playArea(*this), buttonBar(*this, playArea), notificationDisplay(*this), currentEventTarget(nullptr), currentLocationTarget(nullptr), currentAction(*this), clipboard(notificationDisplay), interfaceFont("OpenSans-Bold.ttf", 12), processName(processName) {
@@ -105,6 +131,11 @@ MainWindow::MainWindow(const char* const processName) : stateManager(getSimulato
 
     // render once first, because in case file loading takes long we don't want users to stare at black/white screen
     render();
+    
+#if defined(_WIN32) || defined(__APPLE)
+    // save the current thread id (on Windows and Mac, so the event watch can check it
+    mainThreadId = std::this_thread::get_id();
+#endif
 }
 
 
@@ -260,8 +291,8 @@ void MainWindow::start(const char* filePath) {
 
 void MainWindow::startEventLoop() {
 
-#ifdef _WIN32
-    // On Windows, when the user is resizing the window, we don't get any events until the resize is complete.
+#if defined(_WIN32) || defined(__APPLE__)
+    // On Windows and Mac, when the user is resizing the window, we don't get any events until the resize is complete.
     // This tries to fix this
     // Note that this has to come *after* layoutComponents(true), so that all layout-specific stuff (e.g. fonts) has been initialized.
     // Also, we have to remember to delete the event watch before closing the window as closing the window will resize it (by disengaging fullscreen mode).
@@ -274,7 +305,10 @@ void MainWindow::startEventLoop() {
             SDL_DelEventWatch(resizeEventForwarder, static_cast<void*>(&mainWindow));
         }
     } eventWatchGuard(*this);
-
+#endif
+    
+#ifdef _WIN32
+    // on Windows we also need special handling of some windows messages
     SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif // _WIN32
 
