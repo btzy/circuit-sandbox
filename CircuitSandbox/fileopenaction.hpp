@@ -39,7 +39,7 @@ public:
         if (filePath == nullptr) {
             // create (single) filter
             nfdfilteritem_t fileFilter{ CCSB_FILE_FRIENDLY_NAME, CCSB_FILE_EXTENSION };
-            nfdresult_t result = NFD::OpenDialog(&fileFilter, 1, nullptr, outPath);
+            nfdresult_t result = NFD::OpenDialog(outPath, &fileFilter, 1);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 filePath = outPath.get();

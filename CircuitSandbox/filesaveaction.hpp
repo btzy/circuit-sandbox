@@ -36,7 +36,7 @@ public:
         NFD::UniquePath outPath;
         if (filePath == nullptr) {
             nfdfilteritem_t fileFilter{ CCSB_FILE_FRIENDLY_NAME, CCSB_FILE_EXTENSION };
-            nfdresult_t result = NFD::SaveDialog(&fileFilter, 1, nullptr, outPath);
+            nfdresult_t result = NFD::SaveDialog(outPath, &fileFilter, 1, nullptr, "Circuit1." CCSB_FILE_EXTENSION);
             mainWindow.suppressMouseUntilNextDown();
             if (result == NFD_OKAY) {
                 // no adding file extension; NFD::SaveDialog does that on supported platforms

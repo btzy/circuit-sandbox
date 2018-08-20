@@ -19,10 +19,10 @@ public:
         NFD::UniquePath outPath;
         nfdresult_t result;
         if constexpr(std::is_same_v<FileInputCommunicator, FileCommunicator>) {
-            result = NFD::OpenDialog(nullptr, 0, nullptr, outPath);
+            result = NFD::OpenDialog(outPath);
         }
         else if constexpr(std::is_same_v<FileOutputCommunicator, FileCommunicator>) {
-            result = NFD::SaveDialog(nullptr, 0, nullptr, outPath);
+            result = NFD::SaveDialog(outPath);
         }
         else {
             static_assert(std::is_same_v<FileCommunicator, FileCommunicator>, "Unrecognized communicator type");
