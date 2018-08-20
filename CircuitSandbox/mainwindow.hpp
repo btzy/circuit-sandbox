@@ -8,7 +8,10 @@
 #include <optional>
 #include <vector>
 #include <tuple>
-#include <thread>
+#if defined(__APPLE__)
+#include <mutex>
+#include <atomic>
+#endif
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -82,13 +85,15 @@ private:
     NotificationDisplay::UniqueNotification noRedoNotification;
     NotificationDisplay::UniqueNotification changeSpeedNotification;
 
-#if defined(_WIN32) || defined(__APPLE__)
-    std::thread::id mainThreadId;
+#if defined(_WIN32)
+    unsigned long mainThreadId;
 #endif
     
 #if defined(_WIN32)
     bool _suppressMouseUntilNextDown = false; // Windows hack to prevent SDL from simulating mousedown event after the file dialog closes
     bool _sizeMoveTimerRunning = false;
+#elif defined(__APPLE__)
+    std::atomic<bool> _mainQueueDispatchRunning = false;
 #endif
 
 public:
@@ -223,10 +228,16 @@ private:
      * Renders everything to the screen
      */
     void render();
-    #if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32)
     // hack for issue with window resizing on Windows and Mac not giving live events
     friend int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event);
-    #endif // _WIN32
+#endif // _WIN32
+#if defined(__APPLE__)
+    // hack for issue with window resizing on Windows and Mac not giving live events
+    friend int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event);
+    friend void dispatchLayoutHandler(void* main_window_void_ptr);
+    friend void dispatchRenderHandler(void* main_window_void_ptr);
+#endif // _WIN32
 
     /**
      * Starts the event loop (blocks until window is closed).

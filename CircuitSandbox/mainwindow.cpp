@@ -26,6 +26,8 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <SDL_syswm.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
 #endif
 
 
@@ -35,12 +37,12 @@ using namespace std::literals::string_literals; // gives the 's' suffix for stri
 #define SIZE_MOVE_TIMER_ID 1
 // hack for issue with window resizing on Windows not giving live events
 int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
-    MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
+    MainWindow* const main_window = static_cast<MainWindow*>(main_window_void_ptr);
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         if (event_window == main_window->window) {
             // only do stuff if we are called from the main thread
-            if (main_window->mainThreadId == std::this_thread::get_id()) {
+            if (main_window->mainThreadId == GetCurrentThreadId()) {
                 main_window->layoutComponents();
                 main_window->render();
             }
@@ -54,7 +56,7 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
         else if (winMessage.msg == WM_TIMER) {
             if (winMessage.wParam == SIZE_MOVE_TIMER_ID) {
                 // only do stuff if we are called from the main thread
-                if (main_window->mainThreadId == std::this_thread::get_id()) {
+                if (main_window->mainThreadId == GetCurrentThreadId()) {
                     main_window->render();
                 }
             }
@@ -67,17 +69,35 @@ int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
 #ifdef __APPLE__
 // hack for issue with window resizing on MacOS not giving live events
 // https://stackoverflow.com/questions/34967628/sdl2-window-turns-black-on-resize
+
+void dispatchRenderHandler(void* main_window_void_ptr) {
+    MainWindow* const main_window = static_cast<MainWindow*>(main_window_void_ptr);
+    if (main_window->_mainQueueDispatchRunning.load(std::memory_order_relaxed)) {
+        main_window->render();
+        dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, 2000000), dispatch_get_main_queue(), main_window_void_ptr, &dispatchRenderHandler);
+    }
+}
+
+void dispatchLayoutHandler(void* main_window_void_ptr) {
+    MainWindow* const main_window = static_cast<MainWindow*>(main_window_void_ptr);
+    if (main_window->_mainQueueDispatchRunning.load(std::memory_order_relaxed)) {
+        main_window->layoutComponents();
+        main_window->render();
+    }
+}
+
 int resizeEventForwarder(void* main_window_void_ptr, SDL_Event* event) {
-    MainWindow* main_window = static_cast<MainWindow*>(main_window_void_ptr);
+    MainWindow* const main_window = static_cast<MainWindow*>(main_window_void_ptr);
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_Window* event_window = SDL_GetWindowFromID(event->window.windowID);
         if (event_window == main_window->window) {
             // This is dangerous if SDL_PollEvent() can return while we are doing layout/rendering.
             // But it seems to work well in practice.
-            //if (main_window->mainThreadId == std::this_thread::get_id()) {
-                main_window->layoutComponents();
-                main_window->render();
-            //}
+            dispatch_async_f(dispatch_get_main_queue(), main_window_void_ptr, &dispatchLayoutHandler);
+            bool tmp = false;
+            if (main_window->_mainQueueDispatchRunning.compare_exchange_strong(tmp, true)) {
+                dispatch_async_f(dispatch_get_main_queue(), main_window_void_ptr, &dispatchRenderHandler);
+            }
         }
     }
     return 1;
@@ -132,9 +152,9 @@ MainWindow::MainWindow(const char* const processName) : stateManager(getSimulato
     // render once first, because in case file loading takes long we don't want users to stare at black/white screen
     render();
     
-#if defined(_WIN32) || defined(__APPLE)
-    // save the current thread id (on Windows and Mac, so the event watch can check it
-    mainThreadId = std::this_thread::get_id();
+#if defined(_WIN32)
+    // save the current thread id on Windows, so the event watch can check it
+    mainThreadId = GetCurrentThreadId();
 #endif
 }
 
@@ -340,6 +360,9 @@ void MainWindow::startEventLoop() {
                 else {
                     processEvent(event);
                 }
+#elif defined(__APPLE__)
+                _mainQueueDispatchRunning.store(false, std::memory_order_release);
+                processEvent(event);
 #else
                 processEvent(event);
 #endif
