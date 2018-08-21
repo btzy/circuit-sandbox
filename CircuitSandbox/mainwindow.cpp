@@ -28,6 +28,8 @@
 #include <SDL_syswm.h>
 #elif defined(__APPLE__)
 #include <dispatch/dispatch.h>
+#elif defined(__linux)
+#include "x11_dpi_scaling.hpp"
 #endif
 
 
@@ -183,14 +185,29 @@ bool MainWindow::updateDpiFields(bool useWindow) {
 
 
     float dpi_float;
-    SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr); // well we expect horizontal and vertical dpis to be the same
-    int dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
-
+    // well expect horizontal and vertical dpis to be the same
+    // this function might fail to get dpi on some setups
+    int dpi;
+#if defined(__linux__)
+    if (DpiScaling::getDpi(useWindow ? window : nullptr, display_index, dpi_float)) {
+        // success
+        dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
+    }
+#else
+    if (SDL_GetDisplayDPI(display_index, nullptr, &dpi_float, nullptr) == 0) {
+        // success
+        dpi = static_cast<int>(dpi_float + 0.5f); // round to nearest int
+    }
+#endif
+    else {
+        dpi = 96;
+    }
+    
     int default_dpi;
 #if defined(__APPLE__)
     default_dpi = 96; // for some reason apple is 96 dpi
 #elif defined(__linux__)
-    default_dpi = 144;
+    default_dpi = 96;
 #elif defined(_WIN32)
 
 #if defined(USER_DEFAULT_SCREEN_DPI) // If we have the default DPI macro, use it
