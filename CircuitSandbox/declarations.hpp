@@ -77,7 +77,7 @@ constexpr inline SDL_Color BLACK        { 0x00, 0x00, 0x00, 0xff };
 // strings
 // we use compiler #defines so we can have adjacent string concatenation
 #define CIRCUIT_SANDBOX_STRING "Circuit Sandbox"
-#define CIRCUIT_SANDBOX_VERSION_STRING "v0.3" // change this when there is a new update
+#define CIRCUIT_SANDBOX_VERSION_STRING "v0.4" // change this when there is a new update
 #define WINDOW_TITLE_STRING CIRCUIT_SANDBOX_STRING " " CIRCUIT_SANDBOX_VERSION_STRING
 
 /**
