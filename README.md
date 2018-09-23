@@ -41,7 +41,7 @@ It probably also compiles on Mac OSX with Clang, but this is untested.
 
 ### Building on Windows (Visual Studio 2017)
 
-The Windows releases are built with Boost 1.67.0, SDL2 2.0.8, SDL2_ttf 2.0.14, and the latest NFD from its master branch.  Boost and NFD are statically linked to Circuit Sandbox; SDL2 and SDL2_ttf are dynamically linked as recommended by SDL2.  The C and C++ runtimes are dynamically linked.  To avoid unexpected issues, it is best to build it in the same way.
+The Windows releases are built with Boost 1.67.0, SDL2 2.0.8, SDL2_ttf 2.0.14, and the latest NFD from its master branch.  Boost and NFD are statically linked to Circuit Sandbox; SDL2 and SDL2_ttf are dynamically linked as recommended by SDL2.  The C and C++ runtimes are dynamically linked.  To minimise unexpected issues, it is best to build it in the same way.
 
 1. Set-up all the dependencies:
 
@@ -69,3 +69,22 @@ The Windows releases are built with Boost 1.67.0, SDL2 2.0.8, SDL2_ttf 2.0.14, a
     * `NFD_Lib_Release_x64`
 
 3. Build Circuit Sandbox; it should work!
+
+## Licensing
+
+Circuit Sandbox is licensed under the GNU General Public License version 3.  For the complete license text, see the file 'COPYING'. 
+
+This license applies to all files in this repository, except the following:
+
+* CircuitSandbox/resources/ButtonIcons.ttf and everything in the CircuitSandbox/resources/icons directory, which are from [Google Material Icons](https://material.io/tools/icons/) and licensed under the Apache License version 2.0.
+* CircuitSandbox/resources/OpenSans-Bold.ttf, which is from the [Open Sans](https://fonts.google.com/specimen/Open+Sans) typeface and licensed under the Apache License version 2.0.
+* CircuitSandbox/unicode.hpp, which is from [Unicode Utilities](https://github.com/btzy/unicode-utilities) and licensed under the MIT License.
+
+In addition to the items stated above, Circuit Sandbox releases also contain binary code from SDL 2.0, SDL_ttf 2.0, Boost C++ Libraries, Native File Dialog Extended, and compiler runtimes for MSVC (Windows), Clang (Mac OS X), and GCC (Linux).  SDL_ttf 2.0 further depends on FreeType and Zlib, which are also packaged with the releases.  They have their own licenses, which may be different from the license of Circuit Sandbox.
+
+## Credits
+
+* [Bernard Teo Zhi Yi](https://github.com/btzy)
+* [Kuan Wei Heng](https://github.com/xsot)
+
+This project was built for [CP2106 Independent Software Development Project (Orbital)](https://orbital.comp.nus.edu.sg/) at the National University of Singapore (NUS).  NUS owns the copyright for all source code and assets up to and including the v0.4 release.
