@@ -1,3 +1,9 @@
+/*
+ * Unicode Utilities
+ * Copyright 2015-2018 Bernard Teo <bernard.14916@gmail.com>
+ * Released under the MIT license
+ */
+
 #pragma once
 
 /* All functions in unicode.h will not throw as long as callbacks don't throw */
