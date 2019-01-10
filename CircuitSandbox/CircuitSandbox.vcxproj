@@ -351,6 +351,7 @@ XCOPY $(ProjectDir)resources\ButtonIcons.ttf $(OutDir) /D /Y</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="buttonbar.cpp" />
+    <ClCompile Include="canvasstate.cpp" />
     <ClCompile Include="clipboardaction.cpp" />
     <ClCompile Include="clipboardmanager.cpp" />
     <ClCompile Include="launch_browser.cpp" />

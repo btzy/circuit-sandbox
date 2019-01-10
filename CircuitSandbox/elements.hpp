@@ -197,7 +197,7 @@ struct CommunicatorElementBase : public CommunicatorElement, public SignalReceiv
 protected:
     CommunicatorElementBase(bool logicLevel, bool startingLogicLevel, bool transmitState) : LogicLevelElementBase<T>(logicLevel, startingLogicLevel), transmitState(transmitState) {}
 public:
-    bool transmitState; // filled in by Simulator::takeSnapshot()
+    bool transmitState; // This field is used for rendering only. It is filled in by Simulator::takeSnapshot() (which is called upon compilation and upon UI refresh)
 
     // shared communicator instance
     // after action is ended, this should point to a valid communicator instance (filled in by Simulator::compile())
